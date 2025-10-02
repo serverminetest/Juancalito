@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Visitantes - Sistema de Gestión{% endblock %}
+{% block page_title %}Reporte de Visitantes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-user-friends"></i> Reporte de Visitantes</h2>
+    <div>
+        <button class="btn btn-success" onclick="window.print()">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+        <a href="{{ url_for('reportes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Período: {{ fecha_inicio }} al {{ fecha_fin }}</h5>
+    </div>
+    <div class="card-body">
+        {% if visitantes %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre Completo</th>
+                        <th>Cédula</th>
+                        <th>Teléfono</th>
+                        <th>Empresa</th>
+                        <th>Empleado Visitado</th>
+                        <th>Motivo</th>
+                        <th>Fecha/Hora Entrada</th>
+                        <th>Fecha/Hora Salida</th>
+                        <th>Duración</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visitante in visitantes %}
+                    <tr>
+                        <td>{{ visitante.id }}</td>
+                        <td>{{ visitante.nombre }} {{ visitante.apellido }}</td>
+                        <td>{{ visitante.cedula or 'N/A' }}</td>
+                        <td>{{ visitante.telefono or 'N/A' }}</td>
+                        <td>{{ visitante.empresa or 'N/A' }}</td>
+                        <td>{{ visitante.empleado_visitado or 'N/A' }}</td>
+                        <td>
+                            <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ visitante.motivo_visita }}">
+                                {{ visitante.motivo_visita or 'N/A' }}
+                            </span>
+                        </td>
+                        <td>{{ visitante.fecha_entrada.strftime('%d/%m/%Y %H:%M') if visitante.fecha_entrada else 'N/A' }}</td>
+                        <td>
+                            {% if visitante.fecha_salida %}
+                                {{ visitante.fecha_salida.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if visitante.fecha_salida and visitante.fecha_entrada %}
+                                {% set duracion = visitante.fecha_salida - visitante.fecha_entrada %}
+                                {% set horas = duracion.total_seconds() / 3600 %}
+                                {% if horas >= 1 %}
+                                    {{ "%.1f"|format(horas) }}h
+                                {% else %}
+                                    {{ "%.0f"|format(horas * 60) }}min
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if visitante.activo %}
+                                <span class="badge bg-success">En el edificio</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Salido</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Resumen estadístico -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">{{ visitantes|length }}</h5>
+                        <p class="card-text">Total Visitas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            {{ visitantes|rejectattr('activo')|list|length }}
+                        </h5>
+                        <p class="card-text">Visitas Completadas</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            {{ visitantes|selectattr('activo')|list|length }}
+                        </h5>
+                        <p class="card-text">En el Edificio</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            {% set empresas_unicas = visitantes|selectattr('empresa')|map(attribute='empresa')|unique|list|length %}
+                            {{ empresas_unicas }}
+                        </h5>
+                        <p class="card-text">Empresas Diferentes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribución por empresa -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Distribución por Empresa</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Empresa</th>
+                                        <th>Visitas</th>
+                                        <th>Porcentaje</th>
+                                        <th>Última Visita</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set empresas_dict = {} %}
+                                    {% for visitante in visitantes %}
+                                        {% if visitante.empresa %}
+                                            {% set empresa = visitante.empresa %}
+                                            {% if empresa not in empresas_dict %}
+                                                {% set _ = empresas_dict.update({empresa: {'count': 0, 'ultima_visita': visitante.fecha_entrada}}) %}
+                                            {% endif %}
+                                            {% set _ = empresas_dict[empresa]['count'].update(empresas_dict[empresa]['count'] + 1) %}
+                                            {% if visitante.fecha_entrada > empresas_dict[empresa]['ultima_visita'] %}
+                                                {% set _ = empresas_dict[empresa]['ultima_visita'].update(visitante.fecha_entrada) %}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% for empresa, data in empresas_dict.items() %}
+                                    <tr>
+                                        <td>{{ empresa }}</td>
+                                        <td>{{ data.count }}</td>
+                                        <td>{{ "%.1f"|format((data.count / visitantes|length) * 100) }}%</td>
+                                        <td>{{ data.ultima_visita.strftime('%d/%m/%Y') if data.ultima_visita else 'N/A' }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-user-friends fa-3x mb-3"></i>
+            <h4>No hay visitantes registrados</h4>
+            <p>No se encontraron visitantes para el período seleccionado.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .card-header .btn {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Empleado - Juancalito SAS{% endblock %}
+{% block page_title %}Detalles del Empleado{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-user"></i> {{ empleado.nombre_completo }}</h2>
+            <div>
+                <a href="{{ url_for('editar_empleado', id=empleado.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <a href="{{ url_for('empleados') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Información Personal -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user"></i> Información Personal</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Nombre Completo:</strong></div>
+                    <div class="col-sm-8">{{ empleado.nombre_completo }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Cédula:</strong></div>
+                    <div class="col-sm-8">{{ empleado.cedula }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Fecha de Nacimiento:</strong></div>
+                    <div class="col-sm-8">{{ empleado.fecha_nacimiento.strftime('%d/%m/%Y') if empleado.fecha_nacimiento else 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Género:</strong></div>
+                    <div class="col-sm-8">{{ empleado.genero or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Estado Civil:</strong></div>
+                    <div class="col-sm-8">{{ empleado.estado_civil or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información de Contacto -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-phone"></i> Información de Contacto</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Teléfono Principal:</strong></div>
+                    <div class="col-sm-8">{{ empleado.telefono_principal or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Teléfono Secundario:</strong></div>
+                    <div class="col-sm-8">{{ empleado.telefono_secundario or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Email Personal:</strong></div>
+                    <div class="col-sm-8">{{ empleado.email_personal or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Email Corporativo:</strong></div>
+                    <div class="col-sm-8">{{ empleado.email_corporativo or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Dirección -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Dirección de Residencia</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Dirección:</strong></div>
+                    <div class="col-sm-8">{{ empleado.direccion_residencia or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Ciudad:</strong></div>
+                    <div class="col-sm-8">{{ empleado.ciudad or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Departamento:</strong></div>
+                    <div class="col-sm-8">{{ empleado.departamento or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Código Postal:</strong></div>
+                    <div class="col-sm-8">{{ empleado.codigo_postal or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información Laboral -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-briefcase"></i> Información Laboral</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Cargo/Puesto:</strong></div>
+                    <div class="col-sm-8">{{ empleado.cargo_puesto or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Departamento:</strong></div>
+                    <div class="col-sm-8">{{ empleado.departamento_laboral or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Fecha de Ingreso:</strong></div>
+                    <div class="col-sm-8">{{ empleado.fecha_ingreso.strftime('%d/%m/%Y') if empleado.fecha_ingreso else 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Tipo de Contrato:</strong></div>
+                    <div class="col-sm-8">{{ empleado.tipo_contrato or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Estado:</strong></div>
+                    <div class="col-sm-8">
+                        <span class="badge bg-{{ 'success' if empleado.estado_empleado == 'Activo' else 'warning' if empleado.estado_empleado == 'Suspendido' else 'secondary' }}">
+                            {{ empleado.estado_empleado }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Detalles Salariales -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> Información Salarial</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Salario Base:</strong></div>
+                    <div class="col-sm-8">${{ "{:,.2f}".format(empleado.salario_base) if empleado.salario_base else 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Tipo de Salario:</strong></div>
+                    <div class="col-sm-8">{{ empleado.tipo_salario or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Jornada Laboral:</strong></div>
+                    <div class="col-sm-8">{{ empleado.jornada_laboral or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Ubicación de Trabajo:</strong></div>
+                    <div class="col-sm-8">{{ empleado.ubicacion_trabajo or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Supervisor:</strong></div>
+                    <div class="col-sm-8">{{ empleado.supervisor or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Horario:</strong></div>
+                    <div class="col-sm-8">{{ empleado.horario or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seguridad Social -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Seguridad Social</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>EPS:</strong></div>
+                    <div class="col-sm-8">{{ empleado.eps or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>ARL:</strong></div>
+                    <div class="col-sm-8">{{ empleado.arl or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>AFP:</strong></div>
+                    <div class="col-sm-8">{{ empleado.afp or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Caja de Compensación:</strong></div>
+                    <div class="col-sm-8">{{ empleado.caja_compensacion or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Contacto de Emergencia -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Contacto de Emergencia</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>Nombre:</strong></div>
+                    <div class="col-sm-8">{{ empleado.nombre_contacto_emergencia or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Teléfono:</strong></div>
+                    <div class="col-sm-8">{{ empleado.telefono_emergencia or 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Parentesco:</strong></div>
+                    <div class="col-sm-8">{{ empleado.parentesco or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del Sistema -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información del Sistema</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-4"><strong>ID del Empleado:</strong></div>
+                    <div class="col-sm-8">{{ empleado.id }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Fecha de Registro:</strong></div>
+                    <div class="col-sm-8">{{ empleado.created_at.strftime('%d/%m/%Y %H:%M') if empleado.created_at else 'N/A' }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-sm-4"><strong>Última Actualización:</strong></div>
+                    <div class="col-sm-8">{{ empleado.updated_at.strftime('%d/%m/%Y %H:%M') if empleado.updated_at else 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

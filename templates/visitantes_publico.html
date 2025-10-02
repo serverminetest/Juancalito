@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Visitantes - Juancalito SAS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: white;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.5rem;
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            background-color: #fff;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            background-color: #fff;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+            background: linear-gradient(135deg, #218838, #1ea085);
+        }
+        .clock {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        .section-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 0.5rem;
+        }
+        .required {
+            color: #dc3545;
+        }
+        .form-label {
+            color: #495057;
+            font-weight: 500;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h2><i class="fas fa-user-plus me-2"></i>Registro de Visitantes</h2>
+                        <p class="mb-0">Juancalito SAS - Sistema de Gestión</p>
+                        <div class="clock mt-2">
+                            <i class="fas fa-clock me-2"></i>
+                            <span id="currentTime"></span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if not error %}
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle"></i>
+                            <strong>Código QR válido para hoy:</strong> <span id="currentDate"></span>
+                        </div>
+                        {% endif %}
+                        
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' if category == 'warning' else 'success' }} alert-dismissible fade show">
+                                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'exclamation-circle' if category == 'warning' else 'check-circle' }}"></i>
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <form method="POST">
+                            <!-- Información Personal -->
+                            <h5 class="section-title">
+                                <i class="fas fa-user me-2"></i>Información Personal
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombre" class="form-label">Nombre <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="apellido" class="form-label">Apellido <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="apellido" name="apellido" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="documento" class="form-label">Documento de Identidad <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="documento" name="documento" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="telefono" class="form-label">Teléfono <span class="required">*</span></label>
+                                    <input type="tel" class="form-control" id="telefono" name="telefono" required>
+                                </div>
+                            </div>
+
+                            <!-- Información Médica -->
+                            <h5 class="section-title">
+                                <i class="fas fa-heartbeat me-2"></i>Información Médica
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="eps" class="form-label">EPS <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="eps" name="eps" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="rh" class="form-label">Tipo de Sangre (RH) <span class="required">*</span></label>
+                                    <select class="form-select" id="rh" name="rh" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="O+">O+</option>
+                                        <option value="O-">O-</option>
+                                        <option value="A+">A+</option>
+                                        <option value="A-">A-</option>
+                                        <option value="B+">B+</option>
+                                        <option value="B-">B-</option>
+                                        <option value="AB+">AB+</option>
+                                        <option value="AB-">AB-</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Información de Visita -->
+                            <h5 class="section-title">
+                                <i class="fas fa-building me-2"></i>Información de Visita
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="empresa" class="form-label">Empresa <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="empresa" name="empresa" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="motivo_visita" class="form-label">Motivo de la Visita <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="motivo_visita" name="motivo_visita" required>
+                                </div>
+                            </div>
+
+                            <!-- Contacto de Emergencia -->
+                            <h5 class="section-title">
+                                <i class="fas fa-phone me-2"></i>Contacto de Emergencia
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombre_contacto_emergencia" class="form-label">Nombre del Contacto <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="nombre_contacto_emergencia" name="nombre_contacto_emergencia" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="telefono_emergencia" class="form-label">Teléfono de Emergencia <span class="required">*</span></label>
+                                    <input type="tel" class="form-control" id="telefono_emergencia" name="telefono_emergencia" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="parentesco" class="form-label">Parentesco <span class="required">*</span></label>
+                                <select class="form-select" id="parentesco" name="parentesco" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Padre">Padre</option>
+                                    <option value="Madre">Madre</option>
+                                    <option value="Esposo">Esposo</option>
+                                    <option value="Esposa">Esposa</option>
+                                    <option value="Hermano">Hermano</option>
+                                    <option value="Hermana">Hermana</option>
+                                    <option value="Hijo">Hijo</option>
+                                    <option value="Hija">Hija</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-success btn-lg py-4">
+                                    <i class="fas fa-sign-in-alt fa-2x mb-2"></i><br>
+                                    <strong>Registrar Entrada</strong><br>
+                                    <small>Confirmar registro de visitante</small>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Actualizar reloj en tiempo real
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('es-CO', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('currentTime').textContent = timeString;
+        }
+
+        // Actualizar fecha actual
+        function updateDate() {
+            const now = new Date();
+            const dateString = now.toLocaleDateString('es-CO', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('currentDate').textContent = dateString;
+        }
+
+        // Actualizar cada segundo
+        setInterval(updateClock, 1000);
+        updateClock();
+        updateDate();
+
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert:not(.alert-success)');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

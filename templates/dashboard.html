@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sistema de Gestión{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Empleados
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_empleados }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Asistencias Hoy
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ asistencias_hoy }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Visitantes Hoy
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_visitantes_hoy }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-friends fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Contratos por Vencer
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ contratos_vencer }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Acciones Rápidas</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('nuevo_empleado') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-user-plus"></i> Nuevo Empleado
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('nuevo_visitante') }}" class="btn btn-info w-100">
+                            <i class="fas fa-user-friends"></i> Registrar Visitante
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('asistencia') }}" class="btn btn-success w-100">
+                            <i class="fas fa-clock"></i> Registrar Asistencia
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('reportes') }}" class="btn btn-warning w-100">
+                            <i class="fas fa-chart-bar"></i> Ver Reportes
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Información del Sistema</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
+                    <h5>Fecha Actual</h5>
+                    <p class="text-muted" id="fechaActual"></p>
+                    
+                    <hr>
+                    
+                    <h6>Funcionalidades Disponibles:</h6>
+                    <ul class="list-unstyled text-left">
+                        <li><i class="fas fa-check text-success"></i> Gestión de Empleados</li>
+                        <li><i class="fas fa-check text-success"></i> Control de Contratos</li>
+                        <li><i class="fas fa-check text-success"></i> Registro de Asistencia</li>
+                        <li><i class="fas fa-check text-success"></i> Control de Visitantes</li>
+                        <li><i class="fas fa-check text-success"></i> Reportes y Estadísticas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #22c55e !important;
+}
+.border-left-success {
+    border-left: 0.25rem solid #16a34a !important;
+}
+.border-left-info {
+    border-left: 0.25rem solid #10b981 !important;
+}
+.border-left-warning {
+    border-left: 0.25rem solid #f59e0b !important;
+}
+.text-xs {
+    font-size: 0.7rem;
+}
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+.text-uppercase {
+    text-transform: uppercase !important;
+}
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+</style>
+
+<script>
+// Mostrar fecha actual
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaActual = new Date();
+    const opciones = { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+    };
+    document.getElementById('fechaActual').textContent = fechaActual.toLocaleDateString('es-ES', opciones);
+});
+</script>
+{% endblock %}

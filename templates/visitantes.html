@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Visitantes - Sistema de Gestión{% endblock %}
+{% block page_title %}Control de Visitantes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-user-friends"></i> Registro de Visitantes</h2>
+    <a href="{{ url_for('nuevo_visitante') }}" class="btn btn-success">
+        <i class="fas fa-plus"></i> Nuevo Visitante
+    </a>
+</div>
+
+<!-- Sección QR y Registro Manual -->
+<div class="row justify-content-center mb-4 mx-0">
+    <!-- QR Code -->
+    <div class="col-lg-5 col-md-5 mb-4">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-qrcode"></i> Código QR para Visitantes
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ url_for('generar_qr_visitantes_imagen') }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
+                <div class="alert alert-info py-2">
+                    <small>
+                        <strong>URL:</strong><br>
+                        <code class="small">{{ url_qr[:30] }}...</code><br>
+                        <i class="fas fa-clock text-warning"></i>
+                        <strong>Válido hasta:</strong> 23:59 de hoy
+                    </small>
+                </div>
+                <p class="text-muted small mb-0">
+                    Los visitantes pueden escanear este código para registrarse automáticamente
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Espacio en medio -->
+    <div class="col-lg-1 d-none d-lg-block"></div>
+    
+    <!-- Registro Manual -->
+    <div class="col-lg-5 col-md-5 mb-4">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus"></i> Registro Manual
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Para administradores que necesiten registrar visitantes manualmente
+                </p>
+                <a href="{{ url_for('nuevo_visitante') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-plus"></i> Registrar Visitante Manualmente
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre Completo</th>
+                        <th>Documento</th>
+                        <th>EPS</th>
+                        <th>RH</th>
+                        <th>Teléfono</th>
+                        <th>Empresa</th>
+                        <th>Empleado Visitado</th>
+                        <th>Motivo</th>
+                        <th>Hora Entrada</th>
+                        <th>Hora Salida</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visitante in visitantes %}
+                    <tr>
+                        <td>{{ visitante.id }}</td>
+                        <td>{{ visitante.nombre }} {{ visitante.apellido }}</td>
+                        <td>{{ visitante.documento or 'N/A' }}</td>
+                        <td>
+                            <span class="d-inline-block text-truncate" style="max-width: 100px;" title="{{ visitante.eps }}">
+                                {{ visitante.eps or 'N/A' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ visitante.rh or 'N/A' }}</span>
+                        </td>
+                        <td>{{ visitante.telefono or 'N/A' }}</td>
+                        <td>
+                            <span class="d-inline-block text-truncate" style="max-width: 100px;" title="{{ visitante.empresa }}">
+                                {{ visitante.empresa or 'N/A' }}
+                            </span>
+                        </td>
+                        <td>{{ visitante.empleado_visitado or 'N/A' }}</td>
+                        <td>
+                            <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ visitante.motivo_visita }}">
+                                {{ visitante.motivo_visita or 'N/A' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if visitante.fecha_entrada %}
+                                <small class="text-muted">{{ visitante.fecha_entrada.strftime('%d/%m/%Y') }}</small><br>
+                                <strong>{{ visitante.fecha_entrada.strftime('%H:%M') }}</strong>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if visitante.fecha_salida %}
+                                <small class="text-muted">{{ visitante.fecha_salida.strftime('%d/%m/%Y') }}</small><br>
+                                <strong>{{ visitante.fecha_salida.strftime('%H:%M') }}</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if visitante.estado_visita == 'En visita' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-user-check"></i> En visita
+                                </span>
+                            {% elif visitante.estado_visita == 'Finalizada' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-user-times"></i> Finalizada
+                                </span>
+                            {% elif visitante.estado_visita == 'Pendiente' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Pendiente
+                                </span>
+                            {% else %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-question"></i> {{ visitante.estado_visita or 'N/A' }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('registrar_entrada_salida_visitante', id=visitante.id) }}" style="display: inline;">
+                                {% if visitante.estado_visita == 'En visita' %}
+                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                            onclick="return confirm('¿Registrar SALIDA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
+                                            title="Registrar salida">
+                                        <i class="fas fa-sign-out-alt"></i> SALIDA
+                                    </button>
+                                {% elif visitante.estado_visita == 'Pendiente' %}
+                                    <button type="submit" class="btn btn-sm btn-success" 
+                                            onclick="return confirm('¿Registrar ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
+                                            title="Registrar entrada">
+                                        <i class="fas fa-sign-in-alt"></i> ENTRADA
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-primary" 
+                                            onclick="return confirm('¿Registrar NUEVA ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
+                                            title="Registrar nueva entrada">
+                                        <i class="fas fa-redo"></i> NUEVA ENTRADA
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="13" class="text-center text-muted">
+                            <i class="fas fa-user-friends fa-3x mb-3"></i>
+                            <br>No hay visitantes registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas rápidas -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h5 class="card-title text-success">
+                    {{ visitantes|selectattr('estado_visita', 'equalto', 'En visita')|list|length }}
+                </h5>
+                <p class="card-text">
+                    <i class="fas fa-user-check text-success"></i> En el edificio
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h5 class="card-title text-warning">
+                    {{ visitantes|selectattr('estado_visita', 'equalto', 'Pendiente')|list|length }}
+                </h5>
+                <p class="card-text">
+                    <i class="fas fa-clock text-warning"></i> Pendientes
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-secondary">
+            <div class="card-body">
+                <h5 class="card-title text-secondary">
+                    {{ visitantes|selectattr('estado_visita', 'equalto', 'Finalizada')|list|length }}
+                </h5>
+                <p class="card-text">
+                    <i class="fas fa-user-times text-secondary"></i> Finalizadas
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <h5 class="card-title text-info">
+                    {{ visitantes|length }}
+                </h5>
+                <p class="card-text">
+                    <i class="fas fa-chart-line text-info"></i> Total registrados
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información adicional -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle"></i> Información del Sistema de Visitantes</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>Código QR:</strong> Los visitantes pueden escanear el código para registrarse</li>
+                        <li><strong>Válido 24 horas:</strong> El código QR se renueva automáticamente cada día</li>
+                        <li><strong>Registro Manual:</strong> Para administradores que necesiten registrar visitantes manualmente</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>Entrada:</strong> Use el botón "ENTRADA" para registrar la llegada del visitante</li>
+                        <li><strong>Salida:</strong> Use el botón "SALIDA" para registrar cuando el visitante se va</li>
+                        <li><strong>Contacto de emergencia:</strong> Información disponible en caso de emergencias</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Calcular visitas de hoy
+document.addEventListener('DOMContentLoaded', function() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const visitasHoy = {{ visitantes|selectattr('fecha_entrada')|list|length }};
+    // En una implementación real, filtrarías por fecha aquí
+    document.getElementById('visitasHoy').textContent = visitasHoy;
+});
+
+// Auto-refresh cada 30 segundos para mostrar visitantes en tiempo real
+setInterval(function() {
+    // Solo recargar si hay visitantes activos
+    const visitantesActivos = {{ visitantes|selectattr('estado_visita', 'equalto', 'En visita')|list|length }};
+    if (visitantesActivos > 0) {
+        location.reload();
+    }
+}, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Empleado - Juancalito SAS{% endblock %}
+{% block page_title %}Editar Empleado{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-edit"></i> Editar Empleado: {{ empleado.nombre_completo }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="empleadoForm">
+                    <!-- Información Personal -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2"><i class="fas fa-user"></i> Información Personal</h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre_completo" class="form-label">Nombre Completo *</label>
+                            <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" value="{{ empleado.nombre_completo }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="cedula" class="form-label">Cédula de Identidad *</label>
+                            <input type="text" class="form-control" id="cedula" name="cedula" value="{{ empleado.cedula }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento *</label>
+                            <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" 
+                                   value="{{ empleado.fecha_nacimiento.strftime('%Y-%m-%d') if empleado.fecha_nacimiento else '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="genero" class="form-label">Género *</label>
+                            <select class="form-select" id="genero" name="genero" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Masculino" {{ 'selected' if empleado.genero == 'Masculino' else '' }}>Masculino</option>
+                                <option value="Femenino" {{ 'selected' if empleado.genero == 'Femenino' else '' }}>Femenino</option>
+                                <option value="Otro" {{ 'selected' if empleado.genero == 'Otro' else '' }}>Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="estado_civil" class="form-label">Estado Civil *</label>
+                            <select class="form-select" id="estado_civil" name="estado_civil" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Soltero" {{ 'selected' if empleado.estado_civil == 'Soltero' else '' }}>Soltero</option>
+                                <option value="Casado" {{ 'selected' if empleado.estado_civil == 'Casado' else '' }}>Casado</option>
+                                <option value="Divorciado" {{ 'selected' if empleado.estado_civil == 'Divorciado' else '' }}>Divorciado</option>
+                                <option value="Viudo" {{ 'selected' if empleado.estado_civil == 'Viudo' else '' }}>Viudo</option>
+                                <option value="Unión Libre" {{ 'selected' if empleado.estado_civil == 'Unión Libre' else '' }}>Unión Libre</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Información de Contacto -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2"><i class="fas fa-phone"></i> Información de Contacto</h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono_principal" class="form-label">Teléfono Principal *</label>
+                            <input type="tel" class="form-control" id="telefono_principal" name="telefono_principal" value="{{ empleado.telefono_principal or '' }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono_secundario" class="form-label">Teléfono Secundario</label>
+                            <input type="tel" class="form-control" id="telefono_secundario" name="telefono_secundario" value="{{ empleado.telefono_secundario or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email_personal" class="form-label">Email Personal *</label>
+                            <input type="email" class="form-control" id="email_personal" name="email_personal" value="{{ empleado.email_personal or '' }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email_corporativo" class="form-label">Email Corporativo</label>
+                            <input type="email" class="form-control" id="email_corporativo" name="email_corporativo" value="{{ empleado.email_corporativo or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Dirección -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2"><i class="fas fa-map-marker-alt"></i> Dirección de Residencia</h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="direccion_residencia" class="form-label">Dirección de Residencia *</label>
+                            <textarea class="form-control" id="direccion_residencia" name="direccion_residencia" rows="2" required>{{ empleado.direccion_residencia or '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="ciudad" class="form-label">Ciudad *</label>
+                            <input type="text" class="form-control" id="ciudad" name="ciudad" value="{{ empleado.ciudad or '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="departamento" class="form-label">Departamento/Estado *</label>
+                            <input type="text" class="form-control" id="departamento" name="departamento" value="{{ empleado.departamento or '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="codigo_postal" class="form-label">Código Postal</label>
+                            <input type="text" class="form-control" id="codigo_postal" name="codigo_postal" value="{{ empleado.codigo_postal or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Información Laboral -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase"></i> Información Laboral</h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cargo_puesto" class="form-label">Cargo/Puesto *</label>
+                            <input type="text" class="form-control" id="cargo_puesto" name="cargo_puesto" value="{{ empleado.cargo_puesto or '' }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="departamento_laboral" class="form-label">Departamento *</label>
+                            <select class="form-select" id="departamento_laboral" name="departamento_laboral" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Poscosecha" {{ 'selected' if empleado.departamento_laboral == 'Poscosecha' else '' }}>Poscosecha</option>
+                                <option value="Cultivo" {{ 'selected' if empleado.departamento_laboral == 'Cultivo' else '' }}>Cultivo</option>
+                                <option value="Administrativo" {{ 'selected' if empleado.departamento_laboral == 'Administrativo' else '' }}>Administrativo</option>
+                                <option value="Ventas" {{ 'selected' if empleado.departamento_laboral == 'Ventas' else '' }}>Ventas</option>
+                                <option value="Marketing" {{ 'selected' if empleado.departamento_laboral == 'Marketing' else '' }}>Marketing</option>
+                                <option value="Recursos Humanos" {{ 'selected' if empleado.departamento_laboral == 'Recursos Humanos' else '' }}>Recursos Humanos</option>
+                                <option value="Contabilidad" {{ 'selected' if empleado.departamento_laboral == 'Contabilidad' else '' }}>Contabilidad</option>
+                                <option value="Tecnología" {{ 'selected' if empleado.departamento_laboral == 'Tecnología' else '' }}>Tecnología</option>
+                                <option value="Logística" {{ 'selected' if empleado.departamento_laboral == 'Logística' else '' }}>Logística</option>
+                                <option value="Calidad" {{ 'selected' if empleado.departamento_laboral == 'Calidad' else '' }}>Calidad</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="fecha_ingreso" class="form-label">Fecha de Ingreso *</label>
+                            <input type="date" class="form-control" id="fecha_ingreso" name="fecha_ingreso" 
+                                   value="{{ empleado.fecha_ingreso.strftime('%Y-%m-%d') if empleado.fecha_ingreso else '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="tipo_contrato" class="form-label">Tipo de Contrato *</label>
+                            <select class="form-select" id="tipo_contrato" name="tipo_contrato" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Temporal" {{ 'selected' if empleado.tipo_contrato == 'Temporal' else '' }}>Temporal</option>
+                                <option value="Indefinido" {{ 'selected' if empleado.tipo_contrato == 'Indefinido' else '' }}>Indefinido</option>
+                                <option value="Por Obra" {{ 'selected' if empleado.tipo_contrato == 'Por Obra' else '' }}>Por Obra</option>
+                                <option value="Prueba" {{ 'selected' if empleado.tipo_contrato == 'Prueba' else '' }}>Prueba</option>
+                                <option value="Obra o Labor" {{ 'selected' if empleado.tipo_contrato == 'Obra o Labor' else '' }}>Obra o Labor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="estado_empleado" class="form-label">Estado del Empleado *</label>
+                            <select class="form-select" id="estado_empleado" name="estado_empleado" required>
+                                <option value="Activo" {{ 'selected' if empleado.estado_empleado == 'Activo' else '' }}>Activo</option>
+                                <option value="Inactivo" {{ 'selected' if empleado.estado_empleado == 'Inactivo' else '' }}>Inactivo</option>
+                                <option value="Suspendido" {{ 'selected' if empleado.estado_empleado == 'Suspendido' else '' }}>Suspendido</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="salario_base" class="form-label">Salario Base *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="salario_base" name="salario_base" step="0.01" min="0" 
+                                       value="{{ empleado.salario_base or '' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="tipo_salario" class="form-label">Tipo de Salario *</label>
+                            <select class="form-select" id="tipo_salario" name="tipo_salario" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Mensual" {{ 'selected' if empleado.tipo_salario == 'Mensual' else '' }}>Mensual</option>
+                                <option value="Quincenal" {{ 'selected' if empleado.tipo_salario == 'Quincenal' else '' }}>Quincenal</option>
+                                <option value="Semanal" {{ 'selected' if empleado.tipo_salario == 'Semanal' else '' }}>Semanal</option>
+                                <option value="Diario" {{ 'selected' if empleado.tipo_salario == 'Diario' else '' }}>Diario</option>
+                                <option value="Por Hora" {{ 'selected' if empleado.tipo_salario == 'Por Hora' else '' }}>Por Hora</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="jornada_laboral" class="form-label">Jornada Laboral *</label>
+                            <select class="form-select" id="jornada_laboral" name="jornada_laboral" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Tiempo Completo" {{ 'selected' if empleado.jornada_laboral == 'Tiempo Completo' else '' }}>Tiempo Completo</option>
+                                <option value="Medio Tiempo" {{ 'selected' if empleado.jornada_laboral == 'Medio Tiempo' else '' }}>Medio Tiempo</option>
+                                <option value="Tiempo Parcial" {{ 'selected' if empleado.jornada_laboral == 'Tiempo Parcial' else '' }}>Tiempo Parcial</option>
+                                <option value="Por Horas" {{ 'selected' if empleado.jornada_laboral == 'Por Horas' else '' }}>Por Horas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="ubicacion_trabajo" class="form-label">Ubicación de Trabajo *</label>
+                            <select class="form-select" id="ubicacion_trabajo" name="ubicacion_trabajo" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Oficina" {{ 'selected' if empleado.ubicacion_trabajo == 'Oficina' else '' }}>Oficina</option>
+                                <option value="Remoto" {{ 'selected' if empleado.ubicacion_trabajo == 'Remoto' else '' }}>Remoto</option>
+                                <option value="Híbrido" {{ 'selected' if empleado.ubicacion_trabajo == 'Híbrido' else '' }}>Híbrido</option>
+                                <option value="Campo" {{ 'selected' if empleado.ubicacion_trabajo == 'Campo' else '' }}>Campo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="supervisor" class="form-label">Supervisor</label>
+                            <input type="text" class="form-control" id="supervisor" name="supervisor" value="{{ empleado.supervisor or '' }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="horario" class="form-label">Horario</label>
+                            <input type="text" class="form-control" id="horario" name="horario" value="{{ empleado.horario or '' }}" placeholder="Ej: 8:00 AM - 5:00 PM">
+                        </div>
+                    </div>
+
+                    <!-- Seguridad Social -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2"><i class="fas fa-shield-alt"></i> Seguridad Social</h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="eps" class="form-label">EPS *</label>
+                            <input type="text" class="form-control" id="eps" name="eps" value="{{ empleado.eps or '' }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="arl" class="form-label">ARL *</label>
+                            <input type="text" class="form-control" id="arl" name="arl" value="{{ empleado.arl or '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="afp" class="form-label">AFP *</label>
+                            <input type="text" class="form-control" id="afp" name="afp" value="{{ empleado.afp or '' }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="caja_compensacion" class="form-label">Caja de Compensación</label>
+                            <input type="text" class="form-control" id="caja_compensacion" name="caja_compensacion" value="{{ empleado.caja_compensacion or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Contacto de Emergencia -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2"><i class="fas fa-exclamation-triangle"></i> Contacto de Emergencia</h6>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="nombre_contacto_emergencia" class="form-label">Nombre del Contacto *</label>
+                            <input type="text" class="form-control" id="nombre_contacto_emergencia" name="nombre_contacto_emergencia" value="{{ empleado.nombre_contacto_emergencia or '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="telefono_emergencia" class="form-label">Teléfono de Emergencia *</label>
+                            <input type="tel" class="form-control" id="telefono_emergencia" name="telefono_emergencia" value="{{ empleado.telefono_emergencia or '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="parentesco" class="form-label">Parentesco *</label>
+                            <select class="form-select" id="parentesco" name="parentesco" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Cónyuge" {{ 'selected' if empleado.parentesco == 'Cónyuge' else '' }}>Cónyuge</option>
+                                <option value="Hijo(a)" {{ 'selected' if empleado.parentesco == 'Hijo(a)' else '' }}>Hijo(a)</option>
+                                <option value="Padre" {{ 'selected' if empleado.parentesco == 'Padre' else '' }}>Padre</option>
+                                <option value="Madre" {{ 'selected' if empleado.parentesco == 'Madre' else '' }}>Madre</option>
+                                <option value="Hermano(a)" {{ 'selected' if empleado.parentesco == 'Hermano(a)' else '' }}>Hermano(a)</option>
+                                <option value="Otro Familiar" {{ 'selected' if empleado.parentesco == 'Otro Familiar' else '' }}>Otro Familiar</option>
+                                <option value="Amigo(a)" {{ 'selected' if empleado.parentesco == 'Amigo(a)' else '' }}>Amigo(a)</option>
+                                <option value="Otro" {{ 'selected' if empleado.parentesco == 'Otro' else '' }}>Otro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('empleados') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Actualizar Empleado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validación del formulario
+document.getElementById('empleadoForm').addEventListener('submit', function(e) {
+    const camposRequeridos = document.querySelectorAll('[required]');
+    let valido = true;
+    
+    camposRequeridos.forEach(campo => {
+        if (!campo.value.trim()) {
+            valido = false;
+            campo.classList.add('is-invalid');
+        } else {
+            campo.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!valido) {
+        e.preventDefault();
+        alert('Por favor complete todos los campos obligatorios marcados con *');
+    }
+});
+</script>
+{% endblock %}

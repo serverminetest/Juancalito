@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Empleados - Sistema de Gestión{% endblock %}
+{% block page_title %}Gestión de Empleados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> Lista de Empleados</h2>
+    <a href="{{ url_for('nuevo_empleado') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Empleado
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre Completo</th>
+                        <th>Cédula</th>
+                        <th>Teléfono Principal</th>
+                        <th>Email Personal</th>
+                        <th>Cargo/Puesto</th>
+                        <th>Departamento</th>
+                        <th>Salario Base</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empleado in empleados %}
+                    <tr>
+                        <td>{{ empleado.id }}</td>
+                        <td>{{ empleado.nombre_completo }}</td>
+                        <td>{{ empleado.cedula }}</td>
+                        <td>{{ empleado.telefono_principal or 'N/A' }}</td>
+                        <td>{{ empleado.email_personal or 'N/A' }}</td>
+                        <td>{{ empleado.cargo_puesto or 'N/A' }}</td>
+                        <td>{{ empleado.departamento_laboral or 'N/A' }}</td>
+                        <td>${{ "{:,.2f}".format(empleado.salario_base) if empleado.salario_base else 'N/A' }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if empleado.estado_empleado == 'Activo' else 'warning' if empleado.estado_empleado == 'Suspendido' else 'secondary' }}">
+                                {{ empleado.estado_empleado }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('ver_empleado', id=empleado.id) }}" class="btn btn-sm btn-outline-info" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('editar_empleado', id=empleado.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminacion({{ empleado.id }}, '{{ empleado.nombre_completo }}')" title="Desactivar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <br>No hay empleados registrados
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de que desea desactivar al empleado <strong id="empleadoNombre"></strong>?</p>
+                <p class="text-muted">El empleado será marcado como inactivo pero no se eliminará de la base de datos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Desactivar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarEliminacion(id, nombre) {
+    document.getElementById('empleadoNombre').textContent = nombre;
+    document.getElementById('deleteForm').action = "{{ url_for('eliminar_empleado', id=0) }}".replace('0', id);
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+}
+</script>
+{% endblock %}

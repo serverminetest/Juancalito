@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes - Sistema de Gestión{% endblock %}
+{% block page_title %}Reportes y Estadísticas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Reportes Disponibles</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('reporte_empleados') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="fas fa-users text-primary"></i> Reporte de Empleados</h6>
+                        </div>
+                        <p class="mb-1">Lista completa de empleados activos con información detallada</p>
+                    </a>
+                    
+                    <a href="{{ url_for('reporte_asistencia') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="fas fa-clock text-success"></i> Reporte de Asistencia</h6>
+                        </div>
+                        <p class="mb-1">Control de asistencia por período de tiempo</p>
+                    </a>
+                    
+                    <a href="{{ url_for('reporte_visitantes') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="fas fa-user-friends text-info"></i> Reporte de Visitantes</h6>
+                        </div>
+                        <p class="mb-1">Registro de visitantes por período</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros de Reportes</h5>
+            </div>
+            <div class="card-body">
+                <form id="filtrosForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" 
+                                   value="">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_fin" class="form-label">Fecha de Fin</label>
+                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" 
+                                   value="">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_reporte" class="form-label">Tipo de Reporte</label>
+                            <select class="form-select" id="tipo_reporte" name="tipo_reporte">
+                                <option value="asistencia">Asistencia</option>
+                                <option value="visitantes">Visitantes</option>
+                                <option value="empleados">Empleados</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="formato" class="form-label">Formato</label>
+                            <select class="form-select" id="formato" name="formato">
+                                <option value="html">Vista Web</option>
+                                <option value="pdf">PDF</option>
+                                <option value="excel">Excel</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" onclick="generarReporte()">
+                        <i class="fas fa-file-alt"></i> Generar Reporte
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Estadísticas rápidas -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Estadísticas Generales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-primary" id="totalEmpleados">-</h4>
+                            <p class="text-muted mb-0">Total Empleados</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-success" id="asistenciasHoy">-</h4>
+                            <p class="text-muted mb-0">Asistencias Hoy</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-info" id="visitantesHoy">-</h4>
+                            <p class="text-muted mb-0">Visitantes Hoy</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-warning" id="contratosVencer">-</h4>
+                            <p class="text-muted mb-0">Contratos por Vencer</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row mt-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Asistencia Semanal</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="asistenciaChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Distribución por Cargo</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="cargoChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function generarReporte() {
+    const tipo = document.getElementById('tipo_reporte').value;
+    const fechaInicio = document.getElementById('fecha_inicio').value;
+    const fechaFin = document.getElementById('fecha_fin').value;
+    const formato = document.getElementById('formato').value;
+    
+    let url = '';
+    switch(tipo) {
+        case 'asistencia':
+            url = `{{ url_for('reporte_asistencia') }}?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+            break;
+        case 'visitantes':
+            url = `{{ url_for('reporte_visitantes') }}?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`;
+            break;
+        case 'empleados':
+            url = `{{ url_for('reporte_empleados') }}`;
+            break;
+    }
+    
+    if (formato === 'html') {
+        window.open(url, '_blank');
+    } else {
+        alert('Funcionalidad de exportación a ' + formato + ' próximamente disponible');
+    }
+}
+
+// Cargar estadísticas
+document.addEventListener('DOMContentLoaded', function() {
+    // Establecer fechas por defecto
+    const hoy = new Date();
+    const hace30Dias = new Date();
+    hace30Dias.setDate(hoy.getDate() - 30);
+    
+    document.getElementById('fecha_inicio').value = hace30Dias.toISOString().split('T')[0];
+    document.getElementById('fecha_fin').value = hoy.toISOString().split('T')[0];
+    
+    // Simular carga de estadísticas (en una implementación real, harías una llamada AJAX)
+    document.getElementById('totalEmpleados').textContent = '25';
+    document.getElementById('asistenciasHoy').textContent = '18';
+    document.getElementById('visitantesHoy').textContent = '3';
+    document.getElementById('contratosVencer').textContent = '2';
+    
+    // Gráfico de asistencia semanal
+    const ctx1 = document.getElementById('asistenciaChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            datasets: [{
+                label: 'Asistencias',
+                data: [20, 22, 18, 25, 23, 8, 5],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Gráfico de distribución por cargo
+    const ctx2 = document.getElementById('cargoChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Desarrolladores', 'Diseñadores', 'Administrativos', 'Ventas'],
+            datasets: [{
+                data: [12, 5, 4, 4],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+});
+</script>
+{% endblock %}

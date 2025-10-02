@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Empleados - Sistema de Gestión{% endblock %}
+{% block page_title %}Reporte de Empleados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> Reporte de Empleados</h2>
+    <div>
+        <button class="btn btn-success" onclick="window.print()">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+        <a href="{{ url_for('reportes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Lista Completa de Empleados Activos</h5>
+    </div>
+    <div class="card-body">
+        {% if empleados %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre Completo</th>
+                        <th>Cédula</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Cargo</th>
+                        <th>Salario</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Antigüedad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for empleado in empleados %}
+                    <tr>
+                        <td>{{ empleado.id }}</td>
+                        <td>{{ empleado.nombre }} {{ empleado.apellido }}</td>
+                        <td>{{ empleado.cedula }}</td>
+                        <td>{{ empleado.telefono or 'N/A' }}</td>
+                        <td>{{ empleado.email or 'N/A' }}</td>
+                        <td>{{ empleado.cargo or 'N/A' }}</td>
+                        <td>
+                            {% if empleado.salario %}
+                                ${{ "{:,.2f}".format(empleado.salario) }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ empleado.fecha_ingreso.strftime('%d/%m/%Y') if empleado.fecha_ingreso else 'N/A' }}</td>
+                        <td>
+                            {% if empleado.fecha_ingreso %}
+                                <span class="text-muted">Calculando...</span>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Resumen estadístico -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">{{ empleados|length }}</h5>
+                        <p class="card-text">Total Empleados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            {% set total_salarios = empleados|selectattr('salario')|map(attribute='salario')|sum %}
+                            ${{ "{:,.2f}".format(total_salarios) }}
+                        </h5>
+                        <p class="card-text">Nómina Total</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            {% set empleados_con_salario = empleados|selectattr('salario')|list|length %}
+                            {% if empleados_con_salario > 0 %}
+                                ${{ "{:,.2f}".format(total_salarios / empleados_con_salario) }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </h5>
+                        <p class="card-text">Salario Promedio</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            {% set cargos_unicos = empleados|selectattr('cargo')|map(attribute='cargo')|unique|list|length %}
+                            {{ cargos_unicos }}
+                        </h5>
+                        <p class="card-text">Cargos Diferentes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribución por cargo -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Distribución por Cargo</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Cargo</th>
+                                        <th>Cantidad</th>
+                                        <th>Porcentaje</th>
+                                        <th>Salario Promedio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set cargos_dict = {} %}
+                                    {% for empleado in empleados %}
+                                        {% if empleado.cargo %}
+                                            {% set cargo = empleado.cargo %}
+                                            {% if cargo not in cargos_dict %}
+                                                {% set _ = cargos_dict.update({cargo: {'count': 0, 'salarios': []}}) %}
+                                            {% endif %}
+                                            {% set _ = cargos_dict[cargo]['count'].update(cargos_dict[cargo]['count'] + 1) %}
+                                            {% if empleado.salario %}
+                                                {% set _ = cargos_dict[cargo]['salarios'].append(empleado.salario) %}
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% for cargo, data in cargos_dict.items() %}
+                                    <tr>
+                                        <td>{{ cargo }}</td>
+                                        <td>{{ data.count }}</td>
+                                        <td>{{ "%.1f"|format((data.count / empleados|length) * 100) }}%</td>
+                                        <td>
+                                            {% if data.salarios %}
+                                                ${{ "{:,.2f}".format(data.salarios|sum / data.salarios|length) }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-users fa-3x mb-3"></i>
+            <h4>No hay empleados registrados</h4>
+            <p>No se encontraron empleados activos en el sistema.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .card-header .btn {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

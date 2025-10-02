@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Asistencia - Sistema de Gestión{% endblock %}
+{% block page_title %}Control de Asistencia{% endblock %}
+
+{% block content %}
+<!-- Sección superior: QR y Registro Manual centrados -->
+<div class="row justify-content-center mb-4 mx-0">
+    <!-- Código QR para Asistencia -->
+    <div class="col-lg-5 col-md-5 mb-4">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-qrcode"></i> Código QR del Día</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <img src="{{ url_for('generar_qr_imagen') }}" 
+                         alt="Código QR de Asistencia" 
+                         class="img-fluid" 
+                         style="max-width: 180px;">
+                </div>
+                <p class="text-muted mb-3 small">
+                    <i class="fas fa-info-circle"></i>
+                    Los empleados pueden escanear este código para registrar su asistencia
+                </p>
+                <div class="alert alert-info py-2">
+                    <small>
+                        <strong>URL:</strong><br>
+                        <code class="small">{{ url_qr[:30] }}...</code><br>
+                        <i class="fas fa-clock text-warning"></i>
+                        <strong>Válido hasta:</strong> 23:59 de hoy
+                    </small>
+                </div>
+                <button class="btn btn-outline-success btn-sm" 
+                        onclick="navigator.clipboard.writeText('{{ url_qr }}')">
+                    <i class="fas fa-copy"></i> Copiar URL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Espacio en el medio -->
+    <div class="col-lg-1 d-none d-lg-block"></div>
+
+    <!-- Formulario Manual (para administradores) -->
+    <div class="col-lg-5 col-md-5 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-edit"></i> Registro Manual</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('registrar_asistencia') }}">
+                    <div class="mb-3">
+                        <label for="empleado_id" class="form-label">Empleado *</label>
+                        <select class="form-select" id="empleado_id" name="empleado_id" required>
+                            <option value="">Seleccionar empleado...</option>
+                            {% for empleado in empleados %}
+                            <option value="{{ empleado.id }}">{{ empleado.nombre_completo }} ({{ empleado.cedula }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="fecha" class="form-label">Fecha *</label>
+                        <input type="date" class="form-control" id="fecha" name="fecha" value="{{ fecha }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="observaciones" class="form-label">Observaciones</label>
+                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-center mb-4 text-secondary">
+                                <i class="fas fa-hand-pointer"></i> Seleccione el tipo de registro:
+                            </h6>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <button type="submit" name="tipo_registro" value="entrada" class="btn btn-success btn-lg w-100 py-3">
+                                <i class="fas fa-sign-in-alt fa-lg mb-2"></i><br>
+                                <strong>Marcar Entrada</strong><br>
+                                <small>Registrar llegada al trabajo</small>
+                            </button>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <button type="submit" name="tipo_registro" value="salida" class="btn btn-warning btn-lg w-100 py-3">
+                                <i class="fas fa-sign-out-alt fa-lg mb-2"></i><br>
+                                <strong>Marcar Salida</strong><br>
+                                <small>Registrar salida del trabajo</small>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<!-- Sección inferior: Tabla de asistencias a todo el ancho -->
+<div class="row mx-0">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Asistencias del {{ fecha }}</h5>
+                <div>
+                    <input type="date" class="form-control" id="fechaFiltro" value="{{ fecha }}" 
+                           onchange="cambiarFecha()" style="width: auto; display: inline-block;">
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Hora Entrada</th>
+                                <th>Hora Salida</th>
+                                <th>Horas Trabajadas</th>
+                                <th>Método</th>
+                                <th>Observaciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for asistencia in asistencias %}
+                            <tr>
+                                <td>{{ asistencia.empleado.nombre_completo }}</td>
+                                <td>{{ asistencia.hora_entrada.strftime('%H:%M') if asistencia.hora_entrada else 'N/A' }}</td>
+                                <td>{{ asistencia.hora_salida.strftime('%H:%M') if asistencia.hora_salida else 'N/A' }}</td>
+                                <td>
+                                    {% if asistencia.horas_trabajadas %}
+                                        <span class="badge bg-success">{{ "%.1f"|format(asistencia.horas_trabajadas) }}h</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En curso</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if asistencia.token_diario %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-qrcode"></i> QR
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-user-edit"></i> Manual
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ asistencia.observaciones or 'N/A' }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        {% if not asistencia.hora_salida %}
+                                        <button type="button" class="btn btn-sm btn-warning" 
+                                                onclick="editarAsistencia({{ asistencia.id }})" 
+                                                title="Editar asistencia">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                onclick="eliminarAsistencia({{ asistencia.id }})" 
+                                                title="Eliminar asistencia">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% else %}
+                                        <span class="text-muted small">Completada</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                                    <br>No hay asistencias registradas para esta fecha
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas del día -->
+<div class="row mt-4 mx-0">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Estadísticas del Día</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-primary">{{ asistencias|length }}</h4>
+                            <p class="text-muted mb-0">Asistencias Hoy</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-success">{{ asistencias|selectattr('hora_salida')|list|length }}</h4>
+                            <p class="text-muted mb-0">Completadas</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-warning">{{ asistencias|rejectattr('hora_salida')|list|length }}</h4>
+                            <p class="text-muted mb-0">En Curso</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-info">{{ asistencias|selectattr('token_diario')|list|length }}</h4>
+                            <p class="text-muted mb-0">Registros por QR</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Información del sistema -->
+<div class="row mt-4 mx-0">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle"></i> Información del Sistema de Asistencia</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>Código QR:</strong> Los empleados pueden escanear el código para registrar asistencia</li>
+                        <li><strong>Válido 24 horas:</strong> El código QR se renueva automáticamente cada día</li>
+                        <li><strong>Registro Manual:</strong> Para administradores que necesiten registrar asistencia manualmente</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="mb-0">
+                        <li><strong>Una asistencia por día:</strong> El sistema previene registros duplicados</li>
+                        <li><strong>Hora automática:</strong> Se registra la hora exacta de entrada</li>
+                        <li><strong>Seguridad:</strong> Los códigos QR expiran automáticamente a medianoche</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function cambiarFecha() {
+    const fecha = document.getElementById('fechaFiltro').value;
+    window.location.href = "{{ url_for('asistencia') }}?fecha=" + fecha;
+}
+
+function editarAsistencia(asistenciaId) {
+    alert('Función de edición en desarrollo. Por ahora solo puede eliminar asistencias incompletas.');
+}
+
+function eliminarAsistencia(asistenciaId) {
+    if (confirm('¿Está seguro de que desea eliminar esta asistencia? Esta acción no se puede deshacer.')) {
+        fetch(`/asistencia/eliminar/${asistenciaId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error al eliminar la asistencia: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al eliminar la asistencia');
+        });
+    }
+}
+
+// Auto-calcular horas trabajadas
+document.getElementById('hora_entrada').addEventListener('change', calcularHoras);
+document.getElementById('hora_salida').addEventListener('change', calcularHoras);
+
+function calcularHoras() {
+    const entrada = document.getElementById('hora_entrada').value;
+    const salida = document.getElementById('hora_salida').value;
+    
+    if (entrada && salida) {
+        const [h1, m1] = entrada.split(':').map(Number);
+        const [h2, m2] = salida.split(':').map(Number);
+        
+        const minutos1 = h1 * 60 + m1;
+        const minutos2 = h2 * 60 + m2;
+        
+        if (minutos2 > minutos1) {
+            const horas = (minutos2 - minutos1) / 60;
+            console.log(`Horas trabajadas: ${horas.toFixed(1)}`);
+        }
+    }
+}
+</script>
+{% endblock %}
+

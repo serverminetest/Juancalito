@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Asistencia - Sistema de Gestión{% endblock %}
+{% block page_title %}Reporte de Asistencia{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-clock"></i> Reporte de Asistencia</h2>
+    <div>
+        <button class="btn btn-success" onclick="window.print()">
+            <i class="fas fa-print"></i> Imprimir
+        </button>
+        <a href="{{ url_for('reportes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Período: {{ fecha_inicio }} al {{ fecha_fin }}</h5>
+    </div>
+    <div class="card-body">
+        {% if asistencias %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Fecha</th>
+                        <th>Hora Entrada</th>
+                        <th>Hora Salida</th>
+                        <th>Horas Trabajadas</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asistencia in asistencias %}
+                    <tr>
+                        <td>{{ asistencia.empleado.nombre }} {{ asistencia.empleado.apellido }}</td>
+                        <td>{{ asistencia.fecha.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ asistencia.hora_entrada.strftime('%H:%M') if asistencia.hora_entrada else 'N/A' }}</td>
+                        <td>{{ asistencia.hora_salida.strftime('%H:%M') if asistencia.hora_salida else 'N/A' }}</td>
+                        <td>
+                            {% if asistencia.horas_trabajadas %}
+                                <span class="badge bg-success">{{ "%.1f"|format(asistencia.horas_trabajadas) }}h</span>
+                            {% else %}
+                                <span class="badge bg-warning">En curso</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ asistencia.observaciones or 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Resumen estadístico -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">{{ asistencias|length }}</h5>
+                        <p class="card-text">Total Registros</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            {% set total_horas = asistencias|selectattr('horas_trabajadas')|map(attribute='horas_trabajadas')|sum %}
+                            {{ "%.1f"|format(total_horas) }}
+                        </h5>
+                        <p class="card-text">Horas Totales</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            {% if asistencias|length > 0 %}
+                                {{ "%.1f"|format(total_horas / asistencias|length) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </h5>
+                        <p class="card-text">Promedio por Día</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            {% set empleados_unicos = asistencias|map(attribute='empleado_id')|unique|list|length %}
+                            {{ empleados_unicos }}
+                        </h5>
+                        <p class="card-text">Empleados Únicos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+            <h4>No hay registros de asistencia</h4>
+            <p>No se encontraron registros de asistencia para el período seleccionado.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .card-header .btn {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

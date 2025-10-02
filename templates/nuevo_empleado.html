@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Empleado - Juancalito SAS{% endblock %}
+{% block page_title %}Registrar Nuevo Empleado{% endblock %}
+
+{% block content %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-left: 4px solid #28a745;
+    }
+    .form-section h6 {
+        color: #28a745;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        background-color: #fff !important;
+        color: #495057 !important;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        background-color: #fff !important;
+        color: #495057 !important;
+    }
+    .form-label {
+        color: #495057 !important;
+        font-weight: 500;
+    }
+    .btn-submit {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 3rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+    .btn-submit:hover {
+        background: linear-gradient(135deg, #218838, #1ea085);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    }
+</style>
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-plus"></i> Registro Completo de Empleado</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="empleadoForm">
+                    <!-- Información Personal -->
+                    <div class="form-section">
+                        <h6><i class="fas fa-user"></i> Información Personal</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre_completo" class="form-label">Nombre Completo *</label>
+                            <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="cedula" class="form-label">Cédula de Identidad *</label>
+                            <input type="text" class="form-control" id="cedula" name="cedula" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento *</label>
+                            <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="genero" class="form-label">Género *</label>
+                            <select class="form-select" id="genero" name="genero" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Masculino">Masculino</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="estado_civil" class="form-label">Estado Civil *</label>
+                            <select class="form-select" id="estado_civil" name="estado_civil" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Soltero">Soltero</option>
+                                <option value="Casado">Casado</option>
+                                <option value="Divorciado">Divorciado</option>
+                                <option value="Viudo">Viudo</option>
+                                <option value="Unión Libre">Unión Libre</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    </div>
+
+                    <!-- Información de Contacto -->
+                    <div class="form-section">
+                        <h6><i class="fas fa-phone"></i> Información de Contacto</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono_principal" class="form-label">Teléfono Principal *</label>
+                            <input type="tel" class="form-control" id="telefono_principal" name="telefono_principal" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono_secundario" class="form-label">Teléfono Secundario</label>
+                            <input type="tel" class="form-control" id="telefono_secundario" name="telefono_secundario">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email_personal" class="form-label">Email Personal *</label>
+                            <input type="email" class="form-control" id="email_personal" name="email_personal" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email_corporativo" class="form-label">Email Corporativo</label>
+                            <input type="email" class="form-control" id="email_corporativo" name="email_corporativo">
+                        </div>
+                    </div>
+
+                    </div>
+
+                    <!-- Dirección -->
+                    <div class="form-section">
+                        <h6><i class="fas fa-map-marker-alt"></i> Dirección de Residencia</h6>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="direccion_residencia" class="form-label">Dirección de Residencia *</label>
+                            <textarea class="form-control" id="direccion_residencia" name="direccion_residencia" rows="2" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="ciudad" class="form-label">Ciudad *</label>
+                            <input type="text" class="form-control" id="ciudad" name="ciudad" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="departamento" class="form-label">Departamento/Estado *</label>
+                            <input type="text" class="form-control" id="departamento" name="departamento" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="codigo_postal" class="form-label">Código Postal</label>
+                            <input type="text" class="form-control" id="codigo_postal" name="codigo_postal">
+                        </div>
+                    </div>
+
+                    </div>
+
+                    <!-- Información Laboral -->
+                    <div class="form-section">
+                        <h6><i class="fas fa-briefcase"></i> Información Laboral</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cargo_puesto" class="form-label">Cargo/Puesto *</label>
+                            <input type="text" class="form-control" id="cargo_puesto" name="cargo_puesto" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="departamento_laboral" class="form-label">Departamento *</label>
+                            <select class="form-select" id="departamento_laboral" name="departamento_laboral" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Poscosecha">Poscosecha</option>
+                                <option value="Cultivo">Cultivo</option>
+                                <option value="Administrativo">Administrativo</option>
+                                <option value="Ventas">Ventas</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Recursos Humanos">Recursos Humanos</option>
+                                <option value="Contabilidad">Contabilidad</option>
+                                <option value="Tecnología">Tecnología</option>
+                                <option value="Logística">Logística</option>
+                                <option value="Calidad">Calidad</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="fecha_ingreso" class="form-label">Fecha de Ingreso *</label>
+                            <input type="date" class="form-control" id="fecha_ingreso" name="fecha_ingreso" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="tipo_contrato" class="form-label">Tipo de Contrato *</label>
+                            <select class="form-select" id="tipo_contrato" name="tipo_contrato" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Temporal">Temporal</option>
+                                <option value="Indefinido">Indefinido</option>
+                                <option value="Por Obra">Por Obra</option>
+                                <option value="Prueba">Prueba</option>
+                                <option value="Obra o Labor">Obra o Labor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="estado_empleado" class="form-label">Estado del Empleado *</label>
+                            <select class="form-select" id="estado_empleado" name="estado_empleado" required>
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                                <option value="Suspendido">Suspendido</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="salario_base" class="form-label">Salario Base *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="salario_base" name="salario_base" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="tipo_salario" class="form-label">Tipo de Salario *</label>
+                            <select class="form-select" id="tipo_salario" name="tipo_salario" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Mensual">Mensual</option>
+                                <option value="Quincenal">Quincenal</option>
+                                <option value="Semanal">Semanal</option>
+                                <option value="Diario">Diario</option>
+                                <option value="Por Hora">Por Hora</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="jornada_laboral" class="form-label">Jornada Laboral *</label>
+                            <select class="form-select" id="jornada_laboral" name="jornada_laboral" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Tiempo Completo">Tiempo Completo</option>
+                                <option value="Medio Tiempo">Medio Tiempo</option>
+                                <option value="Tiempo Parcial">Tiempo Parcial</option>
+                                <option value="Por Horas">Por Horas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="ubicacion_trabajo" class="form-label">Ubicación de Trabajo *</label>
+                            <select class="form-select" id="ubicacion_trabajo" name="ubicacion_trabajo" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Oficina">Oficina</option>
+                                <option value="Remoto">Remoto</option>
+                                <option value="Híbrido">Híbrido</option>
+                                <option value="Campo">Campo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="supervisor" class="form-label">Supervisor</label>
+                            <input type="text" class="form-control" id="supervisor" name="supervisor">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="horario" class="form-label">Horario</label>
+                            <input type="text" class="form-control" id="horario" name="horario" placeholder="Ej: 8:00 AM - 5:00 PM">
+                        </div>
+                    </div>
+
+                    </div>
+
+                    <!-- Seguridad Social -->
+                    <div class="form-section">
+                        <h6><i class="fas fa-shield-alt"></i> Seguridad Social</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="eps" class="form-label">EPS *</label>
+                            <input type="text" class="form-control" id="eps" name="eps" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="arl" class="form-label">ARL *</label>
+                            <input type="text" class="form-control" id="arl" name="arl" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="afp" class="form-label">AFP *</label>
+                            <input type="text" class="form-control" id="afp" name="afp" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="caja_compensacion" class="form-label">Caja de Compensación</label>
+                            <input type="text" class="form-control" id="caja_compensacion" name="caja_compensacion">
+                        </div>
+                    </div>
+
+                    </div>
+
+                    <!-- Contacto de Emergencia -->
+                    <div class="form-section">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Contacto de Emergencia</h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="nombre_contacto_emergencia" class="form-label">Nombre del Contacto *</label>
+                            <input type="text" class="form-control" id="nombre_contacto_emergencia" name="nombre_contacto_emergencia" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="telefono_emergencia" class="form-label">Teléfono de Emergencia *</label>
+                            <input type="tel" class="form-control" id="telefono_emergencia" name="telefono_emergencia" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="parentesco" class="form-label">Parentesco *</label>
+                            <select class="form-select" id="parentesco" name="parentesco" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Cónyuge">Cónyuge</option>
+                                <option value="Hijo(a)">Hijo(a)</option>
+                                <option value="Padre">Padre</option>
+                                <option value="Madre">Madre</option>
+                                <option value="Hermano(a)">Hermano(a)</option>
+                                <option value="Otro Familiar">Otro Familiar</option>
+                                <option value="Amigo(a)">Amigo(a)</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('empleados') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        <button type="submit" class="btn btn-submit">
+                            <i class="fas fa-save fa-lg me-2"></i> Registrar Empleado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Establecer fecha de ingreso por defecto como hoy
+document.addEventListener('DOMContentLoaded', function() {
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha_ingreso').value = hoy;
+});
+
+// Validación del formulario
+document.getElementById('empleadoForm').addEventListener('submit', function(e) {
+    const camposRequeridos = document.querySelectorAll('[required]');
+    let valido = true;
+    
+    camposRequeridos.forEach(campo => {
+        if (!campo.value.trim()) {
+            valido = false;
+            campo.classList.add('is-invalid');
+        } else {
+            campo.classList.remove('is-invalid');
+        }
+    });
+    
+    if (!valido) {
+        e.preventDefault();
+        alert('Por favor complete todos los campos obligatorios marcados con *');
+    }
+});
+</script>
+{% endblock %}

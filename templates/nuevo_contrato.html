@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Contrato - Sistema de Gestión{% endblock %}
+{% block page_title %}Nuevo Contrato{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-file-contract"></i> Registrar Nuevo Contrato</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="empleado_id" class="form-label">Empleado *</label>
+                            <select class="form-select" id="empleado_id" name="empleado_id" required>
+                                <option value="">Seleccionar empleado...</option>
+                                {% for empleado in empleados %}
+                                <option value="{{ empleado.id }}">{{ empleado.nombre }} {{ empleado.apellido }} - {{ empleado.cedula }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="tipo_contrato" class="form-label">Tipo de Contrato *</label>
+                            <select class="form-select" id="tipo_contrato" name="tipo_contrato" required>
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="Temporal">Temporal</option>
+                                <option value="Indefinido">Indefinido</option>
+                                <option value="Por Obra">Por Obra</option>
+                                <option value="Prueba">Prueba</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_fin" class="form-label">Fecha de Fin</label>
+                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin">
+                            <div class="form-text">Dejar vacío para contratos indefinidos</div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="salario" class="form-label">Salario *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="salario" name="salario" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción del Contrato</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="4" 
+                                  placeholder="Detalles adicionales del contrato, responsabilidades, etc."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('contratos') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar Contrato
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validación del tipo de contrato
+document.getElementById('tipo_contrato').addEventListener('change', function() {
+    const fechaFin = document.getElementById('fecha_fin');
+    if (this.value === 'Indefinido') {
+        fechaFin.disabled = true;
+        fechaFin.value = '';
+    } else {
+        fechaFin.disabled = false;
+    }
+});
+</script>
+{% endblock %}
