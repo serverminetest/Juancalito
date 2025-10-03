@@ -75,7 +75,7 @@ def generar_contrato_excel(contrato_id):
             'SALARIO_NUMEROS': f"$ {contrato.salario:,.0f}",
             'SALARIO': f"$ {contrato.salario:,.0f}",
             'SALARIO_LETRAS': convertir_numero_a_letras(contrato.salario),
-            'VALOR_EN_LETRAS': convertir_numero_a_letras(contrato.salario),
+            'VALOR_LETRAS': convertir_numero_a_letras(contrato.salario),
             'FECHA_INICIO_LABORES': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
             'FECHA_INICIO': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
             'FECHA_FIN': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
