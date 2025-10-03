@@ -78,14 +78,14 @@
                                 
                                 <!-- Botón Regenerar -->
                                 <button type="button" class="btn btn-sm btn-outline-warning" 
-                                        onclick="confirmarRegenerar({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo }}')"
+                                        onclick="confirmarRegenerar({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo|replace("'", "\\'")|replace('"', '\\"') }}')"
                                         title="Regenerar contrato">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                                 
                                 <!-- Botón Eliminar -->
                                 <button type="button" class="btn btn-sm btn-outline-danger" 
-                                        onclick="confirmarEliminarContrato({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo }}')"
+                                        onclick="confirmarEliminarContrato({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo|replace("'", "\\'")|replace('"', '\\"') }}')"
                                         title="Eliminar contrato">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -236,95 +236,163 @@
 <script>
 let contratoIdActual = null;
 
+// Función de debugging
+function debugLog(message, data = null) {
+    console.log(`[DEBUG] ${message}`, data || '');
+}
+
+// Verificar que Bootstrap esté cargado
+if (typeof bootstrap === 'undefined') {
+    console.error('Bootstrap no está cargado');
+} else {
+    debugLog('Bootstrap cargado correctamente');
+}
+
 function vistaPreviaContrato(id) {
+    console.log('vistaPreviaContrato llamado con ID:', id);
     contratoIdActual = id;
-    document.getElementById('contenidoVistaPrevia').innerHTML = `
-        <div class="text-center">
-            <i class="fas fa-spinner fa-spin fa-2x"></i>
-            <p>Cargando vista previa...</p>
-        </div>
-    `;
     
-    const modal = new bootstrap.Modal(document.getElementById('modalVistaPrevia'));
-    modal.show();
+    const contenidoElement = document.getElementById('contenidoVistaPrevia');
+    if (contenidoElement) {
+        contenidoElement.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Cargando vista previa...</p>
+            </div>
+        `;
+    }
+    
+    const modalElement = document.getElementById('modalVistaPrevia');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('Modal vista previa no encontrado');
+        return;
+    }
     
     // Cargar vista previa real desde el servidor
+    console.log('Cargando vista previa desde:', `/contratos/vista_previa/${id}`);
     fetch(`/contratos/vista_previa/${id}`)
-        .then(response => response.json())
+        .then(response => {
+            console.log('Respuesta recibida:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Datos recibidos:', data);
             if (data.success) {
-                document.getElementById('contenidoVistaPrevia').innerHTML = data.html;
+                if (contenidoElement) {
+                    contenidoElement.innerHTML = data.html;
+                }
             } else {
-                document.getElementById('contenidoVistaPrevia').innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Error:</strong> ${data.message}
-                    </div>
-                `;
+                if (contenidoElement) {
+                    contenidoElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Error:</strong> ${data.message}
+                        </div>
+                    `;
+                }
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('contenidoVistaPrevia').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Error:</strong> No se pudo cargar la vista previa del contrato.
-                    <br>Puedes descargar el archivo Excel para verlo directamente.
-                </div>
-            `;
+            console.error('Error en fetch:', error);
+            if (contenidoElement) {
+                contenidoElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> No se pudo cargar la vista previa del contrato.
+                        <br>Puedes descargar el archivo Excel para verlo directamente.
+                    </div>
+                `;
+            }
         });
 }
 
 function confirmarRegenerar(id, nombre) {
+    console.log('confirmarRegenerar llamado con ID:', id, 'Nombre:', nombre);
     contratoIdActual = id;
-    document.getElementById('nombreEmpleadoRegenerar').textContent = nombre;
-    const modal = new bootstrap.Modal(document.getElementById('modalRegenerar'));
-    modal.show();
+    
+    const nombreElement = document.getElementById('nombreEmpleadoRegenerar');
+    if (nombreElement) {
+        nombreElement.textContent = nombre;
+    }
+    
+    const modalElement = document.getElementById('modalRegenerar');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('Modal regenerar no encontrado');
+    }
 }
 
 function confirmarEliminarContrato(id, nombre) {
+    console.log('confirmarEliminarContrato llamado con ID:', id, 'Nombre:', nombre);
     contratoIdActual = id;
-    document.getElementById('nombreEmpleadoEliminarContrato').textContent = nombre;
-    const modal = new bootstrap.Modal(document.getElementById('modalEliminarContrato'));
-    modal.show();
+    
+    const nombreElement = document.getElementById('nombreEmpleadoEliminarContrato');
+    if (nombreElement) {
+        nombreElement.textContent = nombre;
+    }
+    
+    const modalElement = document.getElementById('modalEliminarContrato');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('Modal eliminar no encontrado');
+    }
 }
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('confirmarRegenerar').addEventListener('click', function() {
-        if (contratoIdActual) {
-            window.location.href = `/contratos/regenerar/${contratoIdActual}`;
-        }
-    });
+    // Event listener para regenerar
+    const btnRegenerar = document.getElementById('confirmarRegenerar');
+    if (btnRegenerar) {
+        btnRegenerar.addEventListener('click', function() {
+            if (contratoIdActual) {
+                window.location.href = `/contratos/regenerar/${contratoIdActual}`;
+            }
+        });
+    }
 
-    document.getElementById('confirmarEliminarContrato').addEventListener('click', function() {
-        if (contratoIdActual) {
-            fetch(`/contratos/eliminar_generado/${contratoIdActual}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al eliminar el contrato');
-            });
-        }
-    });
+    // Event listener para eliminar
+    const btnEliminar = document.getElementById('confirmarEliminarContrato');
+    if (btnEliminar) {
+        btnEliminar.addEventListener('click', function() {
+            if (contratoIdActual) {
+                fetch(`/contratos/eliminar_generado/${contratoIdActual}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar el contrato');
+                });
+            }
+        });
+    }
 
-    document.getElementById('descargarDesdeVista').addEventListener('click', function() {
-        if (contratoIdActual) {
-            window.location.href = `/contratos/descargar/${contratoIdActual}`;
-        }
-    });
+    // Event listener para descargar desde vista previa
+    const btnDescargarVista = document.getElementById('descargarDesdeVista');
+    if (btnDescargarVista) {
+        btnDescargarVista.addEventListener('click', function() {
+            if (contratoIdActual) {
+                window.location.href = `/contratos/descargar/${contratoIdActual}`;
+            }
+        });
+    }
 });
 
 function imprimirVistaPrevia() {
