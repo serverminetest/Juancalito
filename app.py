@@ -97,13 +97,16 @@ def generar_contrato_excel(contrato_id):
             return contrato_generado
         except Exception as db_error:
             print(f"Error al guardar en base de datos: {str(db_error)}")
-            # Si hay error de BD, al menos el archivo se generó
-            return {
-                'nombre_archivo': nombre_archivo,
-                'ruta_archivo': ruta_archivo,
-                'empleado': empleado,
-                'contrato': contrato
-            }
+            # Si hay error de BD, crear un objeto mock que simule ContratoGenerado
+            class MockContratoGenerado:
+                def __init__(self, nombre_archivo, ruta_archivo, empleado, contrato):
+                    self.nombre_archivo = nombre_archivo
+                    self.ruta_archivo = ruta_archivo
+                    self.empleado = empleado
+                    self.contrato = contrato
+                    self.id = None  # No tiene ID porque no se guardó en BD
+            
+            return MockContratoGenerado(nombre_archivo, ruta_archivo, empleado, contrato)
         
     except Exception as e:
         print(f"Error al generar contrato: {str(e)}")
@@ -1015,8 +1018,13 @@ def generar_contrato(id):
 @login_required
 def contratos_generados():
     """Lista de contratos generados"""
-    contratos_generados = ContratoGenerado.query.join(Empleado).join(Contrato).order_by(ContratoGenerado.fecha_generacion.desc()).all()
-    return render_template('contratos_generados.html', contratos_generados=contratos_generados)
+    try:
+        contratos_generados = ContratoGenerado.query.join(Empleado).join(Contrato).order_by(ContratoGenerado.fecha_generacion.desc()).all()
+        return render_template('contratos_generados.html', contratos_generados=contratos_generados)
+    except Exception as e:
+        print(f"Error al cargar contratos generados: {str(e)}")
+        flash('Error al cargar contratos generados. La tabla puede no existir aún.', 'error')
+        return render_template('contratos_generados.html', contratos_generados=[])
 
 @app.route('/contratos/descargar/<int:id>')
 @login_required

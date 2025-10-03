@@ -74,19 +74,17 @@
                                 
                                 <!-- Botón Desactivar/Activar -->
                                 {% if contrato.activo %}
-                                    <a href="{{ url_for('desactivar_contrato', id=contrato.id) }}" 
-                                       class="btn btn-sm btn-outline-warning" 
-                                       title="Desactivar contrato"
-                                       onclick="return confirm('¿Desactivar contrato de {{ contrato.empleado.nombre_completo }}?')">
+                                    <button type="button" class="btn btn-sm btn-outline-warning" 
+                                            title="Desactivar contrato"
+                                            onclick="confirmarDesactivar({{ contrato.id }}, '{{ contrato.empleado.nombre_completo }}')">
                                         <i class="fas fa-pause"></i>
-                                    </a>
+                                    </button>
                                 {% else %}
-                                    <a href="{{ url_for('activar_contrato', id=contrato.id) }}" 
-                                       class="btn btn-sm btn-outline-success" 
-                                       title="Activar contrato"
-                                       onclick="return confirm('¿Activar contrato de {{ contrato.empleado.nombre_completo }}?')">
+                                    <button type="button" class="btn btn-sm btn-outline-success" 
+                                            title="Activar contrato"
+                                            onclick="confirmarActivar({{ contrato.id }}, '{{ contrato.empleado.nombre_completo }}')">
                                         <i class="fas fa-play"></i>
-                                    </a>
+                                    </button>
                                 {% endif %}
                                 
                                 <!-- Botón Eliminar -->
@@ -128,10 +126,99 @@
     </div>
 </div>
 
+<!-- Modal de Confirmación para Desactivar -->
+<div class="modal fade" id="modalDesactivar" tabindex="-1" aria-labelledby="modalDesactivarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title" id="modalDesactivarLabel">
+                    <i class="fas fa-pause me-2"></i>Desactivar Contrato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>desactivar</strong> el contrato de:</p>
+                <div class="alert alert-warning">
+                    <strong id="nombreEmpleadoDesactivar"></strong>
+                </div>
+                <p class="text-muted">El contrato se marcará como inactivo pero no se eliminará.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="confirmarDesactivar">
+                    <i class="fas fa-pause me-1"></i>Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Activar -->
+<div class="modal fade" id="modalActivar" tabindex="-1" aria-labelledby="modalActivarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalActivarLabel">
+                    <i class="fas fa-play me-2"></i>Activar Contrato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>activar</strong> el contrato de:</p>
+                <div class="alert alert-success">
+                    <strong id="nombreEmpleadoActivar"></strong>
+                </div>
+                <p class="text-muted">El contrato volverá a estar activo y disponible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="confirmarActivar">
+                    <i class="fas fa-play me-1"></i>Activar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Eliminar -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalEliminarLabel">
+                    <i class="fas fa-trash me-2"></i>Eliminar Contrato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>eliminar permanentemente</strong> el contrato de:</p>
+                <div class="alert alert-danger">
+                    <strong id="nombreEmpleadoEliminar"></strong>
+                </div>
+                <p class="text-muted"><strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminar">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+let contratoIdActual = null;
+
 function verDetalles(id) {
     // Aquí podrías hacer una llamada AJAX para obtener los detalles del contrato
     document.getElementById('detallesContenido').innerHTML = `
@@ -142,5 +229,69 @@ function verDetalles(id) {
     `;
     new bootstrap.Modal(document.getElementById('detallesModal')).show();
 }
+
+function confirmarDesactivar(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoDesactivar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalDesactivar'));
+    modal.show();
+}
+
+function confirmarActivar(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoActivar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalActivar'));
+    modal.show();
+}
+
+function eliminarContrato(id) {
+    contratoIdActual = id;
+    // Obtener el nombre del empleado desde el botón
+    const button = event.target.closest('button');
+    const row = button.closest('tr');
+    const nombre = row.querySelector('td:nth-child(2)').textContent.trim();
+    
+    document.getElementById('nombreEmpleadoEliminar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+    modal.show();
+}
+
+// Event listeners para los botones de confirmación
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmarDesactivar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            window.location.href = `/contratos/desactivar/${contratoIdActual}`;
+        }
+    });
+
+    document.getElementById('confirmarActivar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            window.location.href = `/contratos/activar/${contratoIdActual}`;
+        }
+    });
+
+    document.getElementById('confirmarEliminar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            fetch(`/contratos/eliminar/${contratoIdActual}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al eliminar el contrato');
+            });
+        }
+    });
+});
 </script>
 {% endblock %}
