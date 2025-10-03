@@ -2,12 +2,19 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import os
 import qrcode
 import io
 import hashlib
 import secrets
+
+# Configurar zona horaria de Colombia (UTC-5)
+COLOMBIA_TZ = timezone(timedelta(hours=-5))
+
+def colombia_now():
+    """Devuelve la fecha y hora actual en zona horaria de Colombia"""
+    return datetime.now(COLOMBIA_TZ)
 
 app = Flask(__name__)
 
@@ -97,8 +104,8 @@ class Empleado(db.Model):
     parentesco = db.Column(db.String(50), nullable=False)
     
     # Campos del sistema
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=colombia_now)
+    updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
 
 class Contrato(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -109,7 +116,7 @@ class Contrato(db.Model):
     salario = db.Column(db.Float, nullable=False)
     descripcion = db.Column(db.Text)
     activo = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=colombia_now)
     
     empleado = db.relationship('Empleado', backref=db.backref('contratos', lazy=True))
 
@@ -122,7 +129,7 @@ class Asistencia(db.Model):
     horas_trabajadas = db.Column(db.Float)
     observaciones = db.Column(db.Text)
     token_diario = db.Column(db.String(100))  # Token del día para validación
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=colombia_now)
     
     empleado = db.relationship('Empleado', backref=db.backref('asistencias', lazy=True))
     
@@ -145,7 +152,7 @@ class Visitante(db.Model):
     motivo_visita = db.Column(db.Text, nullable=False)
     
     # Control de Entrada/Salida
-    fecha_entrada = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_entrada = db.Column(db.DateTime, default=colombia_now)
     fecha_salida = db.Column(db.DateTime)
     estado_visita = db.Column(db.String(20), default='En visita')  # En visita, Finalizada
     
@@ -156,8 +163,8 @@ class Visitante(db.Model):
     
     # Campos del sistema
     activo = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=colombia_now)
+    updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -803,14 +810,14 @@ def registrar_entrada_salida_visitante(id):
     
     if visitante.estado_visita == 'En visita':
         # Registrar salida
-        visitante.fecha_salida = datetime.utcnow()
+        visitante.fecha_salida = colombia_now()
         visitante.estado_visita = 'Finalizada'
         visitante.activo = False
         db.session.commit()
         flash(f'Salida registrada para {visitante.nombre} {visitante.apellido} a las {visitante.fecha_salida.strftime("%H:%M")}', 'success')
     else:
         # Registrar entrada (nuevo visitante)
-        visitante.fecha_entrada = datetime.utcnow()
+        visitante.fecha_entrada = colombia_now()
         visitante.estado_visita = 'En visita'
         visitante.activo = True
         visitante.fecha_salida = None
