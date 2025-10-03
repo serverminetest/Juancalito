@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta, timezone
+from sqlalchemy import text
 import os
 import qrcode
 import io
@@ -84,6 +85,23 @@ def generar_contrato_excel(contrato_id):
         
         # Verificar si la tabla contrato_generado existe antes de insertar
         try:
+            # Intentar crear la tabla si no existe
+            try:
+                db.engine.execute(text("""
+                    CREATE TABLE IF NOT EXISTS contrato_generado (
+                        id SERIAL PRIMARY KEY,
+                        empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+                        contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+                        nombre_archivo VARCHAR(255) NOT NULL,
+                        ruta_archivo VARCHAR(500) NOT NULL,
+                        fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        activo BOOLEAN DEFAULT TRUE
+                    );
+                """))
+                print("✅ Tabla contrato_generado creada/verificada en generar_contrato_excel")
+            except Exception as create_error:
+                print(f"⚠️ No se pudo crear la tabla en generar_contrato_excel: {create_error}")
+            
             # Registrar en la base de datos
             contrato_generado = ContratoGenerado(
                 empleado_id=empleado.id,
@@ -1019,6 +1037,23 @@ def generar_contrato(id):
 def contratos_generados():
     """Lista de contratos generados"""
     try:
+        # Intentar crear la tabla si no existe
+        try:
+            db.engine.execute(text("""
+                CREATE TABLE IF NOT EXISTS contrato_generado (
+                    id SERIAL PRIMARY KEY,
+                    empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+                    contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+                    nombre_archivo VARCHAR(255) NOT NULL,
+                    ruta_archivo VARCHAR(500) NOT NULL,
+                    fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    activo BOOLEAN DEFAULT TRUE
+                );
+            """))
+            print("✅ Tabla contrato_generado creada/verificada")
+        except Exception as create_error:
+            print(f"⚠️ No se pudo crear la tabla: {create_error}")
+        
         contratos_generados = ContratoGenerado.query.join(Empleado).join(Contrato).order_by(ContratoGenerado.fecha_generacion.desc()).all()
         return render_template('contratos_generados.html', contratos_generados=contratos_generados)
     except Exception as e:
