@@ -171,9 +171,8 @@
                                 </form>
                                 
                                 <!-- Botón de Ver Detalles -->
-                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#detallesModal{{ visitante.id }}"
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="abrirModalDetalles({{ visitante.id }})"
                                         title="Ver detalles completos">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -183,7 +182,7 @@
                             <div class="modal fade" id="detallesModal{{ visitante.id }}" tabindex="-1" aria-labelledby="detallesModalLabel{{ visitante.id }}" aria-hidden="true">
                                 <div class="modal-dialog modal-lg">
                                     <div class="modal-content">
-                                        <div class="modal-header bg-info text-white">
+                                        <div class="modal-header bg-success text-white">
                                             <h5 class="modal-title" id="detallesModalLabel{{ visitante.id }}">
                                                 <i class="fas fa-user me-2"></i>
                                                 Detalles del Visitante
@@ -341,13 +340,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('visitasHoy').textContent = visitasHoy;
 });
 
-// Auto-refresh cada 30 segundos para mostrar visitantes en tiempo real
-setInterval(function() {
-    // Solo recargar si hay visitantes activos
-    const visitantesActivos = {{ visitantes|selectattr('estado_visita', 'equalto', 'En visita')|list|length }};
-    if (visitantesActivos > 0) {
-        location.reload();
-    }
-}, 30000);
+// Auto-refresh eliminado para evitar interrupciones del usuario
+
+// Función para abrir modal de detalles
+function abrirModalDetalles(visitanteId) {
+    const modal = new bootstrap.Modal(document.getElementById('detallesModal' + visitanteId));
+    modal.show();
+}
 </script>
 {% endblock %}
