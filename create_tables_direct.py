@@ -102,6 +102,7 @@ def create_tables_direct():
             contrato_id INTEGER NOT NULL REFERENCES contrato(id),
             nombre_archivo VARCHAR(255) NOT NULL,
             ruta_archivo VARCHAR(500) NOT NULL,
+            archivo_data BYTEA,
             fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             activo BOOLEAN DEFAULT TRUE
         );

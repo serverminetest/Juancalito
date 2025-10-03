@@ -97,6 +97,10 @@ def generar_contrato_excel(contrato_id):
         # Guardar el archivo
         workbook.save(ruta_archivo)
         
+        # Leer el archivo como datos binarios
+        with open(ruta_archivo, 'rb') as f:
+            archivo_data = f.read()
+        
         # Verificar si la tabla contrato_generado existe antes de insertar
         try:
             # Intentar crear la tabla si no existe
@@ -109,6 +113,7 @@ def generar_contrato_excel(contrato_id):
                             contrato_id INTEGER NOT NULL REFERENCES contrato(id),
                             nombre_archivo VARCHAR(255) NOT NULL,
                             ruta_archivo VARCHAR(500) NOT NULL,
+                            archivo_data BYTEA,
                             fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                             activo BOOLEAN DEFAULT TRUE
                         );
@@ -118,29 +123,39 @@ def generar_contrato_excel(contrato_id):
             except Exception as create_error:
                 print(f"⚠️ No se pudo crear la tabla en generar_contrato_excel: {create_error}")
             
-            # Registrar en la base de datos
+            # Registrar en la base de datos con datos binarios
             contrato_generado = ContratoGenerado(
                 empleado_id=empleado.id,
                 contrato_id=contrato.id,
                 nombre_archivo=nombre_archivo,
-                ruta_archivo=ruta_archivo
+                ruta_archivo=ruta_archivo,
+                archivo_data=archivo_data
             )
             db.session.add(contrato_generado)
             db.session.commit()
             
+            # Limpiar archivo temporal (opcional, ya que tenemos los datos en BD)
+            try:
+                os.remove(ruta_archivo)
+                print(f"✅ Archivo temporal eliminado: {ruta_archivo}")
+            except:
+                pass  # No es crítico si no se puede eliminar
+            
+            print(f"✅ Contrato generado y guardado en BD: {nombre_archivo}")
             return contrato_generado
         except Exception as db_error:
             print(f"Error al guardar en base de datos: {str(db_error)}")
             # Si hay error de BD, crear un objeto mock que simule ContratoGenerado
             class MockContratoGenerado:
-                def __init__(self, nombre_archivo, ruta_archivo, empleado, contrato):
+                def __init__(self, nombre_archivo, ruta_archivo, empleado, contrato, archivo_data):
                     self.nombre_archivo = nombre_archivo
                     self.ruta_archivo = ruta_archivo
+                    self.archivo_data = archivo_data
                     self.empleado = empleado
                     self.contrato = contrato
                     self.id = None  # No tiene ID porque no se guardó en BD
             
-            return MockContratoGenerado(nombre_archivo, ruta_archivo, empleado, contrato)
+            return MockContratoGenerado(nombre_archivo, ruta_archivo, empleado, contrato, archivo_data)
         
     except Exception as e:
         print(f"Error al generar contrato: {str(e)}")
@@ -521,6 +536,7 @@ class ContratoGenerado(db.Model):
     contrato_id = db.Column(db.Integer, db.ForeignKey('contrato.id'), nullable=False)
     nombre_archivo = db.Column(db.String(255), nullable=False)
     ruta_archivo = db.Column(db.String(500), nullable=False)
+    archivo_data = db.Column(db.LargeBinary, nullable=True)  # Datos binarios del archivo
     fecha_generacion = db.Column(db.DateTime, default=colombia_now)
     activo = db.Column(db.Boolean, default=True)
     
@@ -1331,16 +1347,28 @@ def descargar_contrato(id):
     """Descargar contrato generado"""
     contrato_generado = ContratoGenerado.query.get_or_404(id)
     
-    if not os.path.exists(contrato_generado.ruta_archivo):
-        flash('El archivo del contrato no existe', 'error')
-        return redirect(url_for('contratos_generados'))
-    
-    return send_file(
-        contrato_generado.ruta_archivo,
-        as_attachment=True,
-        download_name=contrato_generado.nombre_archivo,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    # Verificar si tenemos datos binarios en la base de datos
+    if contrato_generado.archivo_data:
+        # Crear respuesta desde datos binarios
+        from io import BytesIO
+        return send_file(
+            BytesIO(contrato_generado.archivo_data),
+            as_attachment=True,
+            download_name=contrato_generado.nombre_archivo,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    else:
+        # Fallback: intentar desde archivo (para contratos antiguos)
+        if os.path.exists(contrato_generado.ruta_archivo):
+            return send_file(
+                contrato_generado.ruta_archivo,
+                as_attachment=True,
+                download_name=contrato_generado.nombre_archivo,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        else:
+            flash('El archivo del contrato no existe', 'error')
+            return redirect(url_for('contratos_generados'))
 
 @app.route('/contratos/regenerar/<int:id>')
 @login_required
@@ -1399,15 +1427,22 @@ def vista_previa_contrato(id):
     try:
         contrato_generado = ContratoGenerado.query.get_or_404(id)
         
-        # Verificar que el archivo existe
-        if not os.path.exists(contrato_generado.ruta_archivo):
-            return jsonify({
-                'success': False,
-                'message': 'El archivo del contrato no existe'
-            }), 404
+        # Verificar si tenemos datos binarios en la base de datos
+        if contrato_generado.archivo_data:
+            # Leer desde datos binarios
+            from io import BytesIO
+            workbook = openpyxl.load_workbook(BytesIO(contrato_generado.archivo_data))
+        else:
+            # Fallback: intentar desde archivo (para contratos antiguos)
+            if not os.path.exists(contrato_generado.ruta_archivo):
+                return jsonify({
+                    'success': False,
+                    'message': 'El archivo del contrato no existe'
+                }), 404
+            
+            # Leer el archivo Excel
+            workbook = openpyxl.load_workbook(contrato_generado.ruta_archivo)
         
-        # Leer el archivo Excel
-        workbook = openpyxl.load_workbook(contrato_generado.ruta_archivo)
         worksheet = workbook.active
         
         # Convertir a HTML
@@ -1454,12 +1489,12 @@ def eliminar_contrato_generado(id):
         contrato_generado = ContratoGenerado.query.get_or_404(id)
         empleado_nombre = contrato_generado.empleado.nombre_completo
         
-        # Eliminar el archivo si existe
+        # Eliminar el archivo si existe (para contratos antiguos)
         if os.path.exists(contrato_generado.ruta_archivo):
             os.remove(contrato_generado.ruta_archivo)
             print(f"✅ Archivo eliminado: {contrato_generado.ruta_archivo}")
         
-        # Eliminar el registro de la base de datos
+        # Eliminar el registro de la base de datos (incluye datos binarios)
         db.session.delete(contrato_generado)
         db.session.commit()
         
