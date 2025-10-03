@@ -69,17 +69,17 @@ def generar_contrato_excel(contrato_id):
             'DIRECCION_EMPLEADO': (empleado.direccion_residencia or 'NO ESPECIFICADA').upper(),
             'DIRECCION_TRABAJADOR': (empleado.direccion_residencia or 'NO ESPECIFICADA').upper(),
             'LUGAR_NACIMIENTO': (empleado.ciudad or 'BOGOTÁ, COLOMBIA').upper(),
-            'FECHA_NACIMIENTO': empleado.fecha_nacimiento.strftime('%d DE %B DE %Y').upper(),
+            'FECHA_NACIMIENTO': convertir_fecha_espanol(empleado.fecha_nacimiento),
             'CARGO_EMPLEADO': (empleado.cargo_puesto or 'NO ESPECIFICADO').upper(),
             'CARGO': (empleado.cargo_puesto or 'NO ESPECIFICADO').upper(),
             'SALARIO_NUMEROS': f"$ {contrato.salario:,.0f}",
             'SALARIO': f"$ {contrato.salario:,.0f}",
             'SALARIO_LETRAS': convertir_numero_a_letras(contrato.salario),
             'VALOR_LETRAS': convertir_numero_a_letras(contrato.salario),
-            'FECHA_INICIO_LABORES': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
-            'FECHA_INICIO': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
-            'FECHA_FIN': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
-            'VENCE_EL_DIA': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
+            'FECHA_INICIO_LABORES': convertir_fecha_espanol(contrato.fecha_inicio),
+            'FECHA_INICIO': convertir_fecha_espanol(contrato.fecha_inicio),
+            'FECHA_FIN': convertir_fecha_espanol(contrato.fecha_fin) if contrato.fecha_fin else 'INDEFINIDO',
+            'VENCE_EL_DIA': convertir_fecha_espanol(contrato.fecha_fin) if contrato.fecha_fin else 'INDEFINIDO',
             'LUGAR_LABORES': 'FLORES JUNCALITO S.A.S',
             'LUGAR_TRABAJO': 'FLORES JUNCALITO S.A.S',
             'CIUDAD_CONTRATACION': 'EL ROSAL CUNDINAMARCA',
@@ -301,6 +301,28 @@ def convertir_centenas_miles(numero):
                 resultado += decenas[decena] + " Y " + unidades[unidad]
     
     return resultado
+
+def convertir_fecha_espanol(fecha):
+    """Convierte una fecha a formato español"""
+    if fecha is None:
+        return 'INDEFINIDO'
+    
+    # Mapeo de meses en inglés a español
+    meses_espanol = {
+        1: 'ENERO', 2: 'FEBRERO', 3: 'MARZO', 4: 'ABRIL',
+        5: 'MAYO', 6: 'JUNIO', 7: 'JULIO', 8: 'AGOSTO',
+        9: 'SEPTIEMBRE', 10: 'OCTUBRE', 11: 'NOVIEMBRE', 12: 'DICIEMBRE'
+    }
+    
+    try:
+        dia = fecha.day
+        mes = meses_espanol[fecha.month]
+        año = fecha.year
+        
+        return f"{dia} DE {mes} DE {año}"
+    except Exception as e:
+        print(f"Error al convertir fecha: {str(e)}")
+        return str(fecha)
 
 app = Flask(__name__)
 
@@ -1290,7 +1312,7 @@ def regenerar_contrato(id):
         flash(f'Error al regenerar el contrato: {str(e)}', 'error')
         return redirect(url_for('contratos_generados'))
 
-@app.route('/contratos/eliminar_generado/<int:id>', methods=['DELETE'])
+@app.route('/contratos/eliminar_generado/<int:id>', methods=['DELETE', 'POST'])
 @login_required
 def eliminar_contrato_generado(id):
     """Eliminar contrato generado"""
@@ -1326,18 +1348,31 @@ def eliminar_contrato_generado(id):
         db.session.delete(contrato_generado)
         db.session.commit()
         
-        return jsonify({
-            'success': True,
-            'message': f'Contrato de {empleado_nombre} eliminado exitosamente'
-        })
+        # Si es una petición AJAX, devolver JSON
+        if request.headers.get('Content-Type') == 'application/json' or request.method == 'DELETE':
+            return jsonify({
+                'success': True,
+                'message': f'Contrato de {empleado_nombre} eliminado exitosamente'
+            })
+        else:
+            # Si es una petición normal, redirigir
+            flash(f'Contrato de {empleado_nombre} eliminado exitosamente', 'success')
+            return redirect(url_for('contratos_generados'))
         
     except Exception as e:
         db.session.rollback()
         print(f"Error al eliminar contrato generado: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': f'Error al eliminar el contrato: {str(e)}'
-        }), 500
+        
+        # Si es una petición AJAX, devolver JSON
+        if request.headers.get('Content-Type') == 'application/json' or request.method == 'DELETE':
+            return jsonify({
+                'success': False,
+                'message': f'Error al eliminar el contrato: {str(e)}'
+            }), 500
+        else:
+            # Si es una petición normal, redirigir con error
+            flash(f'Error al eliminar contrato: {str(e)}', 'error')
+            return redirect(url_for('contratos_generados'))
 
 @app.route('/visitantes/nuevo', methods=['GET', 'POST'])
 @login_required
