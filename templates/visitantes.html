@@ -4,6 +4,22 @@
 {% block page_title %}Control de Visitantes{% endblock %}
 
 {% block content %}
+<style>
+/* Estilos para evitar parpadeo del modal */
+.modal {
+    transition: none !important;
+}
+.modal.fade .modal-dialog {
+    transition: none !important;
+}
+.modal-backdrop {
+    transition: none !important;
+}
+/* Asegurar que el modal se mantenga estable */
+.modal-dialog {
+    margin: 1.75rem auto;
+}
+</style>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-user-friends"></i> Registro de Visitantes</h2>
     <a href="{{ url_for('nuevo_visitante') }}" class="btn btn-success">
@@ -344,8 +360,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Función para abrir modal de detalles
 function abrirModalDetalles(visitanteId) {
-    const modal = new bootstrap.Modal(document.getElementById('detallesModal' + visitanteId));
-    modal.show();
+    // Cerrar cualquier modal abierto primero
+    const modalesAbiertos = document.querySelectorAll('.modal.show');
+    modalesAbiertos.forEach(modal => {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) {
+            bsModal.hide();
+        }
+    });
+    
+    // Esperar un momento y luego abrir el nuevo modal
+    setTimeout(function() {
+        const modalElement = document.getElementById('detallesModal' + visitanteId);
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+            modal.show();
+        }
+    }, 100);
 }
 </script>
 {% endblock %}
