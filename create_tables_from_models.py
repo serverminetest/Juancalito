@@ -22,6 +22,8 @@ def create_tables_from_models():
         print("❌ ERROR: DATABASE_URL o DATABASE_PUBLIC_URL no configurada")
         return False
     
+    print(f"📡 Usando URL: {database_url[:50]}...")
+    
     try:
         # Configurar la aplicación con la URL de la base de datos
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
