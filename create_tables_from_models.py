@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Importar los modelos de la aplicación
 sys.path.append('.')
-from app import app, db, User, Empleado, Asistencia, Visitante, ContactoEmergencia
+from app import app, db, User, Empleado, Asistencia, Visitante
 
 def create_tables_from_models():
     """Crea las tablas usando los modelos de SQLAlchemy"""
