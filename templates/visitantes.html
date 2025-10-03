@@ -146,27 +146,96 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="POST" action="{{ url_for('registrar_entrada_salida_visitante', id=visitante.id) }}" style="display: inline;">
-                                {% if visitante.estado_visita == 'En visita' %}
-                                    <button type="submit" class="btn btn-sm btn-danger" 
-                                            onclick="return confirm('¿Registrar SALIDA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
-                                            title="Registrar salida">
-                                        <i class="fas fa-sign-out-alt"></i> SALIDA
-                                    </button>
-                                {% elif visitante.estado_visita == 'Pendiente' %}
-                                    <button type="submit" class="btn btn-sm btn-success" 
-                                            onclick="return confirm('¿Registrar ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
-                                            title="Registrar entrada">
-                                        <i class="fas fa-sign-in-alt"></i> ENTRADA
-                                    </button>
-                                {% else %}
-                                    <button type="submit" class="btn btn-sm btn-primary" 
-                                            onclick="return confirm('¿Registrar NUEVA ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
-                                            title="Registrar nueva entrada">
-                                        <i class="fas fa-redo"></i> NUEVA ENTRADA
-                                    </button>
-                                {% endif %}
-                            </form>
+                            <div class="btn-group" role="group">
+                                <!-- Botón de Entrada/Salida -->
+                                <form method="POST" action="{{ url_for('registrar_entrada_salida_visitante', id=visitante.id) }}" style="display: inline;">
+                                    {% if visitante.estado_visita == 'En visita' %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                onclick="return confirm('¿Registrar SALIDA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
+                                                title="Registrar salida">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                        </button>
+                                    {% elif visitante.estado_visita == 'Pendiente' %}
+                                        <button type="submit" class="btn btn-sm btn-outline-success" 
+                                                onclick="return confirm('¿Registrar ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
+                                                title="Registrar entrada">
+                                            <i class="fas fa-sign-in-alt"></i>
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" 
+                                                onclick="return confirm('¿Registrar NUEVA ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
+                                                title="Registrar nueva entrada">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    {% endif %}
+                                </form>
+                                
+                                <!-- Botón de Ver Detalles -->
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#detallesModal{{ visitante.id }}"
+                                        title="Ver detalles completos">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Modal de Detalles -->
+                            <div class="modal fade" id="detallesModal{{ visitante.id }}" tabindex="-1" aria-labelledby="detallesModalLabel{{ visitante.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-info text-white">
+                                            <h5 class="modal-title" id="detallesModalLabel{{ visitante.id }}">
+                                                <i class="fas fa-user me-2"></i>
+                                                Detalles del Visitante
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="text-primary"><i class="fas fa-user me-2"></i>Información Personal</h6>
+                                                    <p><strong>Nombre:</strong> {{ visitante.nombre }} {{ visitante.apellido }}</p>
+                                                    <p><strong>Documento:</strong> {{ visitante.documento }}</p>
+                                                    <p><strong>EPS:</strong> {{ visitante.eps }}</p>
+                                                    <p><strong>Tipo de Sangre:</strong> {{ visitante.rh }}</p>
+                                                    <p><strong>Teléfono:</strong> {{ visitante.telefono }}</p>
+                                                    <p><strong>Empresa:</strong> {{ visitante.empresa or 'N/A' }}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="text-success"><i class="fas fa-clock me-2"></i>Información de Visita</h6>
+                                                    <p><strong>Motivo:</strong> {{ visitante.motivo_visita }}</p>
+                                                    <p><strong>Estado:</strong> 
+                                                        {% if visitante.estado_visita == 'En visita' %}
+                                                            <span class="badge bg-success">En visita</span>
+                                                        {% elif visitante.estado_visita == 'Pendiente' %}
+                                                            <span class="badge bg-warning">Pendiente</span>
+                                                        {% else %}
+                                                            <span class="badge bg-info">Finalizada</span>
+                                                        {% endif %}
+                                                    </p>
+                                                    {% if visitante.fecha_entrada %}
+                                                        {% set fecha_entrada_col = visitante.fecha_entrada | colombia_time %}
+                                                        <p><strong>Hora de Entrada:</strong> {{ fecha_entrada_col.strftime('%d/%m/%Y %H:%M') }}</p>
+                                                    {% endif %}
+                                                    {% if visitante.fecha_salida %}
+                                                        {% set fecha_salida_col = visitante.fecha_salida | colombia_time %}
+                                                        <p><strong>Hora de Salida:</strong> {{ fecha_salida_col.strftime('%d/%m/%Y %H:%M') }}</p>
+                                                    {% endif %}
+                                                    <h6 class="text-warning mt-3"><i class="fas fa-phone me-2"></i>Contacto de Emergencia</h6>
+                                                    <p><strong>Nombre:</strong> {{ visitante.nombre_contacto_emergencia }}</p>
+                                                    <p><strong>Teléfono:</strong> {{ visitante.telefono_emergencia }}</p>
+                                                    <p><strong>Parentesco:</strong> {{ visitante.parentesco }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                <i class="fas fa-times me-2"></i>Cerrar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
