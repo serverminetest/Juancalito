@@ -13,10 +13,10 @@ def test_database_connection():
     """Prueba la conexión a la base de datos"""
     print("🔍 Probando conexión a la base de datos...")
     
-    # Obtener la URL de la base de datos
-    database_url = os.environ.get('DATABASE_URL')
+    # Obtener la URL de la base de datos (usar pública para scripts)
+    database_url = os.environ.get('DATABASE_PUBLIC_URL') or os.environ.get('DATABASE_URL')
     if not database_url:
-        print("❌ ERROR: DATABASE_URL no configurada")
+        print("❌ ERROR: DATABASE_URL o DATABASE_PUBLIC_URL no configurada")
         return False
     
     print(f"📡 URL de conexión: {database_url[:50]}...")
@@ -43,9 +43,9 @@ def create_tables():
     """Crea las tablas necesarias en la base de datos"""
     print("📊 Creando tablas en la base de datos...")
     
-    database_url = os.environ.get('DATABASE_URL')
+    database_url = os.environ.get('DATABASE_PUBLIC_URL') or os.environ.get('DATABASE_URL')
     if not database_url:
-        print("❌ ERROR: DATABASE_URL no configurada")
+        print("❌ ERROR: DATABASE_URL o DATABASE_PUBLIC_URL no configurada")
         return False
     
     try:
@@ -140,9 +140,9 @@ def create_admin_user():
     """Crea el usuario administrador por defecto"""
     print("👤 Creando usuario administrador...")
     
-    database_url = os.environ.get('DATABASE_URL')
+    database_url = os.environ.get('DATABASE_PUBLIC_URL') or os.environ.get('DATABASE_URL')
     if not database_url:
-        print("❌ ERROR: DATABASE_URL no configurada")
+        print("❌ ERROR: DATABASE_URL o DATABASE_PUBLIC_URL no configurada")
         return False
     
     try:
