@@ -78,20 +78,18 @@
                                 </a>
                                 
                                 <!-- Botón Regenerar -->
-                                <a href="{{ url_for('regenerar_contrato', id=contrato_gen.id) }}" 
-                                   class="btn btn-sm btn-outline-warning" 
-                                   title="Regenerar contrato"
-                                   onclick="return confirm('¿Estás seguro de que quieres regenerar el contrato de {{ contrato_gen.empleado.nombre_completo }}?')">
+                                <button type="button" class="btn btn-sm btn-outline-warning" 
+                                        onclick="confirmarRegenerar({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo|replace("'", "\\'")|replace('"', '\\"') }}')"
+                                        title="Regenerar contrato">
                                     <i class="fas fa-sync-alt"></i>
-                                </a>
+                                </button>
                                 
                                 <!-- Botón Eliminar -->
-                                <a href="{{ url_for('eliminar_contrato_generado', id=contrato_gen.id) }}" 
-                                   class="btn btn-sm btn-outline-danger" 
-                                   title="Eliminar contrato"
-                                   onclick="return confirm('¿Estás seguro de que quieres eliminar permanentemente el contrato de {{ contrato_gen.empleado.nombre_completo }}?')">
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="confirmarEliminar({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo|replace("'", "\\'")|replace('"', '\\"') }}')"
+                                        title="Eliminar contrato">
                                     <i class="fas fa-trash"></i>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -144,13 +142,120 @@
         </div>
     </div>
 </div>
-<!-- Los modales se han eliminado - ahora usamos enlaces directos y confirmaciones nativas -->
+<!-- Modal de Confirmación para Regenerar -->
+<div class="modal fade" id="modalRegenerar" tabindex="-1" aria-labelledby="modalRegenerarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalRegenerarLabel">
+                    <i class="fas fa-sync-alt me-2"></i>Regenerar Contrato
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>regenerar</strong> el contrato de:</p>
+                <div class="alert alert-warning">
+                    <strong id="nombreEmpleadoRegenerar"></strong>
+                </div>
+                <p class="text-muted">El contrato anterior será eliminado y se creará uno nuevo con los datos actualizados.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="confirmarRegenerar">
+                    <i class="fas fa-sync-alt me-1"></i>Regenerar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Eliminar -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalEliminarLabel">
+                    <i class="fas fa-trash me-2"></i>Eliminar Contrato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>eliminar permanentemente</strong> el contrato de:</p>
+                <div class="alert alert-danger">
+                    <strong id="nombreEmpleadoEliminar"></strong>
+                </div>
+                <p class="text-muted"><strong>⚠️ Advertencia:</strong> Esta acción eliminará el archivo Excel y no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminar">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Script simplificado - solo para confirmaciones básicas
+let contratoIdActual = null;
+
+// Función para mostrar modal de regenerar
+function confirmarRegenerar(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoRegenerar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalRegenerar'));
+    modal.show();
+}
+
+// Función para mostrar modal de eliminar
+function confirmarEliminar(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoEliminar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+    modal.show();
+}
+
+// Event listeners cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Event listener para confirmar regenerar
+    document.getElementById('confirmarRegenerar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            window.location.href = `/contratos/regenerar/${contratoIdActual}`;
+        }
+    });
+
+    // Event listener para confirmar eliminar
+    document.getElementById('confirmarEliminar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            fetch(`/contratos/eliminar_generado/${contratoIdActual}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al eliminar el contrato');
+            });
+        }
+    });
+});
+
 console.log('Script de contratos generados cargado correctamente');
 </script>
 {% endblock %}

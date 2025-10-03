@@ -1431,7 +1431,8 @@ def vista_previa_contrato(id):
         if contrato_generado.archivo_data:
             # Leer desde datos binarios
             from io import BytesIO
-            workbook = openpyxl.load_workbook(BytesIO(contrato_generado.archivo_data))
+            from openpyxl import load_workbook
+            workbook = load_workbook(BytesIO(contrato_generado.archivo_data))
         else:
             # Fallback: intentar desde archivo (para contratos antiguos)
             if not os.path.exists(contrato_generado.ruta_archivo):
@@ -1454,7 +1455,8 @@ def vista_previa_contrato(id):
                 """, 404
             
             # Leer el archivo Excel
-            workbook = openpyxl.load_workbook(contrato_generado.ruta_archivo)
+            from openpyxl import load_workbook
+            workbook = load_workbook(contrato_generado.ruta_archivo)
         
         worksheet = workbook.active
         
