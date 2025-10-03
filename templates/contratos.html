@@ -81,7 +81,12 @@
                                         <i class="fas fa-pause"></i>
                                     </a>
                                 {% else %}
-                                    <span class="text-muted small">Inactivo</span>
+                                    <a href="{{ url_for('activar_contrato', id=contrato.id) }}" 
+                                       class="btn btn-sm btn-outline-success" 
+                                       title="Activar contrato"
+                                       onclick="return confirm('¿Activar contrato de {{ contrato.empleado.nombre_completo }}?')">
+                                        <i class="fas fa-play"></i>
+                                    </a>
                                 {% endif %}
                                 
                                 <!-- Botón Eliminar -->

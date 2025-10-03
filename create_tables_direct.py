@@ -95,6 +95,17 @@ def create_tables_direct():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
+        -- Tabla de contratos generados
+        CREATE TABLE contrato_generado (
+            id SERIAL PRIMARY KEY,
+            empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+            contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+            nombre_archivo VARCHAR(255) NOT NULL,
+            ruta_archivo VARCHAR(500) NOT NULL,
+            fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            activo BOOLEAN DEFAULT TRUE
+        );
+        
         -- Tabla de asistencias
         CREATE TABLE asistencia (
             id SERIAL PRIMARY KEY,

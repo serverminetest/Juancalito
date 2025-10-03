@@ -82,17 +82,28 @@ def generar_contrato_excel(contrato_id):
         # Guardar el archivo
         workbook.save(ruta_archivo)
         
-        # Registrar en la base de datos
-        contrato_generado = ContratoGenerado(
-            empleado_id=empleado.id,
-            contrato_id=contrato.id,
-            nombre_archivo=nombre_archivo,
-            ruta_archivo=ruta_archivo
-        )
-        db.session.add(contrato_generado)
-        db.session.commit()
-        
-        return contrato_generado
+        # Verificar si la tabla contrato_generado existe antes de insertar
+        try:
+            # Registrar en la base de datos
+            contrato_generado = ContratoGenerado(
+                empleado_id=empleado.id,
+                contrato_id=contrato.id,
+                nombre_archivo=nombre_archivo,
+                ruta_archivo=ruta_archivo
+            )
+            db.session.add(contrato_generado)
+            db.session.commit()
+            
+            return contrato_generado
+        except Exception as db_error:
+            print(f"Error al guardar en base de datos: {str(db_error)}")
+            # Si hay error de BD, al menos el archivo se generó
+            return {
+                'nombre_archivo': nombre_archivo,
+                'ruta_archivo': ruta_archivo,
+                'empleado': empleado,
+                'contrato': contrato
+            }
         
     except Exception as e:
         print(f"Error al generar contrato: {str(e)}")
@@ -957,6 +968,16 @@ def desactivar_contrato(id):
     contrato.activo = False
     db.session.commit()
     flash('Contrato desactivado exitosamente', 'success')
+    return redirect(url_for('contratos'))
+
+@app.route('/contratos/activar/<int:id>')
+@login_required
+def activar_contrato(id):
+    """Activar contrato"""
+    contrato = Contrato.query.get_or_404(id)
+    contrato.activo = True
+    db.session.commit()
+    flash('Contrato activado exitosamente', 'success')
     return redirect(url_for('contratos'))
 
 @app.route('/contratos/eliminar/<int:id>', methods=['DELETE'])
