@@ -549,32 +549,7 @@ def eliminar_empleado(id):
     flash('Empleado desactivado exitosamente', 'success')
     return redirect(url_for('empleados'))
 
-# Gestión de Contratos
-@app.route('/contratos')
-@login_required
-def contratos():
-    contratos = Contrato.query.filter_by(activo=True).all()
-    return render_template('contratos.html', contratos=contratos)
-
-@app.route('/contratos/nuevo', methods=['GET', 'POST'])
-@login_required
-def nuevo_contrato():
-    if request.method == 'POST':
-        contrato = Contrato(
-            empleado_id=int(request.form['empleado_id']),
-            tipo_contrato=request.form['tipo_contrato'],
-            fecha_inicio=datetime.strptime(request.form['fecha_inicio'], '%Y-%m-%d').date(),
-            fecha_fin=datetime.strptime(request.form['fecha_fin'], '%Y-%m-%d').date() if request.form['fecha_fin'] else None,
-            salario=float(request.form['salario']),
-            descripcion=request.form['descripcion']
-        )
-        db.session.add(contrato)
-        db.session.commit()
-        flash('Contrato creado exitosamente', 'success')
-        return redirect(url_for('contratos'))
-    
-    empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
-    return render_template('nuevo_contrato.html', empleados=empleados)
+# Gestión de Contratos - Rutas movidas a la sección completa más abajo
 
 # Gestión de Asistencia
 @app.route('/asistencia')
