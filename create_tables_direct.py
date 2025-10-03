@@ -30,6 +30,7 @@ def create_tables_direct():
         -- Eliminar tablas existentes si existen
         DROP TABLE IF EXISTS contacto_emergencia CASCADE;
         DROP TABLE IF EXISTS asistencia CASCADE;
+        DROP TABLE IF EXISTS contrato CASCADE;
         DROP TABLE IF EXISTS visitante CASCADE;
         DROP TABLE IF EXISTS empleado CASCADE;
         DROP TABLE IF EXISTS "user" CASCADE;
@@ -79,6 +80,19 @@ def create_tables_direct():
             parentesco VARCHAR(50) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        -- Tabla de contratos
+        CREATE TABLE contrato (
+            id SERIAL PRIMARY KEY,
+            empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+            tipo_contrato VARCHAR(50) NOT NULL,
+            fecha_inicio DATE NOT NULL,
+            fecha_fin DATE,
+            salario FLOAT NOT NULL,
+            descripcion TEXT,
+            activo BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
         -- Tabla de asistencias
