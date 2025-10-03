@@ -560,7 +560,7 @@ def asistencia_publica(token):
             try:
                 db.session.add(asistencia)
                 db.session.commit()
-                flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {hora_actual.strftime("%H:%M")}', 'success')
+                flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
             except Exception as e:
                 db.session.rollback()
                 flash('Error al registrar la entrada. Intente nuevamente.', 'error')
@@ -580,7 +580,7 @@ def asistencia_publica(token):
             
             try:
                 db.session.commit()
-                flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {hora_actual.strftime("%H:%M")}', 'success')
+                flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
             except Exception as e:
                 db.session.rollback()
                 flash('Error al registrar la salida. Intente nuevamente.', 'error')
@@ -713,7 +713,7 @@ def registrar_asistencia():
         try:
             db.session.add(asistencia)
             db.session.commit()
-            flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {datetime.now().strftime("%H:%M")}', 'success')
+            flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
         except Exception as e:
             db.session.rollback()
             flash('Error al registrar la entrada. Intente nuevamente.', 'error')
@@ -742,7 +742,7 @@ def registrar_asistencia():
         
         try:
             db.session.commit()
-            flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {hora_salida.strftime("%H:%M")}', 'success')
+            flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
         except Exception as e:
             db.session.rollback()
             flash('Error al registrar la salida. Intente nuevamente.', 'error')
