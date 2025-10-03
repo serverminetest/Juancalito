@@ -55,12 +55,11 @@
                         <td>
                             <div class="btn-group" role="group">
                                 <!-- Botón Generar Contrato -->
-                                <a href="{{ url_for('generar_contrato', id=contrato.id) }}" 
-                                   class="btn btn-sm btn-success" 
-                                   title="Generar contrato Excel"
-                                   onclick="return confirm('¿Generar contrato Excel para {{ contrato.empleado.nombre_completo }}?')">
+                                <button type="button" class="btn btn-sm btn-success" 
+                                        title="Generar contrato Excel"
+                                        onclick="confirmarGenerar({{ contrato.id }}, '{{ contrato.empleado.nombre_completo }}')">
                                     <i class="fas fa-file-excel"></i>
-                                </a>
+                                </button>
                                 
                                 <!-- Botón Ver Detalles -->
                                 <button type="button" class="btn btn-sm btn-outline-info" onclick="verDetalles({{ contrato.id }})">
@@ -184,6 +183,35 @@
     </div>
 </div>
 
+<!-- Modal de Confirmación para Generar -->
+<div class="modal fade" id="modalGenerar" tabindex="-1" aria-labelledby="modalGenerarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalGenerarLabel">
+                    <i class="fas fa-file-excel me-2"></i>Generar Contrato Excel
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>generar</strong> el contrato Excel para:</p>
+                <div class="alert alert-success">
+                    <strong id="nombreEmpleadoGenerar"></strong>
+                </div>
+                <p class="text-muted">Se creará un archivo Excel con todos los datos del empleado y el contrato.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="confirmarGenerar">
+                    <i class="fas fa-file-excel me-1"></i>Generar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Confirmación para Eliminar -->
 <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -220,14 +248,8 @@
 let contratoIdActual = null;
 
 function verDetalles(id) {
-    // Aquí podrías hacer una llamada AJAX para obtener los detalles del contrato
-    document.getElementById('detallesContenido').innerHTML = `
-        <div class="text-center">
-            <i class="fas fa-spinner fa-spin fa-2x"></i>
-            <p>Cargando detalles...</p>
-        </div>
-    `;
-    new bootstrap.Modal(document.getElementById('detallesModal')).show();
+    // Redirigir a la página de editar contrato para ver detalles
+    window.location.href = `/contratos/editar/${id}`;
 }
 
 function confirmarDesactivar(id, nombre) {
@@ -241,6 +263,13 @@ function confirmarActivar(id, nombre) {
     contratoIdActual = id;
     document.getElementById('nombreEmpleadoActivar').textContent = nombre;
     const modal = new bootstrap.Modal(document.getElementById('modalActivar'));
+    modal.show();
+}
+
+function confirmarGenerar(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoGenerar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalGenerar'));
     modal.show();
 }
 
@@ -267,6 +296,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('confirmarActivar').addEventListener('click', function() {
         if (contratoIdActual) {
             window.location.href = `/contratos/activar/${contratoIdActual}`;
+        }
+    });
+
+    document.getElementById('confirmarGenerar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            window.location.href = `/contratos/generar/${contratoIdActual}`;
         }
     });
 

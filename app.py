@@ -178,89 +178,103 @@ def reemplazar_variables_excel(worksheet, datos):
 
 def convertir_numero_a_letras(numero):
     """Convierte un número a letras (mejorado para salarios)"""
-    if numero == 0:
-        return 'CERO PESOS'
-    
-    # Convertir a entero para evitar decimales
-    numero = int(numero)
-    
-    # Nombres de números
-    unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE']
-    decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
-    centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS']
-    
-    # Casos especiales
-    if numero == 100:
-        return 'CIEN PESOS'
-    if numero == 1000:
-        return 'MIL PESOS'
-    if numero == 1000000:
-        return 'UN MILLON DE PESOS'
-    
-    resultado = ''
-    
-    # Millones
-    millones = numero // 1000000
-    if millones > 0:
-        if millones == 1:
-            resultado += 'UN MILLON '
-        else:
-            resultado += f"{unidades[millones]} MILLONES "
-        numero = numero % 1000000
-    
-    # Miles
-    miles = numero // 1000
-    if miles > 0:
-        if miles == 1:
-            resultado += 'MIL '
-        else:
-            resultado += f"{unidades[miles]} MIL "
-        numero = numero % 1000
-    
-    # Centenas
-    centena = numero // 100
-    if centena > 0:
-        if centena == 1 and numero % 100 == 0:
-            resultado += 'CIEN '
-        else:
-            resultado += f"{centenas[centena]} "
-        numero = numero % 100
-    
-    # Decenas y unidades
-    if numero > 0:
-        if numero < 10:
-            resultado += f"{unidades[numero]} "
-        elif numero < 20:
-            if numero == 10:
-                resultado += 'DIEZ '
-            elif numero == 11:
-                resultado += 'ONCE '
-            elif numero == 12:
-                resultado += 'DOCE '
-            elif numero == 13:
-                resultado += 'TRECE '
-            elif numero == 14:
-                resultado += 'CATORCE '
-            elif numero == 15:
-                resultado += 'QUINCE '
-            elif numero == 16:
-                resultado += 'DIECISEIS '
-            elif numero == 17:
-                resultado += 'DIECISIETE '
-            elif numero == 18:
-                resultado += 'DIECIOCHO '
-            elif numero == 19:
-                resultado += 'DIECINUEVE '
-        else:
-            decena = numero // 10
-            unidad = numero % 10
-            if unidad == 0:
-                resultado += f"{decenas[decena]} "
+    try:
+        if numero == 0:
+            return 'CERO PESOS'
+        
+        # Convertir a entero para evitar decimales
+        numero = int(numero)
+        
+        # Nombres de números
+        unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE']
+        decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
+        centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS']
+        
+        # Casos especiales
+        if numero == 100:
+            return 'CIEN PESOS'
+        if numero == 1000:
+            return 'MIL PESOS'
+        if numero == 1000000:
+            return 'UN MILLON DE PESOS'
+        
+        resultado = ''
+        
+        # Millones
+        millones = numero // 1000000
+        if millones > 0:
+            if millones == 1:
+                resultado += 'UN MILLON '
+            elif millones < 10:
+                resultado += f"{unidades[millones]} MILLONES "
             else:
-                resultado += f"{decenas[decena]} Y {unidades[unidad]} "
-    
-    resultado += 'PESOS'
-    return resultado.strip()
+                resultado += f"{millones} MILLONES "
+            numero = numero % 1000000
+        
+        # Miles
+        miles = numero // 1000
+        if miles > 0:
+            if miles == 1:
+                resultado += 'MIL '
+            elif miles < 10:
+                resultado += f"{unidades[miles]} MIL "
+            else:
+                resultado += f"{miles} MIL "
+            numero = numero % 1000
+        
+        # Centenas
+        centena = numero // 100
+        if centena > 0:
+            if centena == 1 and numero % 100 == 0:
+                resultado += 'CIEN '
+            elif centena < 10:
+                resultado += f"{centenas[centena]} "
+            else:
+                resultado += f"{centena}CIENTOS "
+            numero = numero % 100
+        
+        # Decenas y unidades
+        if numero > 0:
+            if numero < 10:
+                resultado += f"{unidades[numero]} "
+            elif numero < 20:
+                if numero == 10:
+                    resultado += 'DIEZ '
+                elif numero == 11:
+                    resultado += 'ONCE '
+                elif numero == 12:
+                    resultado += 'DOCE '
+                elif numero == 13:
+                    resultado += 'TRECE '
+                elif numero == 14:
+                    resultado += 'CATORCE '
+                elif numero == 15:
+                    resultado += 'QUINCE '
+                elif numero == 16:
+                    resultado += 'DIECISEIS '
+                elif numero == 17:
+                    resultado += 'DIECISIETE '
+                elif numero == 18:
+                    resultado += 'DIECIOCHO '
+                elif numero == 19:
+                    resultado += 'DIECINUEVE '
+            else:
+                decena = numero // 10
+                unidad = numero % 10
+                if decena < 10 and unidad < 10:
+                    if unidad == 0:
+                        resultado += f"{decenas[decena]} "
+                    else:
+                        resultado += f"{decenas[decena]} Y {unidades[unidad]} "
+                else:
+                    resultado += f"{numero} "
+        
+        resultado += 'PESOS'
+        return resultado.strip()
+        
+    except Exception as e:
+        print(f"Error al convertir número a letras: {str(e)}")
+        return f"{numero} PESOS"
 
 app = Flask(__name__)
 
