@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles de Asistencia - Sistema de Gestión{% endblock %}
+{% block page_title %}Detalles de Asistencia{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-clock me-2"></i>
+                    {{ asistencia.empleado.nombre_completo }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-user me-2"></i>Información del Empleado
+                        </h5>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Nombre:</strong></td>
+                                <td>{{ asistencia.empleado.nombre_completo }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cédula:</strong></td>
+                                <td>{{ asistencia.empleado.cedula }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cargo:</strong></td>
+                                <td>{{ asistencia.empleado.cargo_puesto }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Departamento:</strong></td>
+                                <td>{{ asistencia.empleado.departamento_laboral }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Estado:</strong></td>
+                                <td>
+                                    {% if asistencia.empleado.estado_empleado == 'Activo' %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ asistencia.empleado.estado_empleado }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="text-success mb-3">
+                            <i class="fas fa-clock me-2"></i>Información de Asistencia
+                        </h5>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Fecha:</strong></td>
+                                <td>{{ asistencia.fecha.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% if asistencia.hora_entrada %}
+                                {% set hora_entrada_col = asistencia.hora_entrada %}
+                                <tr>
+                                    <td><strong>Hora de Entrada:</strong></td>
+                                    <td>{{ hora_entrada_col.strftime('%H:%M') }}</td>
+                                </tr>
+                            {% endif %}
+                            {% if asistencia.hora_salida %}
+                                {% set hora_salida_col = asistencia.hora_salida %}
+                                <tr>
+                                    <td><strong>Hora de Salida:</strong></td>
+                                    <td>{{ hora_salida_col.strftime('%H:%M') }}</td>
+                                </tr>
+                            {% endif %}
+                            <tr>
+                                <td><strong>Horas Trabajadas:</strong></td>
+                                <td>
+                                    {% if asistencia.horas_trabajadas %}
+                                        <span class="badge bg-success">{{ "%.1f"|format(asistencia.horas_trabajadas) }} horas</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En curso</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Método de Registro:</strong></td>
+                                <td>
+                                    {% if asistencia.token_diario == 'Manual' %}
+                                        <span class="badge bg-info">Manual</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">QR Code</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Estado:</strong></td>
+                                <td>
+                                    {% if asistencia.hora_salida %}
+                                        <span class="badge bg-success">Completada</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">En curso</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if asistencia.observaciones %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h5 class="text-warning mb-3">
+                            <i class="fas fa-sticky-note me-2"></i>Observaciones
+                        </h5>
+                        <div class="alert alert-light">
+                            <p class="mb-0">{{ asistencia.observaciones }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('asistencia') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Asistencia
+                    </a>
+                    <div>
+                        {% if not asistencia.hora_salida %}
+                            <form method="POST" action="{{ url_for('registrar_salida_manual', id=asistencia.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-danger" 
+                                        onclick="return confirm('¿Registrar SALIDA de {{ asistencia.empleado.nombre_completo }}?')">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Registrar Salida
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="text-muted">
+                                <i class="fas fa-check-circle me-2"></i>Asistencia completada
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -798,6 +798,12 @@ def detalles_visitante(id):
     visitante = Visitante.query.get_or_404(id)
     return render_template('detalles_visitante.html', visitante=visitante)
 
+@app.route('/asistencia/detalles/<int:id>')
+@login_required
+def detalles_asistencia(id):
+    asistencia = Asistencia.query.get_or_404(id)
+    return render_template('detalles_asistencia.html', asistencia=asistencia)
+
 @app.route('/visitantes/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_visitante():

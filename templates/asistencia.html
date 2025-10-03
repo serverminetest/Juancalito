@@ -151,6 +151,13 @@
                                 <td>{{ asistencia.observaciones or 'N/A' }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
+                                        <!-- Botón de Ver Detalles -->
+                                        <a href="{{ url_for('detalles_asistencia', id=asistencia.id) }}" 
+                                           class="btn btn-sm btn-outline-success" 
+                                           title="Ver detalles completos">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        
                                         {% if not asistencia.hora_salida %}
                                         <button type="button" class="btn btn-sm btn-warning" 
                                                 onclick="editarAsistencia({{ asistencia.id }})" 
