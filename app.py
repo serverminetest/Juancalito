@@ -1501,29 +1501,70 @@ def vista_previa_simple(id):
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
             <style>
-                body {{ font-family: Arial, sans-serif; }}
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    margin: 0; 
+                    padding: 20px;
+                    background-color: #f8f9fa;
+                }}
                 .excel-table {{
                     border-collapse: collapse;
-                    width: 100%;
-                    font-size: 12px;
+                    font-size: 10px;
+                    font-family: Arial, sans-serif;
+                    margin: 0 auto;
+                    background-color: white;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
                 }}
                 .excel-table td, .excel-table th {{
-                    border: 1px solid #000;
-                    padding: 6px 8px;
+                    border: 1px solid #d0d7de;
+                    padding: 2px 4px;
                     text-align: left;
                     vertical-align: top;
+                    white-space: nowrap;
+                    min-width: 60px;
+                    max-width: 200px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }}
                 .excel-table th {{
-                    background-color: #f2f2f2;
+                    background-color: #f6f8fa;
                     font-weight: bold;
+                    font-size: 10px;
                 }}
                 .excel-container {{
-                    overflow-x: auto;
-                    border: 1px solid #ddd;
-                    margin: 20px 0;
+                    overflow: auto;
+                    border: 1px solid #d0d7de;
+                    margin: 20px auto;
+                    max-width: 95%;
+                    background-color: white;
+                    border-radius: 6px;
+                }}
+                .excel-table tr:nth-child(even) {{
+                    background-color: #f8f9fa;
+                }}
+                .excel-table tr:hover {{
+                    background-color: #e3f2fd;
                 }}
                 @media print {{
                     .no-print {{ display: none !important; }}
+                    body {{ padding: 0; }}
+                    .excel-container {{ 
+                        max-width: 100%; 
+                        box-shadow: none; 
+                        border: none;
+                    }}
+                    .excel-table {{ font-size: 8px; }}
+                    .excel-table td, .excel-table th {{ 
+                        padding: 1px 2px; 
+                        min-width: 40px;
+                    }}
+                }}
+                @media (max-width: 768px) {{
+                    .excel-table {{ font-size: 8px; }}
+                    .excel-table td, .excel-table th {{ 
+                        padding: 1px 2px; 
+                        min-width: 40px;
+                    }}
                 }}
             </style>
         </head>
@@ -1531,7 +1572,17 @@ def vista_previa_simple(id):
             <div class="container-fluid">
                 <div class="d-flex justify-content-between align-items-center mb-4 no-print">
                     <h2><i class="fas fa-file-excel"></i> Vista Previa del Contrato</h2>
-                    <div>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <label class="form-label me-2">Zoom:</label>
+                            <select id="zoomSelect" class="form-select form-select-sm" style="width: auto;">
+                                <option value="0.5">50%</option>
+                                <option value="0.75">75%</option>
+                                <option value="1" selected>100%</option>
+                                <option value="1.25">125%</option>
+                                <option value="1.5">150%</option>
+                            </select>
+                        </div>
                         <button onclick="window.print()" class="btn btn-info me-2">
                             <i class="fas fa-print"></i> Imprimir
                         </button>
@@ -1544,7 +1595,7 @@ def vista_previa_simple(id):
                     </div>
                 </div>
                 
-                <div class="excel-container">
+                <div class="excel-container" id="excelContainer">
                     <table class="excel-table">
         """
         
@@ -1553,23 +1604,57 @@ def vista_previa_simple(id):
         max_col = worksheet.max_column
         
         # Procesar cada fila
-        for row in range(1, min(max_row + 1, 80)):  # Límite razonable
+        for row in range(1, min(max_row + 1, 100)):  # Aumentar límite para ver más contenido
             pagina_completa += '<tr>'
             
-            for col in range(1, min(max_col + 1, 25)):  # Límite razonable
+            for col in range(1, min(max_col + 1, 30)):  # Aumentar límite de columnas
                 cell = worksheet.cell(row=row, column=col)
                 cell_value = str(cell.value) if cell.value is not None else ''
                 
-                # Aplicar estilos básicos
-                cell_style = ''
-                if cell.font and cell.font.bold:
-                    cell_style += 'font-weight: bold; '
+                # Limpiar y formatear el valor de la celda
+                if cell_value and len(cell_value) > 50:
+                    cell_value = cell_value[:47] + '...'
+                
+                # Aplicar estilos más detallados
+                cell_style = 'font-size: 10px; '
+                
+                # Estilos de fuente
+                if cell.font:
+                    if cell.font.bold:
+                        cell_style += 'font-weight: bold; '
+                    if cell.font.italic:
+                        cell_style += 'font-style: italic; '
+                    if cell.font.size:
+                        cell_style += f'font-size: {min(cell.font.size, 12)}px; '
+                
+                # Estilos de relleno
                 if cell.fill and cell.fill.start_color and cell.fill.start_color.rgb:
                     cell_style += f'background-color: {cell.fill.start_color.rgb}; '
-                if cell.alignment and cell.alignment.horizontal == 'center':
-                    cell_style += 'text-align: center; '
-                elif cell.alignment and cell.alignment.horizontal == 'right':
-                    cell_style += 'text-align: right; '
+                
+                # Estilos de alineación
+                if cell.alignment:
+                    if cell.alignment.horizontal == 'center':
+                        cell_style += 'text-align: center; '
+                    elif cell.alignment.horizontal == 'right':
+                        cell_style += 'text-align: right; '
+                    elif cell.alignment.horizontal == 'left':
+                        cell_style += 'text-align: left; '
+                    
+                    if cell.alignment.vertical == 'center':
+                        cell_style += 'vertical-align: middle; '
+                    elif cell.alignment.vertical == 'bottom':
+                        cell_style += 'vertical-align: bottom; '
+                
+                # Estilos de borde
+                if cell.border:
+                    if cell.border.left and cell.border.left.style:
+                        cell_style += 'border-left: 2px solid #000; '
+                    if cell.border.right and cell.border.right.style:
+                        cell_style += 'border-right: 2px solid #000; '
+                    if cell.border.top and cell.border.top.style:
+                        cell_style += 'border-top: 2px solid #000; '
+                    if cell.border.bottom and cell.border.bottom.style:
+                        cell_style += 'border-bottom: 2px solid #000; '
                 
                 # Determinar el tipo de celda
                 if row == 1 or (cell.font and cell.font.bold):
@@ -1583,6 +1668,48 @@ def vista_previa_simple(id):
                     </table>
                 </div>
             </div>
+            
+            <script>
+                // Control de zoom
+                document.getElementById('zoomSelect').addEventListener('change', function() {
+                    const zoom = parseFloat(this.value);
+                    const container = document.getElementById('excelContainer');
+                    const table = container.querySelector('.excel-table');
+                    
+                    // Aplicar zoom
+                    container.style.transform = `scale(${zoom})`;
+                    container.style.transformOrigin = 'top left';
+                    
+                    // Ajustar el contenedor para el zoom
+                    if (zoom !== 1) {
+                        container.style.width = `${100 / zoom}%`;
+                        container.style.height = `${100 / zoom}%`;
+                    } else {
+                        container.style.width = '100%';
+                        container.style.height = 'auto';
+                    }
+                });
+                
+                // Zoom con rueda del mouse
+                document.getElementById('excelContainer').addEventListener('wheel', function(e) {
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        const zoomSelect = document.getElementById('zoomSelect');
+                        const currentZoom = parseFloat(zoomSelect.value);
+                        const options = zoomSelect.options;
+                        let newIndex = zoomSelect.selectedIndex;
+                        
+                        if (e.deltaY < 0) { // Zoom in
+                            newIndex = Math.min(newIndex + 1, options.length - 1);
+                        } else { // Zoom out
+                            newIndex = Math.max(newIndex - 1, 0);
+                        }
+                        
+                        zoomSelect.selectedIndex = newIndex;
+                        zoomSelect.dispatchEvent(new Event('change'));
+                    }
+                });
+            </script>
         </body>
         </html>
         """
