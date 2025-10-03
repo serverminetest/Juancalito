@@ -64,21 +64,34 @@ def generar_contrato_excel(contrato_id):
         
         # Datos del empleado
         datos_empleado = {
+            'NOMBRE_EMPLEADO': empleado.nombre_completo,
             'NOMBRE_TRABAJADOR': empleado.nombre_completo,
+            'DIRECCION_EMPLEADO': empleado.direccion_residencia or 'No especificada',
             'DIRECCION_TRABAJADOR': empleado.direccion_residencia or 'No especificada',
             'LUGAR_NACIMIENTO': empleado.ciudad or 'BOGOTÁ, COLOMBIA',
             'FECHA_NACIMIENTO': empleado.fecha_nacimiento.strftime('%d DE %B DE %Y').upper(),
+            'CARGO_EMPLEADO': empleado.cargo_puesto or 'No especificado',
             'CARGO': empleado.cargo_puesto or 'No especificado',
+            'SALARIO_NUMEROS': f"$ {contrato.salario:,.0f}",
             'SALARIO': f"$ {contrato.salario:,.0f}",
             'SALARIO_LETRAS': convertir_numero_a_letras(contrato.salario),
+            'FECHA_INICIO_LABORES': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
             'FECHA_INICIO': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
             'FECHA_FIN': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
+            'VENCE_EL_DIA': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
+            'LUGAR_LABORES': 'FLORES JUNCALITO S.A.S',
             'LUGAR_TRABAJO': 'FLORES JUNCALITO S.A.S',
-            'CIUDAD_CONTRATO': empleado.ciudad or 'BARRIO SAN JOSE - EL ROSAL CUNDINAMARCA'
+            'CIUDAD_CONTRATACION': empleado.ciudad or 'BARRIO SAN JOSE - EL ROSAL CUNDINAMARCA',
+            'CIUDAD_CONTRATO': empleado.ciudad or 'BARRIO SAN JOSE - EL ROSAL CUNDINAMARCA',
+            'TIPO_SALARIO': 'ORDINARIO',
+            'PERIODOS_PAGO': 'MENSUAL'
         }
         
-        # Reemplazar variables en el Excel (esto depende de cómo esté estructurado el template)
-        # Por ahora, vamos a crear una función básica que busque y reemplace texto
+        # Combinar todos los datos
+        todos_datos = {**datos_empleador, **datos_empleado}
+        
+        # Reemplazar variables en el Excel
+        reemplazar_variables_excel(worksheet, todos_datos)
         
         # Guardar el archivo
         workbook.save(ruta_archivo)
@@ -132,30 +145,121 @@ def generar_contrato_excel(contrato_id):
         print(f"Error al generar contrato: {str(e)}")
         raise
 
+def reemplazar_variables_excel(worksheet, datos):
+    """Reemplaza las variables {VARIABLE} en el Excel con los datos reales"""
+    try:
+        # Recorrer todas las celdas del worksheet
+        for row in worksheet.iter_rows():
+            for cell in row:
+                if cell.value and isinstance(cell.value, str):
+                    # Buscar variables en formato {VARIABLE}
+                    import re
+                    variables_encontradas = re.findall(r'\{([^}]+)\}', cell.value)
+                    
+                    if variables_encontradas:
+                        valor_original = cell.value
+                        valor_nuevo = valor_original
+                        
+                        # Reemplazar cada variable encontrada
+                        for variable in variables_encontradas:
+                            if variable in datos:
+                                valor_nuevo = valor_nuevo.replace(f'{{{variable}}}', str(datos[variable]))
+                            else:
+                                print(f"⚠️ Variable no encontrada: {variable}")
+                        
+                        # Actualizar el valor de la celda
+                        cell.value = valor_nuevo
+                        print(f"✅ Reemplazado: {valor_original} -> {valor_nuevo}")
+        
+        print("✅ Variables reemplazadas exitosamente en el Excel")
+        
+    except Exception as e:
+        print(f"❌ Error al reemplazar variables: {str(e)}")
+
 def convertir_numero_a_letras(numero):
-    """Convierte un número a letras (básico para salarios)"""
-    # Esta es una implementación básica, se puede mejorar
+    """Convierte un número a letras (mejorado para salarios)"""
+    if numero == 0:
+        return 'CERO PESOS'
+    
+    # Convertir a entero para evitar decimales
+    numero = int(numero)
+    
+    # Nombres de números
     unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE']
     decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
     centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS']
     
-    if numero == 0:
-        return 'CERO'
-    
-    # Para salarios típicos, asumimos que están en millones
-    millones = int(numero // 1000000)
-    resto = int(numero % 1000000)
+    # Casos especiales
+    if numero == 100:
+        return 'CIEN PESOS'
+    if numero == 1000:
+        return 'MIL PESOS'
+    if numero == 1000000:
+        return 'UN MILLON DE PESOS'
     
     resultado = ''
+    
+    # Millones
+    millones = numero // 1000000
     if millones > 0:
         if millones == 1:
             resultado += 'UN MILLON '
         else:
             resultado += f"{unidades[millones]} MILLONES "
+        numero = numero % 1000000
     
-    if resto > 0:
-        resultado += f"{resto:,} PESOS"
+    # Miles
+    miles = numero // 1000
+    if miles > 0:
+        if miles == 1:
+            resultado += 'MIL '
+        else:
+            resultado += f"{unidades[miles]} MIL "
+        numero = numero % 1000
     
+    # Centenas
+    centena = numero // 100
+    if centena > 0:
+        if centena == 1 and numero % 100 == 0:
+            resultado += 'CIEN '
+        else:
+            resultado += f"{centenas[centena]} "
+        numero = numero % 100
+    
+    # Decenas y unidades
+    if numero > 0:
+        if numero < 10:
+            resultado += f"{unidades[numero]} "
+        elif numero < 20:
+            if numero == 10:
+                resultado += 'DIEZ '
+            elif numero == 11:
+                resultado += 'ONCE '
+            elif numero == 12:
+                resultado += 'DOCE '
+            elif numero == 13:
+                resultado += 'TRECE '
+            elif numero == 14:
+                resultado += 'CATORCE '
+            elif numero == 15:
+                resultado += 'QUINCE '
+            elif numero == 16:
+                resultado += 'DIECISEIS '
+            elif numero == 17:
+                resultado += 'DIECISIETE '
+            elif numero == 18:
+                resultado += 'DIECIOCHO '
+            elif numero == 19:
+                resultado += 'DIECINUEVE '
+        else:
+            decena = numero // 10
+            unidad = numero % 10
+            if unidad == 0:
+                resultado += f"{decenas[decena]} "
+            else:
+                resultado += f"{decenas[decena]} Y {unidades[unidad]} "
+    
+    resultado += 'PESOS'
     return resultado.strip()
 
 app = Flask(__name__)
