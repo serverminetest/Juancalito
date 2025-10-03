@@ -10,8 +10,16 @@ import hashlib
 import secrets
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'tu_clave_secreta_muy_segura_aqui'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///empleados.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tu_clave_secreta_muy_segura_aqui')
+
+# Configuración de base de datos para producción y desarrollo
+if os.environ.get('DATABASE_URL'):
+    # Producción: usar PostgreSQL
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+else:
+    # Desarrollo: usar SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///empleados.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
