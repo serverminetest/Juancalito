@@ -1524,6 +1524,68 @@ def eliminar_contrato_generado(id):
             flash(f'Error al eliminar contrato: {str(e)}', 'error')
             return redirect(url_for('contratos_generados'))
 
+@app.route('/admin/arreglar_contratos')
+@login_required
+def arreglar_contratos():
+    """Arreglar contratos generados existentes"""
+    try:
+        # Verificar si es administrador
+        if not current_user.is_admin:
+            flash('Acceso denegado. Solo administradores pueden acceder a esta función.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        print("🚀 Arreglando contratos generados...")
+        
+        # Verificar si la columna archivo_data existe
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'contrato_generado' 
+                    AND column_name = 'archivo_data';
+                """))
+                
+                if result.fetchone():
+                    print("✅ La columna archivo_data ya existe")
+                    columna_existe = True
+                else:
+                    print("📝 Agregando columna archivo_data...")
+                    conn.execute(text("""
+                        ALTER TABLE contrato_generado 
+                        ADD COLUMN archivo_data BYTEA;
+                    """))
+                    print("✅ Columna archivo_data agregada")
+                    columna_existe = False
+                
+                # Contar contratos existentes
+                result = conn.execute(text("SELECT COUNT(*) FROM contrato_generado;"))
+                count_antes = result.fetchone()[0]
+                
+                if count_antes > 0:
+                    print(f"🗑️ Eliminando {count_antes} contratos generados existentes (sin datos binarios)...")
+                    conn.execute(text("DELETE FROM contrato_generado;"))
+                    print("✅ Contratos existentes eliminados")
+                
+                # Confirmar cambios
+                conn.commit()
+                
+                mensaje = f"✅ Arreglo completado exitosamente! Columna archivo_data: {'ya existía' if columna_existe else 'agregada'}. Contratos antiguos eliminados: {count_antes}"
+                flash(mensaje, 'success')
+                print(mensaje)
+                
+                return redirect(url_for('contratos_generados'))
+                
+        except Exception as e:
+            print(f"❌ Error durante el arreglo: {str(e)}")
+            flash(f'Error al arreglar contratos: {str(e)}', 'error')
+            return redirect(url_for('contratos_generados'))
+            
+    except Exception as e:
+        print(f"❌ Error general: {str(e)}")
+        flash(f'Error general: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
 @app.route('/visitantes/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_visitante():
