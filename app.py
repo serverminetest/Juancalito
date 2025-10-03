@@ -663,7 +663,7 @@ def visitantes_publico(token):
         try:
             db.session.add(visitante)
             db.session.commit()
-            flash(f'Visitante {nombre} {apellido} registrado exitosamente a las {datetime.now().strftime("%H:%M")}', 'success')
+            flash(f'Visitante {nombre} {apellido} registrado exitosamente a las {colombia_now().strftime("%H:%M")}', 'success')
         except Exception as e:
             db.session.rollback()
             flash('Error al registrar el visitante. Intente nuevamente.', 'error')

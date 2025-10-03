@@ -113,11 +113,41 @@
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
                                 {% for category, message in messages %}
-                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' if category == 'warning' else 'success' }} alert-dismissible fade show">
-                                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'exclamation-circle' if category == 'warning' else 'check-circle' }}"></i>
-                                        {{ message }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
+                                    {% if category == 'success' %}
+                                        <!-- Modal de éxito -->
+                                        <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-success text-white">
+                                                        <h5 class="modal-title" id="successModalLabel">
+                                                            <i class="fas fa-check-circle me-2"></i>
+                                                            ¡Registro Exitoso!
+                                                        </h5>
+                                                    </div>
+                                                    <div class="modal-body text-center">
+                                                        <div class="mb-3">
+                                                            <i class="fas fa-user-check text-success" style="font-size: 3rem;"></i>
+                                                        </div>
+                                                        <p class="fs-5">{{ message }}</p>
+                                                        <p class="text-muted">El formulario se recargará automáticamente.</p>
+                                                    </div>
+                                                    <div class="modal-footer justify-content-center">
+                                                        <button type="button" class="btn btn-success btn-lg" data-bs-dismiss="modal" onclick="recargarFormulario()">
+                                                            <i class="fas fa-check me-2"></i>
+                                                            Entendido
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <!-- Alertas normales para errores y advertencias -->
+                                        <div class="alert alert-{{ 'danger' if category == 'error' else 'warning' }} alert-dismissible fade show">
+                                            <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'exclamation-circle' }}"></i>
+                                            {{ message }}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        </div>
+                                    {% endif %}
                                 {% endfor %}
                             {% endif %}
                         {% endwith %}
@@ -270,6 +300,23 @@
                 bsAlert.close();
             });
         }, 5000);
+        
+        // Mostrar modal de éxito automáticamente si existe
+        document.addEventListener('DOMContentLoaded', function() {
+            var successModal = document.getElementById('successModal');
+            if (successModal) {
+                var modal = new bootstrap.Modal(successModal);
+                modal.show();
+            }
+        });
+        
+        // Función para recargar el formulario
+        function recargarFormulario() {
+            // Limpiar el formulario
+            document.querySelector('form').reset();
+            // Recargar la página para limpiar los mensajes flash
+            window.location.reload();
+        }
     </script>
 </body>
 </html>
