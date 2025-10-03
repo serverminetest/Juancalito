@@ -792,6 +792,12 @@ def visitantes():
                          token_diario=token,
                          url_qr=url_qr)
 
+@app.route('/visitantes/detalles/<int:id>')
+@login_required
+def detalles_visitante(id):
+    visitante = Visitante.query.get_or_404(id)
+    return render_template('detalles_visitante.html', visitante=visitante)
+
 @app.route('/visitantes/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_visitante():

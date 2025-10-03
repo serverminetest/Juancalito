@@ -188,69 +188,11 @@
                                 </form>
                                 
                                 <!-- Botón de Ver Detalles -->
-                                <button type="button" class="btn btn-sm btn-outline-success" 
-                                        onclick="mostrarDetalles({{ visitante.id }})"
-                                        title="Ver detalles completos">
+                                <a href="{{ url_for('detalles_visitante', id=visitante.id) }}" 
+                                   class="btn btn-sm btn-outline-success" 
+                                   title="Ver detalles completos">
                                     <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            
-                            <!-- Modal de Detalles -->
-                            <div class="modal fade" id="detallesModal{{ visitante.id }}" tabindex="-1" aria-labelledby="detallesModalLabel{{ visitante.id }}" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-success text-white">
-                                            <h5 class="modal-title" id="detallesModalLabel{{ visitante.id }}">
-                                                <i class="fas fa-user me-2"></i>
-                                                Detalles del Visitante
-                                            </h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <h6 class="text-primary"><i class="fas fa-user me-2"></i>Información Personal</h6>
-                                                    <p><strong>Nombre:</strong> {{ visitante.nombre }} {{ visitante.apellido }}</p>
-                                                    <p><strong>Documento:</strong> {{ visitante.documento }}</p>
-                                                    <p><strong>EPS:</strong> {{ visitante.eps }}</p>
-                                                    <p><strong>Tipo de Sangre:</strong> {{ visitante.rh }}</p>
-                                                    <p><strong>Teléfono:</strong> {{ visitante.telefono }}</p>
-                                                    <p><strong>Empresa:</strong> {{ visitante.empresa or 'N/A' }}</p>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6 class="text-success"><i class="fas fa-clock me-2"></i>Información de Visita</h6>
-                                                    <p><strong>Motivo:</strong> {{ visitante.motivo_visita }}</p>
-                                                    <p><strong>Estado:</strong> 
-                                                        {% if visitante.estado_visita == 'En visita' %}
-                                                            <span class="badge bg-success">En visita</span>
-                                                        {% elif visitante.estado_visita == 'Pendiente' %}
-                                                            <span class="badge bg-warning">Pendiente</span>
-                                                        {% else %}
-                                                            <span class="badge bg-info">Finalizada</span>
-                                                        {% endif %}
-                                                    </p>
-                                                    {% if visitante.fecha_entrada %}
-                                                        {% set fecha_entrada_col = visitante.fecha_entrada | colombia_time %}
-                                                        <p><strong>Hora de Entrada:</strong> {{ fecha_entrada_col.strftime('%d/%m/%Y %H:%M') }}</p>
-                                                    {% endif %}
-                                                    {% if visitante.fecha_salida %}
-                                                        {% set fecha_salida_col = visitante.fecha_salida | colombia_time %}
-                                                        <p><strong>Hora de Salida:</strong> {{ fecha_salida_col.strftime('%d/%m/%Y %H:%M') }}</p>
-                                                    {% endif %}
-                                                    <h6 class="text-warning mt-3"><i class="fas fa-phone me-2"></i>Contacto de Emergencia</h6>
-                                                    <p><strong>Nombre:</strong> {{ visitante.nombre_contacto_emergencia }}</p>
-                                                    <p><strong>Teléfono:</strong> {{ visitante.telefono_emergencia }}</p>
-                                                    <p><strong>Parentesco:</strong> {{ visitante.parentesco }}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                <i class="fas fa-times me-2"></i>Cerrar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                </a>
                             </div>
                         </td>
                     </tr>
@@ -359,25 +301,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Auto-refresh eliminado para evitar interrupciones del usuario
 
-// Función simple para mostrar detalles sin conflictos
-function mostrarDetalles(visitanteId) {
-    // Cerrar cualquier modal abierto
-    const modalesAbiertos = document.querySelectorAll('.modal.show');
-    modalesAbiertos.forEach(modal => {
-        const bsModal = bootstrap.Modal.getInstance(modal);
-        if (bsModal) {
-            bsModal.hide();
-        }
-    });
-    
-    // Esperar un momento y abrir el modal específico
-    setTimeout(() => {
-        const modalElement = document.getElementById('detallesModal' + visitanteId);
-        if (modalElement) {
-            const modal = new bootstrap.Modal(modalElement);
-            modal.show();
-        }
-    }, 50);
-}
+// Función JavaScript eliminada - usando página separada para detalles
 </script>
 {% endblock %}
