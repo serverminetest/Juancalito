@@ -41,7 +41,7 @@
                     {% for empleado in empleados %}
                     <tr>
                         <td>{{ empleado.id }}</td>
-                        <td>{{ empleado.nombre }} {{ empleado.apellido }}</td>
+                        <td>{{ empleado.nombre_completo }}</td>
                         <td>{{ empleado.cedula }}</td>
                         <td>{{ empleado.telefono or 'N/A' }}</td>
                         <td>{{ empleado.email or 'N/A' }}</td>

@@ -37,7 +37,7 @@
                 <tbody>
                     {% for asistencia in asistencias %}
                     <tr>
-                        <td>{{ asistencia.empleado.nombre }} {{ asistencia.empleado.apellido }}</td>
+                        <td>{{ asistencia.empleado.nombre_completo }}</td>
                         <td>{{ asistencia.fecha.strftime('%d/%m/%Y') }}</td>
                         <td>{{ asistencia.hora_entrada.strftime('%H:%M') if asistencia.hora_entrada else 'N/A' }}</td>
                         <td>{{ asistencia.hora_salida.strftime('%H:%M') if asistencia.hora_salida else 'N/A' }}</td>

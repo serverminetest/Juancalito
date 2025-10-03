@@ -231,6 +231,9 @@ class Contrato(db.Model):
     descripcion = db.Column(db.Text)
     activo = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=colombia_now)
+    
+    # Relación con Empleado
+    empleado = db.relationship('Empleado', backref=db.backref('contratos', lazy=True))
 
 class ContratoGenerado(db.Model):
     id = db.Column(db.Integer, primary_key=True)

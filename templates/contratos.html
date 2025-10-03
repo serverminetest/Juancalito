@@ -36,7 +36,7 @@
                     {% for contrato in contratos %}
                     <tr>
                         <td>{{ contrato.id }}</td>
-                        <td>{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido }}</td>
+                        <td>{{ contrato.empleado.nombre_completo }}</td>
                         <td>
                             <span class="badge bg-{{ 'primary' if contrato.tipo_contrato == 'Indefinido' else 'warning' }}">
                                 {{ contrato.tipo_contrato }}

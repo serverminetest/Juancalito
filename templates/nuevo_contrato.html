@@ -18,7 +18,7 @@
                             <select class="form-select" id="empleado_id" name="empleado_id" required>
                                 <option value="">Seleccionar empleado...</option>
                                 {% for empleado in empleados %}
-                                <option value="{{ empleado.id }}">{{ empleado.nombre }} {{ empleado.apellido }} - {{ empleado.cedula }}</option>
+                                <option value="{{ empleado.id }}">{{ empleado.nombre_completo }} - {{ empleado.cedula }}</option>
                                 {% endfor %}
                             </select>
                         </div>
