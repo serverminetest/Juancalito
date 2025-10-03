@@ -340,7 +340,7 @@ def convertir_fecha_espanol(fecha):
         return str(fecha)
 
 def convertir_excel_a_html(worksheet, contrato_generado):
-    """Convierte una hoja de Excel a HTML para vista previa"""
+    """Convierte una hoja de Excel a HTML para vista previa con formato fiel"""
     try:
         html = '<div class="vista-previa-excel">'
         html += f'<div class="text-center mb-4">'
@@ -348,35 +348,67 @@ def convertir_excel_a_html(worksheet, contrato_generado):
         html += f'<p class="text-muted">Empleado: <strong>{contrato_generado.empleado.nombre_completo}</strong></p>'
         html += f'</div>'
         
-        # Crear tabla HTML
-        html += '<div class="table-responsive">'
-        html += '<table class="table table-bordered table-sm" style="font-size: 12px;">'
+        # Crear tabla HTML con estilos más fieles al Excel
+        html += '<div class="table-responsive" style="overflow-x: auto;">'
+        html += '<table class="table table-bordered" style="font-family: Arial, sans-serif; font-size: 11px; border-collapse: collapse; width: 100%;">'
         
         # Obtener dimensiones de la hoja
         max_row = worksheet.max_row
         max_col = worksheet.max_column
         
         # Procesar cada fila
-        for row in range(1, min(max_row + 1, 50)):  # Limitar a 50 filas para rendimiento
-            html += '<tr>'
+        for row in range(1, min(max_row + 1, 100)):  # Aumentar límite para ver más contenido
+            html += '<tr style="height: 20px;">'
             
-            for col in range(1, min(max_col + 1, 20)):  # Limitar a 20 columnas
+            for col in range(1, min(max_col + 1, 30)):  # Aumentar límite de columnas
                 cell = worksheet.cell(row=row, column=col)
                 cell_value = str(cell.value) if cell.value is not None else ''
                 
-                # Aplicar estilos básicos
-                cell_style = ''
-                if cell.font and cell.font.bold:
-                    cell_style += 'font-weight: bold; '
-                if cell.fill and cell.fill.start_color.index != '00000000':
+                # Aplicar estilos más detallados
+                cell_style = 'padding: 4px 8px; border: 1px solid #000; vertical-align: top; '
+                
+                # Estilos de fuente
+                if cell.font:
+                    if cell.font.bold:
+                        cell_style += 'font-weight: bold; '
+                    if cell.font.italic:
+                        cell_style += 'font-style: italic; '
+                    if cell.font.size:
+                        cell_style += f'font-size: {cell.font.size}px; '
+                    if cell.font.color and cell.font.color.rgb:
+                        cell_style += f'color: {cell.font.color.rgb}; '
+                
+                # Estilos de relleno
+                if cell.fill and cell.fill.start_color and cell.fill.start_color.rgb:
                     cell_style += f'background-color: {cell.fill.start_color.rgb}; '
-                if cell.alignment and cell.alignment.horizontal == 'center':
-                    cell_style += 'text-align: center; '
-                elif cell.alignment and cell.alignment.horizontal == 'right':
-                    cell_style += 'text-align: right; '
+                
+                # Estilos de alineación
+                if cell.alignment:
+                    if cell.alignment.horizontal == 'center':
+                        cell_style += 'text-align: center; '
+                    elif cell.alignment.horizontal == 'right':
+                        cell_style += 'text-align: right; '
+                    elif cell.alignment.horizontal == 'left':
+                        cell_style += 'text-align: left; '
+                    
+                    if cell.alignment.vertical == 'center':
+                        cell_style += 'vertical-align: middle; '
+                    elif cell.alignment.vertical == 'bottom':
+                        cell_style += 'vertical-align: bottom; '
+                
+                # Estilos de borde
+                if cell.border:
+                    if cell.border.left and cell.border.left.style:
+                        cell_style += 'border-left: 2px solid #000; '
+                    if cell.border.right and cell.border.right.style:
+                        cell_style += 'border-right: 2px solid #000; '
+                    if cell.border.top and cell.border.top.style:
+                        cell_style += 'border-top: 2px solid #000; '
+                    if cell.border.bottom and cell.border.bottom.style:
+                        cell_style += 'border-bottom: 2px solid #000; '
                 
                 # Determinar el tipo de celda
-                if row == 1 or cell.font and cell.font.bold:
+                if row == 1 or (cell.font and cell.font.bold):
                     html += f'<th style="{cell_style}">{cell_value}</th>'
                 else:
                     html += f'<td style="{cell_style}">{cell_value}</td>'
@@ -1420,6 +1452,163 @@ def regenerar_contrato(id):
         flash(f'Error al regenerar el contrato: {str(e)}', 'error')
         return redirect(url_for('contratos_generados'))
 
+@app.route('/contratos/vista_previa_simple/<int:id>')
+@login_required
+def vista_previa_simple(id):
+    """Vista previa simple del contrato generado"""
+    try:
+        contrato_generado = ContratoGenerado.query.get_or_404(id)
+        
+        # Verificar si tenemos datos binarios en la base de datos
+        if contrato_generado.archivo_data:
+            # Leer desde datos binarios
+            from io import BytesIO
+            from openpyxl import load_workbook
+            workbook = load_workbook(BytesIO(contrato_generado.archivo_data))
+        else:
+            # Fallback: intentar desde archivo (para contratos antiguos)
+            if not os.path.exists(contrato_generado.ruta_archivo):
+                return f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Error - Vista Previa</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="container mt-5">
+                        <div class="alert alert-danger">
+                            <h4>Error</h4>
+                            <p>El archivo del contrato no existe</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """, 404
+            
+            # Leer el archivo Excel
+            from openpyxl import load_workbook
+            workbook = load_workbook(contrato_generado.ruta_archivo)
+        
+        worksheet = workbook.active
+        
+        # Crear página HTML simple y limpia
+        pagina_completa = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Vista Previa - {contrato_generado.empleado.nombre_completo}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+            <style>
+                body {{ font-family: Arial, sans-serif; }}
+                .excel-table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                    font-size: 12px;
+                }}
+                .excel-table td, .excel-table th {{
+                    border: 1px solid #000;
+                    padding: 6px 8px;
+                    text-align: left;
+                    vertical-align: top;
+                }}
+                .excel-table th {{
+                    background-color: #f2f2f2;
+                    font-weight: bold;
+                }}
+                .excel-container {{
+                    overflow-x: auto;
+                    border: 1px solid #ddd;
+                    margin: 20px 0;
+                }}
+                @media print {{
+                    .no-print {{ display: none !important; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+                    <h2><i class="fas fa-file-excel"></i> Vista Previa del Contrato</h2>
+                    <div>
+                        <button onclick="window.print()" class="btn btn-info me-2">
+                            <i class="fas fa-print"></i> Imprimir
+                        </button>
+                        <a href="{{ url_for('descargar_contrato', id=contrato_generado.id) }}" class="btn btn-success me-2">
+                            <i class="fas fa-download"></i> Descargar Excel
+                        </a>
+                        <button onclick="window.close()" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cerrar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="excel-container">
+                    <table class="excel-table">
+        """
+        
+        # Obtener dimensiones de la hoja
+        max_row = worksheet.max_row
+        max_col = worksheet.max_column
+        
+        # Procesar cada fila
+        for row in range(1, min(max_row + 1, 80)):  # Límite razonable
+            pagina_completa += '<tr>'
+            
+            for col in range(1, min(max_col + 1, 25)):  # Límite razonable
+                cell = worksheet.cell(row=row, column=col)
+                cell_value = str(cell.value) if cell.value is not None else ''
+                
+                # Aplicar estilos básicos
+                cell_style = ''
+                if cell.font and cell.font.bold:
+                    cell_style += 'font-weight: bold; '
+                if cell.fill and cell.fill.start_color and cell.fill.start_color.rgb:
+                    cell_style += f'background-color: {cell.fill.start_color.rgb}; '
+                if cell.alignment and cell.alignment.horizontal == 'center':
+                    cell_style += 'text-align: center; '
+                elif cell.alignment and cell.alignment.horizontal == 'right':
+                    cell_style += 'text-align: right; '
+                
+                # Determinar el tipo de celda
+                if row == 1 or (cell.font and cell.font.bold):
+                    pagina_completa += f'<th style="{cell_style}">{cell_value}</th>'
+                else:
+                    pagina_completa += f'<td style="{cell_style}">{cell_value}</td>'
+            
+            pagina_completa += '</tr>'
+        
+        pagina_completa += """
+                    </table>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return pagina_completa
+        
+    except Exception as e:
+        print(f"Error al generar vista previa simple: {str(e)}")
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error - Vista Previa</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body>
+            <div class="container mt-5">
+                <div class="alert alert-danger">
+                    <h4>Error</h4>
+                    <p>Error al generar vista previa: {str(e)}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """, 500
+
 @app.route('/contratos/vista_previa/<int:id>')
 @login_required
 def vista_previa_contrato(id):
@@ -1473,11 +1662,27 @@ def vista_previa_contrato(id):
             <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
             <style>
                 .vista-previa-excel {{ max-width: 100%; }}
-                .table {{ font-size: 12px; }}
+                .table {{ 
+                    font-size: 11px; 
+                    font-family: Arial, sans-serif;
+                    border-collapse: collapse;
+                }}
+                .table td, .table th {{
+                    border: 1px solid #000;
+                    padding: 4px 8px;
+                    vertical-align: top;
+                }}
+                .table-responsive {{
+                    overflow-x: auto;
+                    border: 1px solid #ddd;
+                }}
                 @media print {{
                     .no-print {{ display: none !important; }}
-                    body {{ font-size: 12px; }}
-                    .table {{ font-size: 10px; }}
+                    body {{ font-size: 10px; }}
+                    .table {{ font-size: 9px; }}
+                    .table td, .table th {{
+                        padding: 2px 4px;
+                    }}
                 }}
             </style>
         </head>
