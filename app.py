@@ -87,17 +87,19 @@ def generar_contrato_excel(contrato_id):
         try:
             # Intentar crear la tabla si no existe
             try:
-                db.engine.execute(text("""
-                    CREATE TABLE IF NOT EXISTS contrato_generado (
-                        id SERIAL PRIMARY KEY,
-                        empleado_id INTEGER NOT NULL REFERENCES empleado(id),
-                        contrato_id INTEGER NOT NULL REFERENCES contrato(id),
-                        nombre_archivo VARCHAR(255) NOT NULL,
-                        ruta_archivo VARCHAR(500) NOT NULL,
-                        fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        activo BOOLEAN DEFAULT TRUE
-                    );
-                """))
+                with db.engine.connect() as connection:
+                    connection.execute(text("""
+                        CREATE TABLE IF NOT EXISTS contrato_generado (
+                            id SERIAL PRIMARY KEY,
+                            empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+                            contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+                            nombre_archivo VARCHAR(255) NOT NULL,
+                            ruta_archivo VARCHAR(500) NOT NULL,
+                            fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            activo BOOLEAN DEFAULT TRUE
+                        );
+                    """))
+                    connection.commit()
                 print("✅ Tabla contrato_generado creada/verificada en generar_contrato_excel")
             except Exception as create_error:
                 print(f"⚠️ No se pudo crear la tabla en generar_contrato_excel: {create_error}")
@@ -1039,17 +1041,19 @@ def contratos_generados():
     try:
         # Intentar crear la tabla si no existe
         try:
-            db.engine.execute(text("""
-                CREATE TABLE IF NOT EXISTS contrato_generado (
-                    id SERIAL PRIMARY KEY,
-                    empleado_id INTEGER NOT NULL REFERENCES empleado(id),
-                    contrato_id INTEGER NOT NULL REFERENCES contrato(id),
-                    nombre_archivo VARCHAR(255) NOT NULL,
-                    ruta_archivo VARCHAR(500) NOT NULL,
-                    fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    activo BOOLEAN DEFAULT TRUE
-                );
-            """))
+            with db.engine.connect() as connection:
+                connection.execute(text("""
+                    CREATE TABLE IF NOT EXISTS contrato_generado (
+                        id SERIAL PRIMARY KEY,
+                        empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+                        contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+                        nombre_archivo VARCHAR(255) NOT NULL,
+                        ruta_archivo VARCHAR(500) NOT NULL,
+                        fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        activo BOOLEAN DEFAULT TRUE
+                    );
+                """))
+                connection.commit()
             print("✅ Tabla contrato_generado creada/verificada")
         except Exception as create_error:
             print(f"⚠️ No se pudo crear la tabla: {create_error}")
