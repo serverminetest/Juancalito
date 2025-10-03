@@ -220,7 +220,8 @@ def convertir_numero_a_letras(numero):
             elif millones < 10:
                 resultado += f"{unidades[millones]} MILLONES "
             else:
-                resultado += f"{millones} MILLONES "
+                # Para números mayores a 9 millones, convertir a letras
+                resultado += convertir_centenas_miles(millones) + " MILLONES "
             numero = numero % 1000000
         
         # Miles
@@ -231,55 +232,13 @@ def convertir_numero_a_letras(numero):
             elif miles < 10:
                 resultado += f"{unidades[miles]} MIL "
             else:
-                resultado += f"{miles} MIL "
+                # Para números mayores a 9 mil, convertir a letras
+                resultado += convertir_centenas_miles(miles) + " MIL "
             numero = numero % 1000
         
-        # Centenas
-        centena = numero // 100
-        if centena > 0:
-            if centena == 1 and numero % 100 == 0:
-                resultado += 'CIEN '
-            elif centena < 10:
-                resultado += f"{centenas[centena]} "
-            else:
-                resultado += f"{centena}CIENTOS "
-            numero = numero % 100
-        
-        # Decenas y unidades
+        # Centenas, decenas y unidades restantes
         if numero > 0:
-            if numero < 10:
-                resultado += f"{unidades[numero]} "
-            elif numero < 20:
-                if numero == 10:
-                    resultado += 'DIEZ '
-                elif numero == 11:
-                    resultado += 'ONCE '
-                elif numero == 12:
-                    resultado += 'DOCE '
-                elif numero == 13:
-                    resultado += 'TRECE '
-                elif numero == 14:
-                    resultado += 'CATORCE '
-                elif numero == 15:
-                    resultado += 'QUINCE '
-                elif numero == 16:
-                    resultado += 'DIECISEIS '
-                elif numero == 17:
-                    resultado += 'DIECISIETE '
-                elif numero == 18:
-                    resultado += 'DIECIOCHO '
-                elif numero == 19:
-                    resultado += 'DIECINUEVE '
-            else:
-                decena = numero // 10
-                unidad = numero % 10
-                if decena < 10 and unidad < 10:
-                    if unidad == 0:
-                        resultado += f"{decenas[decena]} "
-                    else:
-                        resultado += f"{decenas[decena]} Y {unidades[unidad]} "
-                else:
-                    resultado += f"{numero} "
+            resultado += convertir_centenas_miles(numero) + " "
         
         resultado += 'PESOS'
         return resultado.strip()
@@ -287,6 +246,61 @@ def convertir_numero_a_letras(numero):
     except Exception as e:
         print(f"Error al convertir número a letras: {str(e)}")
         return f"{numero} PESOS"
+
+def convertir_centenas_miles(numero):
+    """Convierte números de 1 a 999 a letras"""
+    if numero == 0:
+        return ''
+    
+    unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE']
+    decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
+    centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS']
+    
+    resultado = ''
+    
+    # Centenas
+    centena = numero // 100
+    if centena > 0:
+        if centena == 1 and numero % 100 == 0:
+            resultado += 'CIEN'
+        else:
+            resultado += centenas[centena]
+        numero = numero % 100
+    
+    # Decenas y unidades
+    if numero > 0:
+        if numero < 10:
+            resultado += unidades[numero]
+        elif numero < 20:
+            if numero == 10:
+                resultado += 'DIEZ'
+            elif numero == 11:
+                resultado += 'ONCE'
+            elif numero == 12:
+                resultado += 'DOCE'
+            elif numero == 13:
+                resultado += 'TRECE'
+            elif numero == 14:
+                resultado += 'CATORCE'
+            elif numero == 15:
+                resultado += 'QUINCE'
+            elif numero == 16:
+                resultado += 'DIECISEIS'
+            elif numero == 17:
+                resultado += 'DIECISIETE'
+            elif numero == 18:
+                resultado += 'DIECIOCHO'
+            elif numero == 19:
+                resultado += 'DIECINUEVE'
+        else:
+            decena = numero // 10
+            unidad = numero % 10
+            if unidad == 0:
+                resultado += decenas[decena]
+            else:
+                resultado += decenas[decena] + " Y " + unidades[unidad]
+    
+    return resultado
 
 app = Flask(__name__)
 
