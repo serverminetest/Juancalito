@@ -16,10 +16,25 @@ def colombia_now():
     """Devuelve la fecha y hora actual en zona horaria de Colombia"""
     return datetime.now(COLOMBIA_TZ)
 
+def to_colombia_time(dt):
+    """Convierte una fecha/hora a zona horaria de Colombia"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # Si no tiene zona horaria, asumir que es UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(COLOMBIA_TZ)
+
 app = Flask(__name__)
 
 # Configuración de la aplicación
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tu_clave_secreta_muy_segura_aqui')
+
+# Registrar filtro de zona horaria para templates
+@app.template_filter('colombia_time')
+def colombia_time_filter(dt):
+    """Filtro para convertir fechas a zona horaria de Colombia en templates"""
+    return to_colombia_time(dt)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configuración de base de datos

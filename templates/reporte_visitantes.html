@@ -53,10 +53,10 @@
                                 {{ visitante.motivo_visita or 'N/A' }}
                             </span>
                         </td>
-                        <td>{{ visitante.fecha_entrada.strftime('%d/%m/%Y %H:%M') if visitante.fecha_entrada else 'N/A' }}</td>
+                        <td>{{ (visitante.fecha_entrada | colombia_time).strftime('%d/%m/%Y %H:%M') if visitante.fecha_entrada else 'N/A' }}</td>
                         <td>
                             {% if visitante.fecha_salida %}
-                                {{ visitante.fecha_salida.strftime('%d/%m/%Y %H:%M') }}
+                                {{ (visitante.fecha_salida | colombia_time).strftime('%d/%m/%Y %H:%M') }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

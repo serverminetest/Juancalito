@@ -110,16 +110,18 @@
                         </td>
                         <td>
                             {% if visitante.fecha_entrada %}
-                                <small class="text-muted">{{ visitante.fecha_entrada.strftime('%d/%m/%Y') }}</small><br>
-                                <strong>{{ visitante.fecha_entrada.strftime('%H:%M') }}</strong>
+                                {% set fecha_entrada_col = visitante.fecha_entrada | colombia_time %}
+                                <small class="text-muted">{{ fecha_entrada_col.strftime('%d/%m/%Y') }}</small><br>
+                                <strong>{{ fecha_entrada_col.strftime('%H:%M') }}</strong>
                             {% else %}
                                 <span class="text-muted">N/A</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if visitante.fecha_salida %}
-                                <small class="text-muted">{{ visitante.fecha_salida.strftime('%d/%m/%Y') }}</small><br>
-                                <strong>{{ visitante.fecha_salida.strftime('%H:%M') }}</strong>
+                                {% set fecha_salida_col = visitante.fecha_salida | colombia_time %}
+                                <small class="text-muted">{{ fecha_salida_col.strftime('%d/%m/%Y') }}</small><br>
+                                <strong>{{ fecha_salida_col.strftime('%H:%M') }}</strong>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
