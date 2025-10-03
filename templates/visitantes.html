@@ -5,19 +5,13 @@
 
 {% block content %}
 <style>
-/* Estilos para evitar parpadeo del modal */
-.modal {
-    transition: none !important;
-}
-.modal.fade .modal-dialog {
-    transition: none !important;
-}
-.modal-backdrop {
-    transition: none !important;
-}
-/* Asegurar que el modal se mantenga estable */
+/* Estilos mínimos para el modal */
 .modal-dialog {
     margin: 1.75rem auto;
+}
+/* Asegurar que solo un modal esté activo */
+.modal.show {
+    z-index: 1055;
 }
 </style>
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -188,7 +182,8 @@
                                 
                                 <!-- Botón de Ver Detalles -->
                                 <button type="button" class="btn btn-sm btn-outline-success" 
-                                        onclick="abrirModalDetalles({{ visitante.id }})"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#detallesModal{{ visitante.id }}"
                                         title="Ver detalles completos">
                                     <i class="fas fa-eye"></i>
                                 </button>
@@ -358,29 +353,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Auto-refresh eliminado para evitar interrupciones del usuario
 
-// Función para abrir modal de detalles
-function abrirModalDetalles(visitanteId) {
-    // Cerrar cualquier modal abierto primero
+// Limpiar modales duplicados al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Cerrar cualquier modal que esté abierto
     const modalesAbiertos = document.querySelectorAll('.modal.show');
     modalesAbiertos.forEach(modal => {
-        const bsModal = bootstrap.Modal.getInstance(modal);
-        if (bsModal) {
-            bsModal.hide();
-        }
+        modal.classList.remove('show');
+        modal.style.display = 'none';
     });
     
-    // Esperar un momento y luego abrir el nuevo modal
-    setTimeout(function() {
-        const modalElement = document.getElementById('detallesModal' + visitanteId);
-        if (modalElement) {
-            const modal = new bootstrap.Modal(modalElement, {
-                backdrop: true,
-                keyboard: true,
-                focus: true
-            });
-            modal.show();
-        }
-    }, 100);
-}
+    // Remover backdrops duplicados
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => {
+        backdrop.remove();
+    });
+    
+    // Remover clase modal-open del body
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+});
 </script>
 {% endblock %}
