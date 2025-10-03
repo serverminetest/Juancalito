@@ -56,17 +56,32 @@
                         </td>
                         <td>
                             <div class="btn-group" role="group">
+                                <!-- Botón Vista Previa -->
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="vistaPreviaContrato({{ contrato_gen.id }})"
+                                        title="Vista previa">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
                                 <!-- Botón Descargar -->
                                 <a href="{{ url_for('descargar_contrato', id=contrato_gen.id) }}" 
                                    class="btn btn-sm btn-success" 
                                    title="Descargar contrato">
-                                    <i class="fas fa-download"></i> Descargar
+                                    <i class="fas fa-download"></i>
                                 </a>
                                 
-                                <!-- Botón Ver Detalles -->
-                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                        onclick="verDetallesContrato({{ contrato_gen.contrato.id }})">
-                                    <i class="fas fa-eye"></i>
+                                <!-- Botón Regenerar -->
+                                <button type="button" class="btn btn-sm btn-outline-warning" 
+                                        onclick="confirmarRegenerar({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo }}')"
+                                        title="Regenerar contrato">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                
+                                <!-- Botón Eliminar -->
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="confirmarEliminarContrato({{ contrato_gen.id }}, '{{ contrato_gen.empleado.nombre_completo }}')"
+                                        title="Eliminar contrato">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -120,13 +135,176 @@
         </div>
     </div>
 </div>
+<!-- Modal de Vista Previa -->
+<div class="modal fade" id="modalVistaPrevia" tabindex="-1" aria-labelledby="modalVistaPreviaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalVistaPreviaLabel">
+                    <i class="fas fa-eye me-2"></i>Vista Previa del Contrato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="contenidoVistaPrevia" class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>Cargando vista previa...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cerrar
+                </button>
+                <button type="button" class="btn btn-success" id="descargarDesdeVista">
+                    <i class="fas fa-download me-1"></i>Descargar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Regenerar -->
+<div class="modal fade" id="modalRegenerar" tabindex="-1" aria-labelledby="modalRegenerarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalRegenerarLabel">
+                    <i class="fas fa-sync-alt me-2"></i>Regenerar Contrato
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>regenerar</strong> el contrato de:</p>
+                <div class="alert alert-warning">
+                    <strong id="nombreEmpleadoRegenerar"></strong>
+                </div>
+                <p class="text-muted">El contrato anterior será eliminado y se creará uno nuevo con los datos actualizados.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="confirmarRegenerar">
+                    <i class="fas fa-sync-alt me-1"></i>Regenerar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Eliminar -->
+<div class="modal fade" id="modalEliminarContrato" tabindex="-1" aria-labelledby="modalEliminarContratoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalEliminarContratoLabel">
+                    <i class="fas fa-trash me-2"></i>Eliminar Contrato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>eliminar permanentemente</strong> el contrato de:</p>
+                <div class="alert alert-danger">
+                    <strong id="nombreEmpleadoEliminarContrato"></strong>
+                </div>
+                <p class="text-muted"><strong>⚠️ Advertencia:</strong> Esta acción eliminará el archivo Excel y no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminarContrato">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-function verDetallesContrato(contratoId) {
-    // Redirigir a la página de contratos para ver detalles
-    window.location.href = "{{ url_for('contratos') }}";
+let contratoIdActual = null;
+
+function vistaPreviaContrato(id) {
+    contratoIdActual = id;
+    document.getElementById('contenidoVistaPrevia').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p>Cargando vista previa...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalVistaPrevia'));
+    modal.show();
+    
+    // Simular carga de vista previa (en una implementación real, harías una llamada AJAX)
+    setTimeout(() => {
+        document.getElementById('contenidoVistaPrevia').innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Vista Previa:</strong> Esta funcionalidad mostraría una vista previa del Excel.
+                <br>Por ahora, puedes descargar el archivo para verlo.
+            </div>
+            <div class="text-center">
+                <i class="fas fa-file-excel fa-4x text-success mb-3"></i>
+                <p class="text-muted">Contrato Excel generado</p>
+            </div>
+        `;
+    }, 1000);
 }
+
+function confirmarRegenerar(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoRegenerar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalRegenerar'));
+    modal.show();
+}
+
+function confirmarEliminarContrato(id, nombre) {
+    contratoIdActual = id;
+    document.getElementById('nombreEmpleadoEliminarContrato').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminarContrato'));
+    modal.show();
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmarRegenerar').addEventListener('click', function() {
+        if (contratoIdActual) {
+            window.location.href = `/contratos/regenerar/${contratoIdActual}`;
+        }
+    });
+
+    document.getElementById('confirmarEliminarContrato').addEventListener('click', function() {
+        if (contratoIdActual) {
+            fetch(`/contratos/eliminar_generado/${contratoIdActual}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al eliminar el contrato');
+            });
+        }
+    });
+
+    document.getElementById('descargarDesdeVista').addEventListener('click', function() {
+        if (contratoIdActual) {
+            window.location.href = `/contratos/descargar/${contratoIdActual}`;
+        }
+    });
+});
 </script>
 {% endblock %}

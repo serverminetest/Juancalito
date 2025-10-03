@@ -1129,11 +1129,25 @@ def eliminar_contrato(id):
 @app.route('/contratos/generar/<int:id>')
 @login_required
 def generar_contrato(id):
-    """Generar contrato Excel"""
+    """Generar contrato Excel con control de duplicados"""
     try:
+        # Verificar si ya existe un contrato generado para este empleado
+        contrato = Contrato.query.get_or_404(id)
+        empleado_id = contrato.empleado_id
+        
+        # Buscar contratos generados existentes para este empleado
+        contrato_existente = ContratoGenerado.query.filter_by(empleado_id=empleado_id).first()
+        
+        if contrato_existente:
+            # Si ya existe, preguntar si quiere regenerar
+            flash(f'Ya existe un contrato generado para {contrato.empleado.nombre_completo}. Usa "Regenerar" para crear uno nuevo.', 'warning')
+            return redirect(url_for('contratos_generados'))
+        
+        # Si no existe, generar nuevo contrato
         contrato_generado = generar_contrato_excel(id)
         flash(f'Contrato generado exitosamente: {contrato_generado.nombre_archivo}', 'success')
         return redirect(url_for('contratos'))
+        
     except Exception as e:
         flash(f'Error al generar el contrato: {str(e)}', 'error')
         return redirect(url_for('contratos'))
@@ -1185,6 +1199,67 @@ def descargar_contrato(id):
         download_name=contrato_generado.nombre_archivo,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+@app.route('/contratos/regenerar/<int:id>')
+@login_required
+def regenerar_contrato(id):
+    """Regenerar contrato (eliminar el anterior y crear uno nuevo)"""
+    try:
+        # Obtener el contrato generado actual
+        contrato_generado = ContratoGenerado.query.get_or_404(id)
+        contrato_id = contrato_generado.contrato_id
+        empleado_nombre = contrato_generado.empleado.nombre_completo
+        
+        # Eliminar el archivo anterior si existe
+        if os.path.exists(contrato_generado.ruta_archivo):
+            os.remove(contrato_generado.ruta_archivo)
+            print(f"✅ Archivo anterior eliminado: {contrato_generado.ruta_archivo}")
+        
+        # Eliminar el registro de la base de datos
+        db.session.delete(contrato_generado)
+        db.session.commit()
+        print(f"✅ Registro anterior eliminado de la base de datos")
+        
+        # Generar nuevo contrato
+        nuevo_contrato = generar_contrato_excel(contrato_id)
+        
+        flash(f'Contrato regenerado exitosamente para {empleado_nombre}', 'success')
+        return redirect(url_for('contratos_generados'))
+        
+    except Exception as e:
+        print(f"Error al regenerar contrato: {str(e)}")
+        flash(f'Error al regenerar el contrato: {str(e)}', 'error')
+        return redirect(url_for('contratos_generados'))
+
+@app.route('/contratos/eliminar_generado/<int:id>', methods=['DELETE'])
+@login_required
+def eliminar_contrato_generado(id):
+    """Eliminar contrato generado"""
+    try:
+        contrato_generado = ContratoGenerado.query.get_or_404(id)
+        empleado_nombre = contrato_generado.empleado.nombre_completo
+        
+        # Eliminar el archivo si existe
+        if os.path.exists(contrato_generado.ruta_archivo):
+            os.remove(contrato_generado.ruta_archivo)
+            print(f"✅ Archivo eliminado: {contrato_generado.ruta_archivo}")
+        
+        # Eliminar el registro de la base de datos
+        db.session.delete(contrato_generado)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Contrato de {empleado_nombre} eliminado exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al eliminar contrato generado: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al eliminar el contrato: {str(e)}'
+        }), 500
 
 @app.route('/visitantes/nuevo', methods=['GET', 'POST'])
 @login_required
