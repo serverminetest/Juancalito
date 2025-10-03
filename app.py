@@ -1435,10 +1435,23 @@ def vista_previa_contrato(id):
         else:
             # Fallback: intentar desde archivo (para contratos antiguos)
             if not os.path.exists(contrato_generado.ruta_archivo):
-                return jsonify({
-                    'success': False,
-                    'message': 'El archivo del contrato no existe'
-                }), 404
+                return f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Error - Vista Previa</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body>
+                    <div class="container mt-5">
+                        <div class="alert alert-danger">
+                            <h4>Error</h4>
+                            <p>El archivo del contrato no existe</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """, 404
             
             # Leer el archivo Excel
             workbook = openpyxl.load_workbook(contrato_generado.ruta_archivo)
@@ -1448,19 +1461,67 @@ def vista_previa_contrato(id):
         # Convertir a HTML
         html_content = convertir_excel_a_html(worksheet, contrato_generado)
         
-        return jsonify({
-            'success': True,
-            'html': html_content,
-            'empleado': contrato_generado.empleado.nombre_completo,
-            'fecha': contrato_generado.fecha_generacion.strftime('%d/%m/%Y %H:%M')
-        })
+        # Crear página HTML completa
+        pagina_completa = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Vista Previa - {contrato_generado.empleado.nombre_completo}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+            <style>
+                .vista-previa-excel {{ max-width: 100%; }}
+                .table {{ font-size: 12px; }}
+                @media print {{
+                    .no-print {{ display: none !important; }}
+                    body {{ font-size: 12px; }}
+                    .table {{ font-size: 10px; }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+                    <h2><i class="fas fa-file-excel"></i> Vista Previa del Contrato</h2>
+                    <div>
+                        <button onclick="window.print()" class="btn btn-info me-2">
+                            <i class="fas fa-print"></i> Imprimir
+                        </button>
+                        <a href="{{ url_for('descargar_contrato', id=contrato_generado.id) }}" class="btn btn-success me-2">
+                            <i class="fas fa-download"></i> Descargar Excel
+                        </a>
+                        <button onclick="window.close()" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cerrar
+                        </button>
+                    </div>
+                </div>
+                {html_content}
+            </div>
+        </body>
+        </html>
+        """
+        
+        return pagina_completa
         
     except Exception as e:
         print(f"Error al generar vista previa: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': f'Error al generar vista previa: {str(e)}'
-        }), 500
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error - Vista Previa</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body>
+            <div class="container mt-5">
+                <div class="alert alert-danger">
+                    <h4>Error</h4>
+                    <p>Error al generar vista previa: {str(e)}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """, 500
 
 @app.route('/contratos/eliminar_generado/<int:id>', methods=['DELETE', 'POST'])
 @login_required
