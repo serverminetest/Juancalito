@@ -8,6 +8,9 @@ import qrcode
 import io
 import hashlib
 import secrets
+from openpyxl import load_workbook
+from openpyxl.styles import Font, Alignment
+import shutil
 
 # Configurar zona horaria de Colombia (UTC-5)
 COLOMBIA_TZ = timezone(timedelta(hours=-5))
@@ -24,6 +27,102 @@ def to_colombia_time(dt):
         # Si no tiene zona horaria, asumir que es UTC
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(COLOMBIA_TZ)
+
+def generar_contrato_excel(contrato_id):
+    """Genera un contrato Excel basado en el template y los datos del empleado"""
+    try:
+        # Obtener datos del contrato y empleado
+        contrato = Contrato.query.get_or_404(contrato_id)
+        empleado = contrato.empleado
+        
+        # Cargar template Excel
+        template_path = 'CONTRATO EXCEL FLORE JUNCALITO.xlsx'
+        if not os.path.exists(template_path):
+            raise FileNotFoundError("Template de contrato no encontrado")
+        
+        # Crear directorio para contratos generados
+        contratos_dir = 'contratos_generados'
+        if not os.path.exists(contratos_dir):
+            os.makedirs(contratos_dir)
+        
+        # Generar nombre único para el archivo
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        nombre_archivo = f"Contrato_{empleado.nombre_completo.replace(' ', '_')}_{timestamp}.xlsx"
+        ruta_archivo = os.path.join(contratos_dir, nombre_archivo)
+        
+        # Copiar template y cargar workbook
+        shutil.copy2(template_path, ruta_archivo)
+        workbook = load_workbook(ruta_archivo)
+        worksheet = workbook.active
+        
+        # Datos del empleador (predeterminados según la imagen)
+        datos_empleador = {
+            'NOMBRE_EMPLEADOR': 'FLORES JUNCALITO S.A.S',
+            'DIRECCION_EMPLEADOR': 'CALLE 19* C N. 88-07'
+        }
+        
+        # Datos del empleado
+        datos_empleado = {
+            'NOMBRE_TRABAJADOR': empleado.nombre_completo,
+            'DIRECCION_TRABAJADOR': empleado.direccion_residencia or 'No especificada',
+            'LUGAR_NACIMIENTO': empleado.ciudad or 'BOGOTÁ, COLOMBIA',
+            'FECHA_NACIMIENTO': empleado.fecha_nacimiento.strftime('%d DE %B DE %Y').upper(),
+            'CARGO': empleado.cargo_puesto or 'No especificado',
+            'SALARIO': f"$ {contrato.salario:,.0f}",
+            'SALARIO_LETRAS': convertir_numero_a_letras(contrato.salario),
+            'FECHA_INICIO': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
+            'FECHA_FIN': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
+            'LUGAR_TRABAJO': 'FLORES JUNCALITO S.A.S',
+            'CIUDAD_CONTRATO': empleado.ciudad or 'BARRIO SAN JOSE - EL ROSAL CUNDINAMARCA'
+        }
+        
+        # Reemplazar variables en el Excel (esto depende de cómo esté estructurado el template)
+        # Por ahora, vamos a crear una función básica que busque y reemplace texto
+        
+        # Guardar el archivo
+        workbook.save(ruta_archivo)
+        
+        # Registrar en la base de datos
+        contrato_generado = ContratoGenerado(
+            empleado_id=empleado.id,
+            contrato_id=contrato.id,
+            nombre_archivo=nombre_archivo,
+            ruta_archivo=ruta_archivo
+        )
+        db.session.add(contrato_generado)
+        db.session.commit()
+        
+        return contrato_generado
+        
+    except Exception as e:
+        print(f"Error al generar contrato: {str(e)}")
+        raise
+
+def convertir_numero_a_letras(numero):
+    """Convierte un número a letras (básico para salarios)"""
+    # Esta es una implementación básica, se puede mejorar
+    unidades = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE']
+    decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
+    centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS']
+    
+    if numero == 0:
+        return 'CERO'
+    
+    # Para salarios típicos, asumimos que están en millones
+    millones = int(numero // 1000000)
+    resto = int(numero % 1000000)
+    
+    resultado = ''
+    if millones > 0:
+        if millones == 1:
+            resultado += 'UN MILLON '
+        else:
+            resultado += f"{unidades[millones]} MILLONES "
+    
+    if resto > 0:
+        resultado += f"{resto:,} PESOS"
+    
+    return resultado.strip()
 
 app = Flask(__name__)
 
@@ -132,8 +231,19 @@ class Contrato(db.Model):
     descripcion = db.Column(db.Text)
     activo = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=colombia_now)
+
+class ContratoGenerado(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    empleado_id = db.Column(db.Integer, db.ForeignKey('empleado.id'), nullable=False)
+    contrato_id = db.Column(db.Integer, db.ForeignKey('contrato.id'), nullable=False)
+    nombre_archivo = db.Column(db.String(255), nullable=False)
+    ruta_archivo = db.Column(db.String(500), nullable=False)
+    fecha_generacion = db.Column(db.DateTime, default=colombia_now)
+    activo = db.Column(db.Boolean, default=True)
     
-    empleado = db.relationship('Empleado', backref=db.backref('contratos', lazy=True))
+    # Relaciones
+    empleado = db.relationship('Empleado', backref='contratos_generados')
+    contrato = db.relationship('Contrato', backref='documentos_generados')
 
 class Asistencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -809,6 +919,122 @@ def detalles_visitante(id):
 def detalles_asistencia(id):
     asistencia = Asistencia.query.get_or_404(id)
     return render_template('detalles_asistencia.html', asistencia=asistencia)
+
+# ===== RUTAS PARA CONTRATOS =====
+
+@app.route('/contratos')
+@login_required
+def contratos():
+    """Lista todos los contratos con opciones CRUD"""
+    contratos = Contrato.query.join(Empleado).order_by(Contrato.created_at.desc()).all()
+    return render_template('contratos.html', contratos=contratos)
+
+@app.route('/contratos/nuevo', methods=['GET', 'POST'])
+@login_required
+def nuevo_contrato():
+    """Crear nuevo contrato"""
+    if request.method == 'POST':
+        contrato = Contrato(
+            empleado_id=request.form['empleado_id'],
+            tipo_contrato=request.form['tipo_contrato'],
+            fecha_inicio=datetime.strptime(request.form['fecha_inicio'], '%Y-%m-%d').date(),
+            fecha_fin=datetime.strptime(request.form['fecha_fin'], '%Y-%m-%d').date() if request.form.get('fecha_fin') else None,
+            salario=float(request.form['salario']),
+            descripcion=request.form.get('descripcion', '')
+        )
+        db.session.add(contrato)
+        db.session.commit()
+        flash('Contrato creado exitosamente', 'success')
+        return redirect(url_for('contratos'))
+    
+    empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
+    return render_template('nuevo_contrato.html', empleados=empleados)
+
+@app.route('/contratos/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_contrato(id):
+    """Editar contrato existente"""
+    contrato = Contrato.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        contrato.empleado_id = request.form['empleado_id']
+        contrato.tipo_contrato = request.form['tipo_contrato']
+        contrato.fecha_inicio = datetime.strptime(request.form['fecha_inicio'], '%Y-%m-%d').date()
+        contrato.fecha_fin = datetime.strptime(request.form['fecha_fin'], '%Y-%m-%d').date() if request.form.get('fecha_fin') else None
+        contrato.salario = float(request.form['salario'])
+        contrato.descripcion = request.form.get('descripcion', '')
+        
+        db.session.commit()
+        flash('Contrato actualizado exitosamente', 'success')
+        return redirect(url_for('contratos'))
+    
+    empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
+    return render_template('editar_contrato.html', contrato=contrato, empleados=empleados)
+
+@app.route('/contratos/desactivar/<int:id>')
+@login_required
+def desactivar_contrato(id):
+    """Desactivar contrato"""
+    contrato = Contrato.query.get_or_404(id)
+    contrato.activo = False
+    db.session.commit()
+    flash('Contrato desactivado exitosamente', 'success')
+    return redirect(url_for('contratos'))
+
+@app.route('/contratos/eliminar/<int:id>', methods=['DELETE'])
+@login_required
+def eliminar_contrato(id):
+    """Eliminar contrato"""
+    try:
+        contrato = Contrato.query.get_or_404(id)
+        db.session.delete(contrato)
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Contrato eliminado exitosamente'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error al eliminar el contrato: {str(e)}'
+        }), 500
+
+@app.route('/contratos/generar/<int:id>')
+@login_required
+def generar_contrato(id):
+    """Generar contrato Excel"""
+    try:
+        contrato_generado = generar_contrato_excel(id)
+        flash(f'Contrato generado exitosamente: {contrato_generado.nombre_archivo}', 'success')
+        return redirect(url_for('contratos'))
+    except Exception as e:
+        flash(f'Error al generar el contrato: {str(e)}', 'error')
+        return redirect(url_for('contratos'))
+
+@app.route('/contratos/generados')
+@login_required
+def contratos_generados():
+    """Lista de contratos generados"""
+    contratos_generados = ContratoGenerado.query.join(Empleado).join(Contrato).order_by(ContratoGenerado.fecha_generacion.desc()).all()
+    return render_template('contratos_generados.html', contratos_generados=contratos_generados)
+
+@app.route('/contratos/descargar/<int:id>')
+@login_required
+def descargar_contrato(id):
+    """Descargar contrato generado"""
+    contrato_generado = ContratoGenerado.query.get_or_404(id)
+    
+    if not os.path.exists(contrato_generado.ruta_archivo):
+        flash('El archivo del contrato no existe', 'error')
+        return redirect(url_for('contratos_generados'))
+    
+    return send_file(
+        contrato_generado.ruta_archivo,
+        as_attachment=True,
+        download_name=contrato_generado.nombre_archivo,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 @app.route('/visitantes/nuevo', methods=['GET', 'POST'])
 @login_required

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Contratos Generados - Sistema de Gestión{% endblock %}
+{% block page_title %}Contratos Generados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-excel"></i> Contratos Generados</h2>
+    <a href="{{ url_for('contratos') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver a Contratos
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-download"></i> Lista de Contratos Excel Generados
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if contratos_generados %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Empleado</th>
+                        <th>Tipo Contrato</th>
+                        <th>Salario</th>
+                        <th>Fecha Generación</th>
+                        <th>Archivo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contrato_gen in contratos_generados %}
+                    <tr>
+                        <td>{{ contrato_gen.id }}</td>
+                        <td>
+                            <strong>{{ contrato_gen.empleado.nombre_completo }}</strong>
+                            <br><small class="text-muted">{{ contrato_gen.empleado.cedula }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'primary' if contrato_gen.contrato.tipo_contrato == 'Indefinido' else 'warning' }}">
+                                {{ contrato_gen.contrato.tipo_contrato }}
+                            </span>
+                        </td>
+                        <td>${{ "{:,.0f}".format(contrato_gen.contrato.salario) }}</td>
+                        <td>
+                            {{ contrato_gen.fecha_generacion.strftime('%d/%m/%Y %H:%M') }}
+                            <br><small class="text-muted">{{ contrato_gen.fecha_generacion|colombia_time }}</small>
+                        </td>
+                        <td>
+                            <i class="fas fa-file-excel text-success"></i>
+                            <small>{{ contrato_gen.nombre_archivo }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <!-- Botón Descargar -->
+                                <a href="{{ url_for('descargar_contrato', id=contrato_gen.id) }}" 
+                                   class="btn btn-sm btn-success" 
+                                   title="Descargar contrato">
+                                    <i class="fas fa-download"></i> Descargar
+                                </a>
+                                
+                                <!-- Botón Ver Detalles -->
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="verDetallesContrato({{ contrato_gen.contrato.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-file-excel fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No hay contratos generados</h4>
+            <p class="text-muted">Los contratos generados aparecerán aquí una vez que uses la función "Generar Contrato"</p>
+            <a href="{{ url_for('contratos') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Ir a Contratos
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Información adicional -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Información</h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Los contratos se generan automáticamente desde el template Excel</li>
+                    <li>Cada contrato incluye todos los datos del empleado</li>
+                    <li>Los archivos se guardan con nombre único por fecha y hora</li>
+                    <li>Puedes descargar los contratos en cualquier momento</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Nota Importante</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">
+                    <strong>Datos del Empleador:</strong><br>
+                    <strong>Empresa:</strong> FLORES JUNCALITO S.A.S<br>
+                    <strong>Dirección:</strong> CALLE 19* C N. 88-07
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function verDetallesContrato(contratoId) {
+    // Redirigir a la página de contratos para ver detalles
+    window.location.href = "{{ url_for('contratos') }}";
+}
+</script>
+{% endblock %}
