@@ -8,14 +8,24 @@ import qrcode
 import io
 import hashlib
 import secrets
-from config import config
 
 app = Flask(__name__)
 
-# Configuración basada en entorno
-config_name = os.environ.get('FLASK_ENV', 'production')
-app.config.from_object(config[config_name])
-config[config_name].init_app(app)
+# Configuración de la aplicación
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tu_clave_secreta_muy_segura_aqui')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configuración de base de datos
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Producción: usar PostgreSQL
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print(f"🔗 Usando PostgreSQL en producción")
+else:
+    # Si no hay DATABASE_URL, usar SQLite como fallback
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///empleados.db'
+    print("⚠️  DATABASE_URL no configurada, usando SQLite como fallback")
+    print("💡 Para producción, configura una base de datos PostgreSQL en Railway")
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -839,26 +849,38 @@ def reporte_visitantes():
 
 # Inicialización de la base de datos
 def init_db():
-    with app.app_context():
-        db.create_all()
-        
-        # Crear usuario administrador por defecto
-        admin_user = User.query.filter_by(email='admin@juancalito.com').first()
-        if not admin_user:
-            admin_user = User(
-                email='admin@juancalito.com',
-                username='Administrador',
-                password_hash=generate_password_hash('nueva_contraseña_2024'),
-                is_admin=True
-            )
-            db.session.add(admin_user)
-            db.session.commit()
-            print("Usuario administrador creado: admin@juancalito.com / nueva_contraseña_2024")
-        
-        print("Base de datos inicializada correctamente")
-        print("Para agregar empleados de prueba, ejecuta: python agregar_empleados_prueba.py")
+    try:
+        with app.app_context():
+            print("📊 Creando tablas de la base de datos...")
+            db.create_all()
+            
+            # Crear usuario administrador por defecto
+            admin_user = User.query.filter_by(email='admin@juancalito.com').first()
+            if not admin_user:
+                admin_user = User(
+                    email='admin@juancalito.com',
+                    username='Administrador',
+                    password_hash=generate_password_hash('nueva_contraseña_2024'),
+                    is_admin=True
+                )
+                db.session.add(admin_user)
+                db.session.commit()
+                print("✅ Usuario administrador creado: admin@juancalito.com / nueva_contraseña_2024")
+            else:
+                print("✅ Usuario administrador ya existe")
+            
+            print("✅ Base de datos inicializada correctamente")
+    except Exception as e:
+        print(f"❌ Error al inicializar la base de datos: {str(e)}")
+        raise
 
 if __name__ == '__main__':
-    init_db()
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    try:
+        print("🚀 Iniciando aplicación...")
+        init_db()
+        port = int(os.environ.get('PORT', 5000))
+        print(f"🌐 Servidor iniciado en puerto {port}")
+        app.run(host='0.0.0.0', port=port, debug=False)
+    except Exception as e:
+        print(f"❌ Error al iniciar la aplicación: {str(e)}")
+        raise
