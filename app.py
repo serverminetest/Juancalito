@@ -8,19 +8,14 @@ import qrcode
 import io
 import hashlib
 import secrets
+from config import config
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tu_clave_secreta_muy_segura_aqui')
 
-# Configuración de base de datos para producción y desarrollo
-if os.environ.get('DATABASE_URL'):
-    # Producción: usar PostgreSQL
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-else:
-    # Desarrollo: usar SQLite
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///empleados.db'
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Configuración basada en entorno
+config_name = os.environ.get('FLASK_ENV', 'production')
+app.config.from_object(config[config_name])
+config[config_name].init_app(app)
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
