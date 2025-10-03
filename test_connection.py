@@ -4,8 +4,7 @@ Script simple para probar la conexión a PostgreSQL
 """
 
 import os
-import psycopg2
-from urllib.parse import urlparse
+from sqlalchemy import create_engine, text
 
 def test_connection():
     """Prueba la conexión directa a PostgreSQL"""
@@ -20,29 +19,15 @@ def test_connection():
     print(f"📡 URL de conexión: {database_url[:50]}...")
     
     try:
-        # Parsear la URL
-        parsed = urlparse(database_url)
-        
-        # Conectar usando psycopg2
-        conn = psycopg2.connect(
-            host=parsed.hostname,
-            port=parsed.port,
-            database=parsed.path[1:],  # Remover el '/' inicial
-            user=parsed.username,
-            password=parsed.password
-        )
+        # Crear el motor de SQLAlchemy
+        engine = create_engine(database_url)
         
         # Probar la conexión
-        cursor = conn.cursor()
-        cursor.execute("SELECT version()")
-        version = cursor.fetchone()[0]
-        print(f"✅ Conexión exitosa a PostgreSQL: {version[:50]}...")
-        
-        # Cerrar la conexión
-        cursor.close()
-        conn.close()
-        
-        return True
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT version()"))
+            version = result.fetchone()[0]
+            print(f"✅ Conexión exitosa a PostgreSQL: {version[:50]}...")
+            return True
         
     except Exception as e:
         print(f"❌ Error de conexión: {str(e)}")
