@@ -22,10 +22,20 @@ if database_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     print(f"🔗 Usando PostgreSQL en producción")
 else:
-    # Si no hay DATABASE_URL, usar SQLite como fallback
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///empleados.db'
-    print("⚠️  DATABASE_URL no configurada, usando SQLite como fallback")
-    print("💡 Para producción, configura una base de datos PostgreSQL en Railway")
+    # Verificar si estamos en producción (Railway, Heroku, etc.)
+    if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DYNO') or os.environ.get('PORT'):
+        # Estamos en producción pero no hay DATABASE_URL - ERROR
+        raise RuntimeError(
+            "❌ ERROR: DATABASE_URL no configurada en producción.\n"
+            "💡 Solución: Agrega una base de datos PostgreSQL en Railway:\n"
+            "   1. Ve a tu proyecto en Railway\n"
+            "   2. Haz clic en '+ New' → 'Database' → 'PostgreSQL'\n"
+            "   3. Railway configurará automáticamente DATABASE_URL"
+        )
+    else:
+        # Desarrollo local: usar SQLite
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///empleados.db'
+        print("💾 Usando SQLite para desarrollo local")
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
