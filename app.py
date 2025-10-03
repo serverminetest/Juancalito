@@ -64,25 +64,26 @@ def generar_contrato_excel(contrato_id):
         
         # Datos del empleado
         datos_empleado = {
-            'NOMBRE_EMPLEADO': empleado.nombre_completo,
-            'NOMBRE_TRABAJADOR': empleado.nombre_completo,
-            'DIRECCION_EMPLEADO': empleado.direccion_residencia or 'No especificada',
-            'DIRECCION_TRABAJADOR': empleado.direccion_residencia or 'No especificada',
-            'LUGAR_NACIMIENTO': empleado.ciudad or 'BOGOTÁ, COLOMBIA',
+            'NOMBRE_EMPLEADO': empleado.nombre_completo.upper(),
+            'NOMBRE_TRABAJADOR': empleado.nombre_completo.upper(),
+            'DIRECCION_EMPLEADO': (empleado.direccion_residencia or 'NO ESPECIFICADA').upper(),
+            'DIRECCION_TRABAJADOR': (empleado.direccion_residencia or 'NO ESPECIFICADA').upper(),
+            'LUGAR_NACIMIENTO': (empleado.ciudad or 'BOGOTÁ, COLOMBIA').upper(),
             'FECHA_NACIMIENTO': empleado.fecha_nacimiento.strftime('%d DE %B DE %Y').upper(),
-            'CARGO_EMPLEADO': empleado.cargo_puesto or 'No especificado',
-            'CARGO': empleado.cargo_puesto or 'No especificado',
+            'CARGO_EMPLEADO': (empleado.cargo_puesto or 'NO ESPECIFICADO').upper(),
+            'CARGO': (empleado.cargo_puesto or 'NO ESPECIFICADO').upper(),
             'SALARIO_NUMEROS': f"$ {contrato.salario:,.0f}",
             'SALARIO': f"$ {contrato.salario:,.0f}",
             'SALARIO_LETRAS': convertir_numero_a_letras(contrato.salario),
+            'VALOR_EN_LETRAS': convertir_numero_a_letras(contrato.salario),
             'FECHA_INICIO_LABORES': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
             'FECHA_INICIO': contrato.fecha_inicio.strftime('%d DE %B DE %Y').upper(),
             'FECHA_FIN': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
             'VENCE_EL_DIA': contrato.fecha_fin.strftime('%d DE %B DE %Y').upper() if contrato.fecha_fin else 'INDEFINIDO',
             'LUGAR_LABORES': 'FLORES JUNCALITO S.A.S',
             'LUGAR_TRABAJO': 'FLORES JUNCALITO S.A.S',
-            'CIUDAD_CONTRATACION': empleado.ciudad or 'BARRIO SAN JOSE - EL ROSAL CUNDINAMARCA',
-            'CIUDAD_CONTRATO': empleado.ciudad or 'BARRIO SAN JOSE - EL ROSAL CUNDINAMARCA',
+            'CIUDAD_CONTRATACION': 'EL ROSAL CUNDINAMARCA',
+            'CIUDAD_CONTRATO': 'EL ROSAL CUNDINAMARCA',
             'TIPO_SALARIO': 'ORDINARIO',
             'PERIODOS_PAGO': 'MENSUAL'
         }
@@ -148,6 +149,9 @@ def generar_contrato_excel(contrato_id):
 def reemplazar_variables_excel(worksheet, datos):
     """Reemplaza las variables {VARIABLE} en el Excel con los datos reales"""
     try:
+        variables_reemplazadas = 0
+        variables_no_encontradas = []
+        
         # Recorrer todas las celdas del worksheet
         for row in worksheet.iter_rows():
             for cell in row:
@@ -164,14 +168,22 @@ def reemplazar_variables_excel(worksheet, datos):
                         for variable in variables_encontradas:
                             if variable in datos:
                                 valor_nuevo = valor_nuevo.replace(f'{{{variable}}}', str(datos[variable]))
+                                variables_reemplazadas += 1
                             else:
+                                variables_no_encontradas.append(variable)
                                 print(f"⚠️ Variable no encontrada: {variable}")
                         
                         # Actualizar el valor de la celda
                         cell.value = valor_nuevo
-                        print(f"✅ Reemplazado: {valor_original} -> {valor_nuevo}")
+                        if valor_original != valor_nuevo:
+                            print(f"✅ Reemplazado: {valor_original} -> {valor_nuevo}")
         
-        print("✅ Variables reemplazadas exitosamente en el Excel")
+        print(f"✅ Variables reemplazadas exitosamente: {variables_reemplazadas} reemplazos")
+        if variables_no_encontradas:
+            print(f"⚠️ Variables no encontradas: {', '.join(set(variables_no_encontradas))}")
+        
+        # Mostrar todas las variables disponibles
+        print(f"📋 Variables disponibles: {', '.join(datos.keys())}")
         
     except Exception as e:
         print(f"❌ Error al reemplazar variables: {str(e)}")
@@ -1219,6 +1231,25 @@ def descargar_contrato(id):
 def regenerar_contrato(id):
     """Regenerar contrato (eliminar el anterior y crear uno nuevo)"""
     try:
+        # Intentar crear la tabla si no existe
+        try:
+            with db.engine.connect() as connection:
+                connection.execute(text("""
+                    CREATE TABLE IF NOT EXISTS contrato_generado (
+                        id SERIAL PRIMARY KEY,
+                        empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+                        contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+                        nombre_archivo VARCHAR(255) NOT NULL,
+                        ruta_archivo VARCHAR(500) NOT NULL,
+                        fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        activo BOOLEAN DEFAULT TRUE
+                    );
+                """))
+                connection.commit()
+            print("✅ Tabla contrato_generado creada/verificada en regenerar")
+        except Exception as create_error:
+            print(f"⚠️ No se pudo crear la tabla en regenerar: {create_error}")
+        
         # Obtener el contrato generado actual
         contrato_generado = ContratoGenerado.query.get_or_404(id)
         contrato_id = contrato_generado.contrato_id
@@ -1250,6 +1281,25 @@ def regenerar_contrato(id):
 def eliminar_contrato_generado(id):
     """Eliminar contrato generado"""
     try:
+        # Intentar crear la tabla si no existe
+        try:
+            with db.engine.connect() as connection:
+                connection.execute(text("""
+                    CREATE TABLE IF NOT EXISTS contrato_generado (
+                        id SERIAL PRIMARY KEY,
+                        empleado_id INTEGER NOT NULL REFERENCES empleado(id),
+                        contrato_id INTEGER NOT NULL REFERENCES contrato(id),
+                        nombre_archivo VARCHAR(255) NOT NULL,
+                        ruta_archivo VARCHAR(500) NOT NULL,
+                        fecha_generacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        activo BOOLEAN DEFAULT TRUE
+                    );
+                """))
+                connection.commit()
+            print("✅ Tabla contrato_generado creada/verificada en eliminar")
+        except Exception as create_error:
+            print(f"⚠️ No se pudo crear la tabla en eliminar: {create_error}")
+        
         contrato_generado = ContratoGenerado.query.get_or_404(id)
         empleado_nombre = contrato_generado.empleado.nombre_completo
         
