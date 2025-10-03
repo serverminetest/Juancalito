@@ -324,6 +324,86 @@ def convertir_fecha_espanol(fecha):
         print(f"Error al convertir fecha: {str(e)}")
         return str(fecha)
 
+def convertir_excel_a_html(worksheet, contrato_generado):
+    """Convierte una hoja de Excel a HTML para vista previa"""
+    try:
+        html = '<div class="vista-previa-excel">'
+        html += f'<div class="text-center mb-4">'
+        html += f'<h4 class="text-primary"><i class="fas fa-file-excel me-2"></i>Vista Previa del Contrato</h4>'
+        html += f'<p class="text-muted">Empleado: <strong>{contrato_generado.empleado.nombre_completo}</strong></p>'
+        html += f'</div>'
+        
+        # Crear tabla HTML
+        html += '<div class="table-responsive">'
+        html += '<table class="table table-bordered table-sm" style="font-size: 12px;">'
+        
+        # Obtener dimensiones de la hoja
+        max_row = worksheet.max_row
+        max_col = worksheet.max_column
+        
+        # Procesar cada fila
+        for row in range(1, min(max_row + 1, 50)):  # Limitar a 50 filas para rendimiento
+            html += '<tr>'
+            
+            for col in range(1, min(max_col + 1, 20)):  # Limitar a 20 columnas
+                cell = worksheet.cell(row=row, column=col)
+                cell_value = str(cell.value) if cell.value is not None else ''
+                
+                # Aplicar estilos básicos
+                cell_style = ''
+                if cell.font and cell.font.bold:
+                    cell_style += 'font-weight: bold; '
+                if cell.fill and cell.fill.start_color.index != '00000000':
+                    cell_style += f'background-color: {cell.fill.start_color.rgb}; '
+                if cell.alignment and cell.alignment.horizontal == 'center':
+                    cell_style += 'text-align: center; '
+                elif cell.alignment and cell.alignment.horizontal == 'right':
+                    cell_style += 'text-align: right; '
+                
+                # Determinar el tipo de celda
+                if row == 1 or cell.font and cell.font.bold:
+                    html += f'<th style="{cell_style}">{cell_value}</th>'
+                else:
+                    html += f'<td style="{cell_style}">{cell_value}</td>'
+            
+            html += '</tr>'
+        
+        html += '</table>'
+        html += '</div>'
+        
+        # Información adicional
+        html += '<div class="mt-3">'
+        html += '<div class="alert alert-info">'
+        html += '<h6><i class="fas fa-info-circle me-2"></i>Información del Contrato:</h6>'
+        html += f'<ul class="mb-0">'
+        html += f'<li><strong>Empleado:</strong> {contrato_generado.empleado.nombre_completo}</li>'
+        html += f'<li><strong>Cédula:</strong> {contrato_generado.empleado.cedula}</li>'
+        html += f'<li><strong>Cargo:</strong> {contrato_generado.empleado.cargo_puesto or "No especificado"}</li>'
+        html += f'<li><strong>Salario:</strong> $ {contrato_generado.contrato.salario:,.0f}</li>'
+        html += f'<li><strong>Tipo de Contrato:</strong> {contrato_generado.contrato.tipo_contrato}</li>'
+        html += f'<li><strong>Fecha de Inicio:</strong> {contrato_generado.contrato.fecha_inicio.strftime("%d/%m/%Y")}</li>'
+        if contrato_generado.contrato.fecha_fin:
+            html += f'<li><strong>Fecha de Fin:</strong> {contrato_generado.contrato.fecha_fin.strftime("%d/%m/%Y")}</li>'
+        else:
+            html += f'<li><strong>Fecha de Fin:</strong> Indefinido</li>'
+        html += f'</ul>'
+        html += '</div>'
+        html += '</div>'
+        
+        html += '</div>'
+        
+        return html
+        
+    except Exception as e:
+        print(f"Error al convertir Excel a HTML: {str(e)}")
+        return f'''
+        <div class="alert alert-warning">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Error en Vista Previa</h6>
+            <p>No se pudo generar la vista previa del contrato. Error: {str(e)}</p>
+            <p>Puedes descargar el archivo Excel para verlo directamente.</p>
+        </div>
+        '''
+
 app = Flask(__name__)
 
 # Configuración de la aplicación
@@ -1311,6 +1391,41 @@ def regenerar_contrato(id):
         print(f"Error al regenerar contrato: {str(e)}")
         flash(f'Error al regenerar el contrato: {str(e)}', 'error')
         return redirect(url_for('contratos_generados'))
+
+@app.route('/contratos/vista_previa/<int:id>')
+@login_required
+def vista_previa_contrato(id):
+    """Vista previa del contrato generado"""
+    try:
+        contrato_generado = ContratoGenerado.query.get_or_404(id)
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(contrato_generado.ruta_archivo):
+            return jsonify({
+                'success': False,
+                'message': 'El archivo del contrato no existe'
+            }), 404
+        
+        # Leer el archivo Excel
+        workbook = openpyxl.load_workbook(contrato_generado.ruta_archivo)
+        worksheet = workbook.active
+        
+        # Convertir a HTML
+        html_content = convertir_excel_a_html(worksheet, contrato_generado)
+        
+        return jsonify({
+            'success': True,
+            'html': html_content,
+            'empleado': contrato_generado.empleado.nombre_completo,
+            'fecha': contrato_generado.fecha_generacion.strftime('%d/%m/%Y %H:%M')
+        })
+        
+    except Exception as e:
+        print(f"Error al generar vista previa: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error al generar vista previa: {str(e)}'
+        }), 500
 
 @app.route('/contratos/eliminar_generado/<int:id>', methods=['DELETE', 'POST'])
 @login_required
