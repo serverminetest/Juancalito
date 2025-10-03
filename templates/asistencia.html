@@ -255,10 +255,63 @@
     </div>
 </div>
 
+<!-- Modal de Confirmación de Asistencia -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>¡Asistencia Registrada!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-check fa-3x text-success mb-3"></i>
+                    <h4 class="text-success">¡Registro Exitoso!</h4>
+                </div>
+                <p class="lead" id="successMessage">La asistencia ha sido registrada correctamente.</p>
+                <div class="alert alert-light">
+                    <strong>Hora de registro:</strong> <span id="successTime"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-2"></i>Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Mostrar modal de éxito si hay mensaje flash
+document.addEventListener('DOMContentLoaded', function() {
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'success' %}
+                    // Extraer información del mensaje
+                    const message = "{{ message }}";
+                    const timeMatch = message.match(/a las (\d{2}:\d{2})/);
+                    const currentTime = timeMatch ? timeMatch[1] : new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
+                    
+                    // Configurar el modal
+                    document.getElementById('successMessage').textContent = message;
+                    document.getElementById('successTime').textContent = currentTime;
+                    
+                    // Mostrar el modal
+                    const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                    modal.show();
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+});
+
 function cambiarFecha() {
     const fecha = document.getElementById('fechaFiltro').value;
     window.location.href = "{{ url_for('asistencia') }}?fecha=" + fecha;

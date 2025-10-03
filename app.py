@@ -525,9 +525,15 @@ def asistencia_publica(token):
             flash('No se encontró un empleado con ese documento', 'error')
             return render_template('asistencia_publica.html', token=token)
         
-        # Verificar que el nombre coincida (insensible a mayúsculas)
-        if empleado.nombre_completo.lower() != nombre.lower():
-            flash('El nombre no coincide con el empleado registrado', 'error')
+        # Verificar que el nombre coincida (validación más flexible)
+        nombre_empleado = empleado.nombre_completo.lower().strip()
+        nombre_ingresado = nombre.lower().strip()
+        
+        # Permitir coincidencias parciales y diferentes formatos
+        if not (nombre_empleado == nombre_ingresado or 
+                nombre_empleado in nombre_ingresado or 
+                nombre_ingresado in nombre_empleado):
+            flash(f'El nombre ingresado no coincide con el empleado registrado. Empleado: {empleado.nombre_completo}', 'error')
             return render_template('asistencia_publica.html', token=token)
         
         # Verificar que el empleado esté activo
