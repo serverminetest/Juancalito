@@ -94,21 +94,26 @@ def create_tables_direct():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
-        -- Tabla de visitantes
+        -- Tabla de visitantes (con la estructura correcta del modelo)
         CREATE TABLE visitante (
             id SERIAL PRIMARY KEY,
-            nombre_completo VARCHAR(100) NOT NULL,
+            nombre VARCHAR(100) NOT NULL,
+            apellido VARCHAR(100) NOT NULL,
             documento VARCHAR(20) NOT NULL,
-            telefono VARCHAR(15),
+            eps VARCHAR(100) NOT NULL,
+            rh VARCHAR(10) NOT NULL,
+            telefono VARCHAR(20) NOT NULL,
             empresa VARCHAR(100),
             motivo_visita TEXT NOT NULL,
-            persona_visita VARCHAR(100) NOT NULL,
             fecha_entrada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             fecha_salida TIMESTAMP,
-            estado VARCHAR(20) DEFAULT 'Dentro',
-            observaciones TEXT,
-            token_diario VARCHAR(100),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            estado_visita VARCHAR(20) DEFAULT 'En visita',
+            nombre_contacto_emergencia VARCHAR(200) NOT NULL,
+            telefono_emergencia VARCHAR(20) NOT NULL,
+            parentesco VARCHAR(50) NOT NULL,
+            activo BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
         -- Tabla de contactos de emergencia
