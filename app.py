@@ -1277,17 +1277,11 @@ def registrar_asistencia():
 @app.route('/asistencia/eliminar/<int:id>', methods=['DELETE'])
 @login_required
 def eliminar_asistencia(id):
-    """Eliminar una asistencia (solo si no tiene salida registrada)"""
+    """Eliminar una asistencia (completa o incompleta)"""
     try:
         asistencia = Asistencia.query.get_or_404(id)
         
-        # Solo permitir eliminar si no tiene salida registrada
-        if asistencia.hora_salida:
-            return jsonify({
-                'success': False,
-                'message': 'No se puede eliminar una asistencia que ya tiene salida registrada'
-            }), 400
-        
+        # Permitir eliminar cualquier asistencia (completa o incompleta)
         db.session.delete(asistencia)
         db.session.commit()
         

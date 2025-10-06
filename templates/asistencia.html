@@ -318,7 +318,7 @@ function cambiarFecha() {
 
 function editarAsistencia(asistenciaId, nombreEmpleado, esCompleta) {
     if (esCompleta === 'true') {
-        alert(`La asistencia de ${nombreEmpleado} ya está completa (tiene hora de salida). Solo se pueden editar asistencias incompletas.`);
+        alert(`La asistencia de ${nombreEmpleado} ya está completa (tiene hora de salida). Solo se pueden editar asistencias incompletas.\n\nSi necesita corregir una asistencia completa, elimínela y cree una nueva.`);
         return;
     }
     
@@ -402,26 +402,74 @@ function guardarEdicion(asistenciaId) {
 }
 
 function eliminarAsistencia(asistenciaId, nombreEmpleado) {
-    if (confirm(`¿Está seguro de que desea eliminar la asistencia de ${nombreEmpleado}?\n\nEsta acción no se puede deshacer.`)) {
-        fetch(`/asistencia/eliminar/${asistenciaId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error al eliminar la asistencia: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al eliminar la asistencia');
-        });
-    }
+    // Crear modal de confirmación
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'eliminarModal';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-trash-alt fa-3x text-danger mb-3"></i>
+                        <h4>¿Eliminar Asistencia?</h4>
+                    </div>
+                    <div class="alert alert-warning">
+                        <strong>Empleado:</strong> ${nombreEmpleado}<br>
+                        <strong>Acción:</strong> Se eliminará completamente esta asistencia
+                    </div>
+                    <p class="text-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Esta acción no se puede deshacer.</strong>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarEliminacion(${asistenciaId})">
+                        <i class="fas fa-trash me-2"></i>Eliminar Definitivamente
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    
+    // Limpiar modal cuando se cierre
+    modal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+    });
+}
+
+function confirmarEliminacion(asistenciaId) {
+    fetch(`/asistencia/eliminar/${asistenciaId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error al eliminar la asistencia: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al eliminar la asistencia');
+    });
 }
 
 // Auto-calcular horas trabajadas
