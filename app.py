@@ -1303,6 +1303,50 @@ def eliminar_asistencia(id):
             'message': f'Error al eliminar la asistencia: {str(e)}'
         }), 500
 
+@app.route('/asistencia/editar/<int:id>', methods=['PUT'])
+@login_required
+def editar_asistencia(id):
+    """Editar una asistencia (solo hora de entrada y observaciones)"""
+    try:
+        asistencia = Asistencia.query.get_or_404(id)
+        data = request.get_json()
+        
+        # Solo permitir editar si no tiene salida registrada
+        if asistencia.hora_salida:
+            return jsonify({
+                'success': False,
+                'message': 'No se puede editar una asistencia que ya tiene salida registrada'
+            }), 400
+        
+        # Actualizar hora de entrada si se proporciona
+        if 'hora_entrada' in data and data['hora_entrada']:
+            try:
+                hora_entrada = datetime.strptime(data['hora_entrada'], '%H:%M').time()
+                asistencia.hora_entrada = hora_entrada
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'message': 'Formato de hora inválido. Use HH:MM'
+                }), 400
+        
+        # Actualizar observaciones
+        if 'observaciones' in data:
+            asistencia.observaciones = data['observaciones']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Asistencia actualizada exitosamente'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error al editar la asistencia: {str(e)}'
+        }), 500
+
 # Gestión de Visitantes
 @app.route('/visitantes')
 @login_required
