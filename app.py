@@ -775,27 +775,67 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Estadísticas para el dashboard
+    # Estadísticas principales
     total_empleados = Empleado.query.filter_by(estado_empleado='Activo').count()
+    total_empleados_inactivos = Empleado.query.filter_by(estado_empleado='Inactivo').count()
+    
+    # Visitantes
     total_visitantes_hoy = Visitante.query.filter(
         Visitante.fecha_entrada >= datetime.now().date(),
         Visitante.activo == True
     ).count()
+    total_visitantes_mes = Visitante.query.filter(
+        Visitante.fecha_entrada >= date.today().replace(day=1),
+        Visitante.activo == True
+    ).count()
     
-    # Empleados con asistencia hoy
+    # Asistencias
     asistencias_hoy = Asistencia.query.filter_by(fecha=date.today()).count()
+    asistencias_semana = Asistencia.query.filter(
+        Asistencia.fecha >= date.today() - timedelta(days=7)
+    ).count()
     
-    # Contratos próximos a vencer (próximos 30 días)
+    # Contratos
     contratos_vencer = Contrato.query.filter(
         Contrato.fecha_fin <= date.today() + timedelta(days=30),
         Contrato.activo == True
     ).count()
+    total_contratos_activos = Contrato.query.filter_by(activo=True).count()
+    
+    # Inventarios (si existen)
+    try:
+        total_productos = Producto.query.filter_by(activo=True).count()
+        productos_stock_bajo = Producto.query.filter(
+            Producto.stock_actual <= Producto.stock_minimo,
+            Producto.activo == True
+        ).count()
+    except:
+        total_productos = 0
+        productos_stock_bajo = 0
+    
+    # Contratos generados
+    contratos_generados_hoy = ContratoGenerado.query.filter(
+        ContratoGenerado.fecha_generacion >= datetime.now().date()
+    ).count()
+    
+    # Empleados recientes (últimos 30 días)
+    empleados_recientes = Empleado.query.filter(
+        Empleado.fecha_ingreso >= date.today() - timedelta(days=30)
+    ).count()
     
     return render_template('dashboard.html', 
                          total_empleados=total_empleados,
+                         total_empleados_inactivos=total_empleados_inactivos,
                          total_visitantes_hoy=total_visitantes_hoy,
+                         total_visitantes_mes=total_visitantes_mes,
                          asistencias_hoy=asistencias_hoy,
-                         contratos_vencer=contratos_vencer)
+                         asistencias_semana=asistencias_semana,
+                         contratos_vencer=contratos_vencer,
+                         total_contratos_activos=total_contratos_activos,
+                         total_productos=total_productos,
+                         productos_stock_bajo=productos_stock_bajo,
+                         contratos_generados_hoy=contratos_generados_hoy,
+                         empleados_recientes=empleados_recientes)
 
 # Gestión de Empleados
 @app.route('/empleados')
