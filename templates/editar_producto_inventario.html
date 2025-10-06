@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Producto{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-edit"></i> Editar Producto</h2>
+                <a href="{{ url_for('productos_inventario') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Productos
+                </a>
+            </div>
+
+            <!-- Alertas -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-box"></i> Información del Producto
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="codigo" class="form-label">
+                                                <i class="fas fa-barcode"></i> Código del Producto *
+                                            </label>
+                                            <input type="text" class="form-control" id="codigo" name="codigo" 
+                                                   value="{{ producto.codigo }}" required>
+                                            <div class="form-text">Código único para identificar el producto.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="nombre" class="form-label">
+                                                <i class="fas fa-tag"></i> Nombre del Producto *
+                                            </label>
+                                            <input type="text" class="form-control" id="nombre" name="nombre" 
+                                                   value="{{ producto.nombre }}" required>
+                                            <div class="form-text">Nombre descriptivo del producto.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="descripcion" class="form-label">
+                                        <i class="fas fa-align-left"></i> Descripción
+                                    </label>
+                                    <textarea class="form-control" id="descripcion" name="descripcion" 
+                                              rows="3" placeholder="Descripción detallada del producto...">{{ producto.descripcion or '' }}</textarea>
+                                    <div class="form-text">Descripción opcional del producto.</div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="categoria_id" class="form-label">
+                                                <i class="fas fa-tags"></i> Categoría *
+                                            </label>
+                                            <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                                <option value="">Seleccione una categoría...</option>
+                                                {% for categoria in categorias %}
+                                                <option value="{{ categoria.id }}" 
+                                                        {% if producto.categoria_id == categoria.id %}selected{% endif %}>
+                                                    {{ categoria.nombre }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="unidad_medida" class="form-label">
+                                                <i class="fas fa-ruler"></i> Unidad de Medida *
+                                            </label>
+                                            <select class="form-select" id="unidad_medida" name="unidad_medida" required>
+                                                <option value="UNIDAD" {% if producto.unidad_medida == 'UNIDAD' %}selected{% endif %}>UNIDAD</option>
+                                                <option value="KG" {% if producto.unidad_medida == 'KG' %}selected{% endif %}>KG</option>
+                                                <option value="LITRO" {% if producto.unidad_medida == 'LITRO' %}selected{% endif %}>LITRO</option>
+                                                <option value="METRO" {% if producto.unidad_medida == 'METRO' %}selected{% endif %}>METRO</option>
+                                                <option value="CAJA" {% if producto.unidad_medida == 'CAJA' %}selected{% endif %}>CAJA</option>
+                                                <option value="BOLSA" {% if producto.unidad_medida == 'BOLSA' %}selected{% endif %}>BOLSA</option>
+                                                <option value="BOTELLA" {% if producto.unidad_medida == 'BOTELLA' %}selected{% endif %}>BOTELLA</option>
+                                                <option value="GALON" {% if producto.unidad_medida == 'GALON' %}selected{% endif %}>GALON</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="precio_unitario" class="form-label">
+                                                <i class="fas fa-dollar-sign"></i> Precio Unitario
+                                            </label>
+                                            <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
+                                                   value="{{ producto.precio_unitario }}" step="0.01" min="0">
+                                            <div class="form-text">Precio por unidad en pesos.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="stock_actual" class="form-label">
+                                                <i class="fas fa-boxes"></i> Stock Actual
+                                            </label>
+                                            <input type="number" class="form-control" id="stock_actual" name="stock_actual" 
+                                                   value="{{ producto.stock_actual }}" min="0">
+                                            <div class="form-text">Cantidad actual en inventario.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="stock_minimo" class="form-label">
+                                                <i class="fas fa-exclamation-triangle"></i> Stock Mínimo
+                                            </label>
+                                            <input type="number" class="form-control" id="stock_minimo" name="stock_minimo" 
+                                                   value="{{ producto.stock_minimo }}" min="0">
+                                            <div class="form-text">Nivel mínimo para alertas.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="ubicacion" class="form-label">
+                                                <i class="fas fa-map-marker-alt"></i> Ubicación
+                                            </label>
+                                            <input type="text" class="form-control" id="ubicacion" name="ubicacion" 
+                                                   value="{{ producto.ubicacion or '' }}" placeholder="Ej: Estante A-1, Bodega 2">
+                                            <div class="form-text">Ubicación física del producto.</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="proveedor" class="form-label">
+                                                <i class="fas fa-truck"></i> Proveedor
+                                            </label>
+                                            <input type="text" class="form-control" id="proveedor" name="proveedor" 
+                                                   value="{{ producto.proveedor or '' }}" placeholder="Nombre del proveedor">
+                                            <div class="form-text">Proveedor del producto.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="fecha_vencimiento" class="form-label">
+                                                <i class="fas fa-calendar"></i> Fecha de Vencimiento
+                                            </label>
+                                            <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" 
+                                                   value="{{ producto.fecha_vencimiento.strftime('%Y-%m-%d') if producto.fecha_vencimiento else '' }}">
+                                            <div class="form-text">Fecha de vencimiento (opcional).</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="lote" class="form-label">
+                                                <i class="fas fa-hashtag"></i> Lote
+                                            </label>
+                                            <input type="text" class="form-control" id="lote" name="lote" 
+                                                   value="{{ producto.lote or '' }}" placeholder="Número de lote">
+                                            <div class="form-text">Número de lote (opcional).</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="activo" name="activo" 
+                                               {% if producto.activo %}checked{% endif %}>
+                                        <label class="form-check-label" for="activo">
+                                            <i class="fas fa-check-circle"></i> Producto Activo
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Los productos inactivos no aparecerán en los formularios de movimientos.</div>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('productos_inventario') }}" class="btn btn-secondary me-md-2">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Guardar Cambios
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Información Actual
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>ID:</strong> {{ producto.id }}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Estado:</strong> 
+                                {% if producto.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Categoría:</strong> 
+                                <span class="badge bg-primary">{{ producto.categoria.nombre }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Stock:</strong> 
+                                <span class="badge bg-info">{{ producto.stock_actual }} {{ producto.unidad_medida }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Precio:</strong> 
+                                <span class="text-success">${{ "{:,.0f}".format(producto.precio_unitario) }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Creado:</strong> {{ producto.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if producto.movimientos %}
+                    <div class="card mt-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-history"></i> Movimientos Recientes
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted">
+                                Este producto tiene {{ producto.movimientos|length }} movimientos registrados.
+                            </p>
+                            <div class="list-group list-group-flush">
+                                {% for movimiento in producto.movimientos[-5:] %}
+                                <div class="list-group-item px-0 py-1">
+                                    <small class="text-muted">
+                                        {{ movimiento.fecha_movimiento.strftime('%d/%m/%Y') }} - 
+                                        {{ movimiento.tipo_movimiento }}: {{ movimiento.cantidad }}
+                                    </small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <a href="{{ url_for('movimientos_inventario', producto_id=producto.id) }}" class="btn btn-outline-primary btn-sm mt-2">
+                                <i class="fas fa-list"></i> Ver Todos los Movimientos
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="card mt-3">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-trash"></i> Zona de Peligro
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted">
+                                <strong>Eliminar producto:</strong> Esta acción no se puede deshacer y afectará todos los movimientos asociados.
+                            </p>
+                            {% if producto.movimientos|length == 0 %}
+                                <form method="POST" action="{{ url_for('eliminar_producto_inventario', id=producto.id) }}" 
+                                      onsubmit="return confirm('¿Estás seguro de eliminar el producto \'{{ producto.nombre }}\'?\\n\\nEsta acción no se puede deshacer.')">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash"></i> Eliminar Producto
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="btn btn-outline-danger btn-sm" disabled>
+                                    <i class="fas fa-trash"></i> No se puede eliminar (tiene movimientos)
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

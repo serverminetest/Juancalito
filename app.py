@@ -2597,6 +2597,139 @@ def desactivar_categoria_inventario(id):
     
     return redirect(url_for('categorias_inventario'))
 
+@app.route('/inventarios/productos/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_producto_inventario(id):
+    """Editar producto de inventario"""
+    producto = Producto.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        try:
+            codigo = request.form['codigo'].strip().upper()
+            nombre = request.form['nombre'].strip().upper()
+            descripcion = request.form.get('descripcion', '').strip()
+            categoria_id = request.form['categoria_id']
+            unidad_medida = request.form['unidad_medida']
+            precio_unitario = float(request.form.get('precio_unitario', 0))
+            stock_minimo = int(request.form.get('stock_minimo', 0))
+            stock_actual = int(request.form.get('stock_actual', 0))
+            ubicacion = request.form.get('ubicacion', '').strip()
+            proveedor = request.form.get('proveedor', '').strip()
+            fecha_vencimiento = request.form.get('fecha_vencimiento')
+            lote = request.form.get('lote', '').strip()
+            activo = 'activo' in request.form
+            
+            # Validaciones
+            if not codigo or not nombre or not categoria_id:
+                flash('Código, nombre y categoría son obligatorios', 'error')
+                return redirect(url_for('editar_producto_inventario', id=id))
+            
+            # Verificar si el código ya existe (excluyendo el actual)
+            producto_existente = Producto.query.filter(
+                Producto.codigo == codigo,
+                Producto.id != id
+            ).first()
+            
+            if producto_existente:
+                flash(f'Ya existe un producto con el código "{codigo}"', 'error')
+                return redirect(url_for('editar_producto_inventario', id=id))
+            
+            # Actualizar producto
+            producto.codigo = codigo
+            producto.nombre = nombre
+            producto.descripcion = descripcion
+            producto.categoria_id = categoria_id
+            producto.unidad_medida = unidad_medida
+            producto.precio_unitario = precio_unitario
+            producto.stock_minimo = stock_minimo
+            producto.stock_actual = stock_actual
+            producto.ubicacion = ubicacion
+            producto.proveedor = proveedor
+            producto.lote = lote
+            producto.activo = activo
+            
+            if fecha_vencimiento:
+                producto.fecha_vencimiento = datetime.strptime(fecha_vencimiento, '%Y-%m-%d').date()
+            else:
+                producto.fecha_vencimiento = None
+            
+            db.session.commit()
+            
+            flash(f'Producto "{nombre}" actualizado exitosamente', 'success')
+            return redirect(url_for('productos_inventario'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el producto: {str(e)}', 'error')
+            return redirect(url_for('editar_producto_inventario', id=id))
+    
+    # GET: Mostrar formulario de edición
+    categorias = CategoriaInventario.query.filter_by(activa=True).order_by(CategoriaInventario.nombre).all()
+    return render_template('editar_producto_inventario.html', producto=producto, categorias=categorias)
+
+@app.route('/inventarios/productos/eliminar/<int:id>', methods=['POST'])
+@login_required
+def eliminar_producto_inventario(id):
+    """Eliminar producto de inventario"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden eliminar productos', 'error')
+        return redirect(url_for('productos_inventario'))
+    
+    try:
+        producto = Producto.query.get_or_404(id)
+        
+        # Verificar si tiene movimientos asociados
+        movimientos_count = MovimientoInventario.query.filter_by(producto_id=id).count()
+        if movimientos_count > 0:
+            flash(f'No se puede eliminar el producto "{producto.nombre}" porque tiene {movimientos_count} movimientos asociados', 'error')
+            return redirect(url_for('productos_inventario'))
+        
+        # Eliminar producto
+        db.session.delete(producto)
+        db.session.commit()
+        
+        flash(f'Producto "{producto.nombre}" eliminado exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el producto: {str(e)}', 'error')
+    
+    return redirect(url_for('productos_inventario'))
+
+@app.route('/inventarios/productos/activar/<int:id>', methods=['POST'])
+@login_required
+def activar_producto_inventario(id):
+    """Activar producto de inventario"""
+    try:
+        producto = Producto.query.get_or_404(id)
+        producto.activo = True
+        db.session.commit()
+        
+        flash(f'Producto "{producto.nombre}" activado exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al activar el producto: {str(e)}', 'error')
+    
+    return redirect(url_for('productos_inventario'))
+
+@app.route('/inventarios/productos/desactivar/<int:id>', methods=['POST'])
+@login_required
+def desactivar_producto_inventario(id):
+    """Desactivar producto de inventario"""
+    try:
+        producto = Producto.query.get_or_404(id)
+        producto.activo = False
+        db.session.commit()
+        
+        flash(f'Producto "{producto.nombre}" desactivado exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al desactivar el producto: {str(e)}', 'error')
+    
+    return redirect(url_for('productos_inventario'))
+
 @app.route('/inventarios/importar', methods=['GET', 'POST'])
 @login_required
 def importar_inventarios():
