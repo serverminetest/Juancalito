@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Importar Inventarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-file-import"></i> Importar Inventarios desde Excel</h2>
+                <a href="{{ url_for('inventarios') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Inventarios
+                </a>
+            </div>
+
+            <!-- Alertas -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-upload"></i> Subir Archivo Excel
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label for="tipo_inventario" class="form-label">
+                                        <i class="fas fa-tags"></i> Tipo de Inventario
+                                    </label>
+                                    <select class="form-select" id="tipo_inventario" name="tipo_inventario" required>
+                                        <option value="">Seleccione el tipo de inventario...</option>
+                                        <option value="ALMACEN GENERAL">Almacén General</option>
+                                        <option value="QUIMICOS">Químicos</option>
+                                        <option value="POSCOSECHA">Poscosecha</option>
+                                    </select>
+                                    <div class="form-text">Seleccione la categoría a la que pertenecen los productos del archivo.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="archivo_excel" class="form-label">
+                                        <i class="fas fa-file-excel"></i> Archivo Excel
+                                    </label>
+                                    <input type="file" class="form-control" id="archivo_excel" name="archivo_excel" 
+                                           accept=".xlsx,.xls" required>
+                                    <div class="form-text">
+                                        Solo se permiten archivos Excel (.xlsx, .xls). Tamaño máximo: 10MB
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-upload"></i> Importar Productos
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Instrucciones
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h6><i class="fas fa-database"></i> Estructura de Archivos:</h6>
+                            
+                            <div class="mb-3">
+                                <strong>Almacén General:</strong>
+                                <ul class="small">
+                                    <li>Columna B: PRODUCTO</li>
+                                    <li>Columna C: SALDO</li>
+                                    <li>Columna F: PROVEEDOR</li>
+                                    <li>Columna H: VALOR UND</li>
+                                </ul>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Químicos:</strong>
+                                <ul class="small">
+                                    <li>Columna B: CLASE</li>
+                                    <li>Columna C: PRODUCTO</li>
+                                    <li>Columna D: SALDO REAL</li>
+                                    <li>Columna G: PROVEEDOR</li>
+                                    <li>Columna I: VALOR C/U</li>
+                                </ul>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Poscosecha:</strong>
+                                <ul class="small">
+                                    <li>Columna A: PRODUCTO</li>
+                                    <li>Columna B: SALDO</li>
+                                    <li>Columna E: PROVEEDOR</li>
+                                    <li>Columna G: VALOR UND</li>
+                                </ul>
+                            </div>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Importante:</strong> La primera fila debe contener los encabezados. 
+                                Los productos duplicados serán omitidos automáticamente.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar"></i> Estadísticas
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="border-end">
+                                        <h4 class="text-primary mb-0" id="total-categorias">0</h4>
+                                        <small class="text-muted">Categorías</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border-end">
+                                        <h4 class="text-success mb-0" id="total-productos">0</h4>
+                                        <small class="text-muted">Productos</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <h4 class="text-info mb-0" id="total-movimientos">0</h4>
+                                    <small class="text-muted">Movimientos</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ejemplos de Archivos -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-file-download"></i> Archivos de Ejemplo
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card border-primary">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-warehouse fa-3x text-primary mb-3"></i>
+                                            <h6>Almacén General</h6>
+                                            <p class="small text-muted">Productos de almacén general</p>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="mostrarEjemplo('almacen')">
+                                                Ver Estructura
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-warning">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-flask fa-3x text-warning mb-3"></i>
+                                            <h6>Químicos</h6>
+                                            <p class="small text-muted">Productos químicos y agroquímicos</p>
+                                            <button class="btn btn-outline-warning btn-sm" onclick="mostrarEjemplo('quimicos')">
+                                                Ver Estructura
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-success">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-seedling fa-3x text-success mb-3"></i>
+                                            <h6>Poscosecha</h6>
+                                            <p class="small text-muted">Productos de poscosecha y empaque</p>
+                                            <button class="btn btn-outline-success btn-sm" onclick="mostrarEjemplo('poscosecha')">
+                                                Ver Estructura
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para mostrar ejemplos -->
+<div class="modal fade" id="modalEjemplo" tabindex="-1" aria-labelledby="modalEjemploLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEjemploLabel">Estructura del Archivo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="contenidoEjemplo"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Cargar estadísticas al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    cargarEstadisticas();
+});
+
+function cargarEstadisticas() {
+    // Aquí podrías hacer una llamada AJAX para obtener las estadísticas reales
+    // Por ahora, mostramos valores de ejemplo
+    document.getElementById('total-categorias').textContent = '3';
+    document.getElementById('total-productos').textContent = '0';
+    document.getElementById('total-movimientos').textContent = '0';
+}
+
+function mostrarEjemplo(tipo) {
+    let contenido = '';
+    
+    if (tipo === 'almacen') {
+        contenido = `
+            <h6>Estructura para Almacén General:</h6>
+            <table class="table table-bordered table-sm">
+                <thead class="table-primary">
+                    <tr>
+                        <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td><td>PRODUCTO</td><td>SALDO</td><td>FECHA</td><td>N. FACTURA</td><td>PROVE</td><td>CANT</td><td>VALOR UND</td><td>VALOR TOTAL</td>
+                    </tr>
+                    <tr>
+                        <td>2</td><td>ARANDELA CUADRADA</td><td>100</td><td>2025-01-01</td><td>F001</td><td>PROVEEDOR A</td><td>50</td><td>1500</td><td>75000</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+    } else if (tipo === 'quimicos') {
+        contenido = `
+            <h6>Estructura para Químicos:</h6>
+            <table class="table table-bordered table-sm">
+                <thead class="table-warning">
+                    <tr>
+                        <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td><td>CLASE</td><td>PRODUCTO</td><td>SALDO REAL</td><td>FECHA</td><td>FACTURA</td><td>PROVE</td><td>CANT</td><td>VALOR C/U</td><td>TOTAL</td>
+                    </tr>
+                    <tr>
+                        <td>2</td><td>ACARICIDA</td><td>Abafed</td><td>25</td><td>2025-01-01</td><td>F002</td><td>PROVEEDOR B</td><td>10</td><td>25000</td><td>250000</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+    } else if (tipo === 'poscosecha') {
+        contenido = `
+            <h6>Estructura para Poscosecha:</h6>
+            <table class="table table-bordered table-sm">
+                <thead class="table-success">
+                    <tr>
+                        <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td><td>PRODUCTO</td><td>SALDO</td><td>FECHA</td><td>N. FACTURA</td><td>PROVE</td><td>CANT</td><td>VALOR UND</td><td>VALOR TOTAL</td>
+                    </tr>
+                    <tr>
+                        <td>2</td><td>TAPAS DE CUARTOS</td><td>500</td><td>2025-01-01</td><td>F003</td><td>PROVEEDOR C</td><td>200</td><td>50</td><td>10000</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+    }
+    
+    document.getElementById('contenidoEjemplo').innerHTML = contenido;
+    new bootstrap.Modal(document.getElementById('modalEjemplo')).show();
+}
+</script>
+{% endblock %}

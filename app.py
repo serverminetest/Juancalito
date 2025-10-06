@@ -2443,6 +2443,161 @@ def movimientos_inventario():
                          fecha_desde_actual=fecha_desde,
                          fecha_hasta_actual=fecha_hasta)
 
+@app.route('/inventarios/importar', methods=['GET', 'POST'])
+@login_required
+def importar_inventarios():
+    """Importar inventarios desde archivos Excel"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden importar inventarios', 'error')
+        return redirect(url_for('inventarios'))
+    
+    if request.method == 'POST':
+        try:
+            # Verificar que se subió un archivo
+            if 'archivo_excel' not in request.files:
+                flash('No se seleccionó ningún archivo', 'error')
+                return redirect(url_for('importar_inventarios'))
+            
+            archivo = request.files['archivo_excel']
+            if archivo.filename == '':
+                flash('No se seleccionó ningún archivo', 'error')
+                return redirect(url_for('importar_inventarios'))
+            
+            # Verificar extensión
+            if not archivo.filename.lower().endswith(('.xlsx', '.xls')):
+                flash('Solo se permiten archivos Excel (.xlsx, .xls)', 'error')
+                return redirect(url_for('importar_inventarios'))
+            
+            # Obtener tipo de inventario
+            tipo_inventario = request.form.get('tipo_inventario')
+            if not tipo_inventario:
+                flash('Debe seleccionar el tipo de inventario', 'error')
+                return redirect(url_for('importar_inventarios'))
+            
+            # Guardar archivo temporalmente
+            import tempfile
+            import os
+            from openpyxl import load_workbook
+            from sqlalchemy import text
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                archivo.save(tmp_file.name)
+                
+                try:
+                    # Cargar archivo Excel
+                    wb = load_workbook(tmp_file.name)
+                    ws = wb.active
+                    
+                    # Obtener ID de categoría
+                    with db.engine.connect() as conn:
+                        result = conn.execute(text("""
+                            SELECT id FROM categoria_inventario WHERE nombre = :nombre
+                        """), {'nombre': tipo_inventario})
+                        categoria_id = result.fetchone()[0]
+                        
+                        productos_importados = 0
+                        productos_duplicados = 0
+                        errores = []
+                        
+                        # Procesar filas según el tipo de inventario
+                        for row in range(2, ws.max_row + 1):  # Saltar encabezado
+                            try:
+                                if tipo_inventario == 'ALMACEN GENERAL':
+                                    # Estructura: PRODUCTO, SALDO, FECHA, N. FACTURA, PROVE, CANT, VALOR UND, VALOR TOTAL
+                                    producto = str(ws[f'B{row}'].value or '').strip().upper()
+                                    saldo = float(str(ws[f'C{row}'].value or '0').replace(',', '.'))
+                                    proveedor = str(ws[f'F{row}'].value or '').strip().upper()
+                                    valor_und = float(str(ws[f'H{row}'].value or '0').replace(',', '.'))
+                                    
+                                elif tipo_inventario == 'QUIMICOS':
+                                    # Estructura: CLASE, PRODUCTO, SALDO REAL, FECHA, FACTURA, PROVE, CANT, VALOR C/U, TOTAL
+                                    clase = str(ws[f'B{row}'].value or '').strip().upper()
+                                    producto = str(ws[f'C{row}'].value or '').strip().upper()
+                                    saldo = float(str(ws[f'D{row}'].value or '0').replace(',', '.'))
+                                    proveedor = str(ws[f'G{row}'].value or '').strip().upper()
+                                    valor_und = float(str(ws[f'I{row}'].value or '0').replace(',', '.'))
+                                    
+                                elif tipo_inventario == 'POSCOSECHA':
+                                    # Estructura: PRODUCTO, SALDO, FECHA, N. FACTURA, PROVE, CANT, VALOR UND, VALOR TOTAL
+                                    producto = str(ws[f'A{row}'].value or '').strip().upper()
+                                    saldo = float(str(ws[f'B{row}'].value or '0').replace(',', '.'))
+                                    proveedor = str(ws[f'E{row}'].value or '').strip().upper()
+                                    valor_und = float(str(ws[f'G{row}'].value or '0').replace(',', '.'))
+                                
+                                if not producto or producto == "":
+                                    continue
+                                
+                                # Generar código único
+                                prefijo = {'ALMACEN GENERAL': 'ALM', 'QUIMICOS': 'QUI', 'POSCOSECHA': 'POS'}
+                                codigo = f"{prefijo[tipo_inventario]}-{row-1:04d}"
+                                
+                                # Verificar si ya existe
+                                result = conn.execute(text("""
+                                    SELECT id FROM producto WHERE codigo = :codigo
+                                """), {'codigo': codigo})
+                                
+                                if result.fetchone():
+                                    productos_duplicados += 1
+                                    continue
+                                
+                                # Insertar producto
+                                descripcion = f'Importado desde Excel - {tipo_inventario}'
+                                if tipo_inventario == 'QUIMICOS' and clase:
+                                    descripcion += f' - Clase: {clase}'
+                                
+                                conn.execute(text("""
+                                    INSERT INTO producto (
+                                        codigo, nombre, descripcion, categoria_id, unidad_medida,
+                                        precio_unitario, stock_actual, proveedor, activo, created_at
+                                    ) VALUES (
+                                        :codigo, :nombre, :descripcion, :categoria_id, :unidad_medida,
+                                        :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
+                                    )
+                                """), {
+                                    'codigo': codigo,
+                                    'nombre': producto,
+                                    'descripcion': descripcion,
+                                    'categoria_id': categoria_id,
+                                    'unidad_medida': 'UNIDAD',
+                                    'precio_unitario': valor_und,
+                                    'stock_actual': int(saldo),
+                                    'proveedor': proveedor
+                                })
+                                
+                                productos_importados += 1
+                                
+                            except Exception as e:
+                                errores.append(f"Fila {row}: {str(e)}")
+                                continue
+                        
+                        conn.commit()
+                        
+                        # Mensaje de resultado
+                        mensaje = f"Importación completada: {productos_importados} productos importados"
+                        if productos_duplicados > 0:
+                            mensaje += f", {productos_duplicados} duplicados omitidos"
+                        if errores:
+                            mensaje += f", {len(errores)} errores"
+                        
+                        flash(mensaje, 'success' if productos_importados > 0 else 'warning')
+                        
+                        if errores and len(errores) <= 10:  # Mostrar solo los primeros 10 errores
+                            for error in errores[:10]:
+                                flash(f"Error: {error}", 'error')
+                
+                finally:
+                    # Limpiar archivo temporal
+                    os.unlink(tmp_file.name)
+            
+            return redirect(url_for('productos_inventario'))
+            
+        except Exception as e:
+            flash(f'Error durante la importación: {str(e)}', 'error')
+            return redirect(url_for('importar_inventarios'))
+    
+    # GET: Mostrar formulario de importación
+    return render_template('importar_inventarios.html')
+
 @app.route('/inventarios/movimientos/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_movimiento_inventario():
