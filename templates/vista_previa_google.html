@@ -130,11 +130,23 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label">Fecha de Generación:</span>
-                        <span class="info-value">{{ contrato.fecha_generacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                        <span class="info-value">
+                            {% if contrato.fecha_generacion %}
+                                {{ contrato.fecha_generacion.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                No disponible
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Salario:</span>
-                        <span class="info-value">${{ "{:,.0f}".format(contrato.empleado.salario) }}</span>
+                        <span class="info-value">
+                            {% if contrato.empleado.salario %}
+                                ${{ "{:,.0f}".format(contrato.empleado.salario) }}
+                            {% else %}
+                                No disponible
+                            {% endif %}
+                        </span>
                     </div>
                 </div>
             </div>
