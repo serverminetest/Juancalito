@@ -576,6 +576,55 @@ class ContratoGenerado(db.Model):
     empleado = db.relationship('Empleado', backref='contratos_generados')
     contrato = db.relationship('Contrato', backref='documentos_generados')
 
+# Modelos para Sistema de Inventarios
+class CategoriaInventario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False, unique=True)
+    descripcion = db.Column(db.Text)
+    activa = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=colombia_now)
+    
+    # Relación con productos
+    productos = db.relationship('Producto', backref='categoria', lazy=True)
+
+class Producto(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(50), nullable=False, unique=True)
+    nombre = db.Column(db.String(200), nullable=False)
+    descripcion = db.Column(db.Text)
+    categoria_id = db.Column(db.Integer, db.ForeignKey('categoria_inventario.id'), nullable=False)
+    unidad_medida = db.Column(db.String(20), nullable=False)  # kg, litros, unidades, etc.
+    precio_unitario = db.Column(db.Numeric(10, 2), default=0)
+    stock_minimo = db.Column(db.Integer, default=0)
+    stock_actual = db.Column(db.Integer, default=0)
+    ubicacion = db.Column(db.String(100))  # Estante, sección, etc.
+    proveedor = db.Column(db.String(200))
+    fecha_vencimiento = db.Column(db.Date)
+    lote = db.Column(db.String(50))
+    activo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=colombia_now)
+    updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
+    
+    # Relación con movimientos
+    movimientos = db.relationship('MovimientoInventario', backref='producto', lazy=True)
+
+class MovimientoInventario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    tipo_movimiento = db.Column(db.String(20), nullable=False)  # ENTRADA, SALIDA
+    cantidad = db.Column(db.Integer, nullable=False)
+    precio_unitario = db.Column(db.Numeric(10, 2))
+    total = db.Column(db.Numeric(10, 2))
+    motivo = db.Column(db.String(200))
+    referencia = db.Column(db.String(100))  # Factura, orden de compra, etc.
+    responsable = db.Column(db.String(200))
+    observaciones = db.Column(db.Text)
+    fecha_movimiento = db.Column(db.DateTime, default=colombia_now)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Relación con usuario
+    usuario = db.relationship('User', backref='movimientos_inventario')
+
 class Asistencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     empleado_id = db.Column(db.Integer, db.ForeignKey('empleado.id'), nullable=False)
@@ -2094,6 +2143,272 @@ def init_db():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {str(e)}")
         raise
+
+# ===== RUTAS PARA SISTEMA DE INVENTARIOS =====
+
+@app.route('/inventarios')
+@login_required
+def inventarios():
+    """Página principal del sistema de inventarios"""
+    categorias = CategoriaInventario.query.filter_by(activa=True).all()
+    productos = Producto.query.filter_by(activo=True).all()
+    
+    # Estadísticas rápidas
+    total_productos = len(productos)
+    productos_bajo_stock = len([p for p in productos if p.stock_actual <= p.stock_minimo])
+    valor_total_inventario = sum(p.stock_actual * p.precio_unitario for p in productos)
+    
+    return render_template('inventarios.html', 
+                         categorias=categorias,
+                         productos=productos,
+                         total_productos=total_productos,
+                         productos_bajo_stock=productos_bajo_stock,
+                         valor_total_inventario=valor_total_inventario)
+
+@app.route('/inventarios/categorias')
+@login_required
+def categorias_inventario():
+    """Gestión de categorías de inventario"""
+    categorias = CategoriaInventario.query.all()
+    return render_template('categorias_inventario.html', categorias=categorias)
+
+@app.route('/inventarios/categorias/nueva', methods=['GET', 'POST'])
+@login_required
+def nueva_categoria_inventario():
+    """Crear nueva categoría de inventario"""
+    if request.method == 'POST':
+        nombre = request.form['nombre'].strip()
+        descripcion = request.form.get('descripcion', '').strip()
+        
+        if not nombre:
+            flash('El nombre de la categoría es obligatorio', 'error')
+            return render_template('nueva_categoria_inventario.html')
+        
+        # Verificar si ya existe
+        categoria_existente = CategoriaInventario.query.filter_by(nombre=nombre).first()
+        if categoria_existente:
+            flash('Ya existe una categoría con ese nombre', 'error')
+            return render_template('nueva_categoria_inventario.html')
+        
+        try:
+            nueva_categoria = CategoriaInventario(
+                nombre=nombre,
+                descripcion=descripcion
+            )
+            db.session.add(nueva_categoria)
+            db.session.commit()
+            flash(f'Categoría "{nombre}" creada exitosamente', 'success')
+            return redirect(url_for('categorias_inventario'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la categoría: {str(e)}', 'error')
+            return render_template('nueva_categoria_inventario.html')
+    
+    return render_template('nueva_categoria_inventario.html')
+
+@app.route('/inventarios/productos')
+@login_required
+def productos_inventario():
+    """Lista de productos del inventario"""
+    categoria_id = request.args.get('categoria_id', type=int)
+    busqueda = request.args.get('busqueda', '').strip()
+    
+    query = Producto.query.filter_by(activo=True)
+    
+    if categoria_id:
+        query = query.filter_by(categoria_id=categoria_id)
+    
+    if busqueda:
+        query = query.filter(
+            db.or_(
+                Producto.nombre.contains(busqueda),
+                Producto.codigo.contains(busqueda),
+                Producto.descripcion.contains(busqueda)
+            )
+        )
+    
+    productos = query.order_by(Producto.nombre).all()
+    categorias = CategoriaInventario.query.filter_by(activa=True).all()
+    
+    return render_template('productos_inventario.html', 
+                         productos=productos, 
+                         categorias=categorias,
+                         categoria_actual=categoria_id,
+                         busqueda_actual=busqueda)
+
+@app.route('/inventarios/productos/nuevo', methods=['GET', 'POST'])
+@login_required
+def nuevo_producto_inventario():
+    """Crear nuevo producto"""
+    if request.method == 'POST':
+        try:
+            codigo = request.form['codigo'].strip()
+            nombre = request.form['nombre'].strip()
+            descripcion = request.form.get('descripcion', '').strip()
+            categoria_id = request.form['categoria_id']
+            unidad_medida = request.form['unidad_medida'].strip()
+            precio_unitario = float(request.form.get('precio_unitario', 0))
+            stock_minimo = int(request.form.get('stock_minimo', 0))
+            stock_actual = int(request.form.get('stock_actual', 0))
+            ubicacion = request.form.get('ubicacion', '').strip()
+            proveedor = request.form.get('proveedor', '').strip()
+            fecha_vencimiento = request.form.get('fecha_vencimiento')
+            lote = request.form.get('lote', '').strip()
+            
+            # Validaciones
+            if not codigo or not nombre or not categoria_id or not unidad_medida:
+                flash('Los campos código, nombre, categoría y unidad de medida son obligatorios', 'error')
+                return redirect(url_for('nuevo_producto_inventario'))
+            
+            # Verificar si el código ya existe
+            producto_existente = Producto.query.filter_by(codigo=codigo).first()
+            if producto_existente:
+                flash('Ya existe un producto con ese código', 'error')
+                return redirect(url_for('nuevo_producto_inventario'))
+            
+            # Convertir fecha de vencimiento
+            fecha_venc = None
+            if fecha_vencimiento:
+                fecha_venc = datetime.strptime(fecha_vencimiento, '%Y-%m-%d').date()
+            
+            nuevo_producto = Producto(
+                codigo=codigo,
+                nombre=nombre,
+                descripcion=descripcion,
+                categoria_id=categoria_id,
+                unidad_medida=unidad_medida,
+                precio_unitario=precio_unitario,
+                stock_minimo=stock_minimo,
+                stock_actual=stock_actual,
+                ubicacion=ubicacion,
+                proveedor=proveedor,
+                fecha_vencimiento=fecha_venc,
+                lote=lote
+            )
+            
+            db.session.add(nuevo_producto)
+            db.session.commit()
+            
+            flash(f'Producto "{nombre}" creado exitosamente', 'success')
+            return redirect(url_for('productos_inventario'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear el producto: {str(e)}', 'error')
+            return redirect(url_for('nuevo_producto_inventario'))
+    
+    categorias = CategoriaInventario.query.filter_by(activa=True).all()
+    return render_template('nuevo_producto_inventario.html', categorias=categorias)
+
+@app.route('/inventarios/movimientos')
+@login_required
+def movimientos_inventario():
+    """Historial de movimientos de inventario"""
+    producto_id = request.args.get('producto_id', type=int)
+    tipo_movimiento = request.args.get('tipo_movimiento', '')
+    fecha_desde = request.args.get('fecha_desde', '')
+    fecha_hasta = request.args.get('fecha_hasta', '')
+    
+    query = MovimientoInventario.query
+    
+    if producto_id:
+        query = query.filter_by(producto_id=producto_id)
+    
+    if tipo_movimiento:
+        query = query.filter_by(tipo_movimiento=tipo_movimiento)
+    
+    if fecha_desde:
+        try:
+            fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d')
+            query = query.filter(MovimientoInventario.fecha_movimiento >= fecha_desde_obj)
+        except ValueError:
+            pass
+    
+    if fecha_hasta:
+        try:
+            fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d')
+            query = query.filter(MovimientoInventario.fecha_movimiento <= fecha_hasta_obj)
+        except ValueError:
+            pass
+    
+    movimientos = query.order_by(MovimientoInventario.fecha_movimiento.desc()).all()
+    productos = Producto.query.filter_by(activo=True).all()
+    
+    return render_template('movimientos_inventario.html',
+                         movimientos=movimientos,
+                         productos=productos,
+                         producto_actual=producto_id,
+                         tipo_actual=tipo_movimiento,
+                         fecha_desde_actual=fecha_desde,
+                         fecha_hasta_actual=fecha_hasta)
+
+@app.route('/inventarios/movimientos/nuevo', methods=['GET', 'POST'])
+@login_required
+def nuevo_movimiento_inventario():
+    """Registrar nuevo movimiento de inventario"""
+    if request.method == 'POST':
+        try:
+            producto_id = request.form['producto_id']
+            tipo_movimiento = request.form['tipo_movimiento']
+            cantidad = int(request.form['cantidad'])
+            precio_unitario = float(request.form.get('precio_unitario', 0))
+            motivo = request.form.get('motivo', '').strip()
+            referencia = request.form.get('referencia', '').strip()
+            responsable = request.form.get('responsable', '').strip()
+            observaciones = request.form.get('observaciones', '').strip()
+            
+            # Validaciones
+            if not producto_id or not tipo_movimiento or not cantidad:
+                flash('Los campos producto, tipo de movimiento y cantidad son obligatorios', 'error')
+                return redirect(url_for('nuevo_movimiento_inventario'))
+            
+            if cantidad <= 0:
+                flash('La cantidad debe ser mayor a 0', 'error')
+                return redirect(url_for('nuevo_movimiento_inventario'))
+            
+            producto = Producto.query.get_or_404(producto_id)
+            
+            # Verificar stock para salidas
+            if tipo_movimiento == 'SALIDA' and producto.stock_actual < cantidad:
+                flash(f'Stock insuficiente. Stock actual: {producto.stock_actual}', 'error')
+                return redirect(url_for('nuevo_movimiento_inventario'))
+            
+            # Calcular total
+            total = cantidad * precio_unitario
+            
+            # Crear movimiento
+            nuevo_movimiento = MovimientoInventario(
+                producto_id=producto_id,
+                tipo_movimiento=tipo_movimiento,
+                cantidad=cantidad,
+                precio_unitario=precio_unitario,
+                total=total,
+                motivo=motivo,
+                referencia=referencia,
+                responsable=responsable,
+                observaciones=observaciones,
+                created_by=current_user.id
+            )
+            
+            # Actualizar stock del producto
+            if tipo_movimiento == 'ENTRADA':
+                producto.stock_actual += cantidad
+            else:  # SALIDA
+                producto.stock_actual -= cantidad
+            
+            db.session.add(nuevo_movimiento)
+            db.session.commit()
+            
+            flash(f'Movimiento registrado exitosamente. Stock actual: {producto.stock_actual}', 'success')
+            return redirect(url_for('movimientos_inventario'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al registrar el movimiento: {str(e)}', 'error')
+            return redirect(url_for('nuevo_movimiento_inventario'))
+    
+    productos = Producto.query.filter_by(activo=True).all()
+    return render_template('nuevo_movimiento_inventario.html', productos=productos)
 
 if __name__ == '__main__':
     try:

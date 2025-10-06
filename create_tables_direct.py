@@ -107,6 +107,51 @@ def create_tables_direct():
             activo BOOLEAN DEFAULT TRUE
         );
         
+        -- Tabla de categorías de inventario
+        CREATE TABLE categoria_inventario (
+            id SERIAL PRIMARY KEY,
+            nombre VARCHAR(100) NOT NULL UNIQUE,
+            descripcion TEXT,
+            activa BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        -- Tabla de productos
+        CREATE TABLE producto (
+            id SERIAL PRIMARY KEY,
+            codigo VARCHAR(50) NOT NULL UNIQUE,
+            nombre VARCHAR(200) NOT NULL,
+            descripcion TEXT,
+            categoria_id INTEGER NOT NULL REFERENCES categoria_inventario(id),
+            unidad_medida VARCHAR(20) NOT NULL,
+            precio_unitario NUMERIC(10, 2) DEFAULT 0,
+            stock_minimo INTEGER DEFAULT 0,
+            stock_actual INTEGER DEFAULT 0,
+            ubicacion VARCHAR(100),
+            proveedor VARCHAR(200),
+            fecha_vencimiento DATE,
+            lote VARCHAR(50),
+            activo BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        -- Tabla de movimientos de inventario
+        CREATE TABLE movimiento_inventario (
+            id SERIAL PRIMARY KEY,
+            producto_id INTEGER NOT NULL REFERENCES producto(id),
+            tipo_movimiento VARCHAR(20) NOT NULL,
+            cantidad INTEGER NOT NULL,
+            precio_unitario NUMERIC(10, 2),
+            total NUMERIC(10, 2),
+            motivo VARCHAR(200),
+            referencia VARCHAR(100),
+            responsable VARCHAR(200),
+            observaciones TEXT,
+            fecha_movimiento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by INTEGER REFERENCES "user"(id)
+        );
+        
         -- Tabla de asistencias
         CREATE TABLE asistencia (
             id SERIAL PRIMARY KEY,

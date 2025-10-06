@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Categoría{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-plus"></i> Nueva Categoría</h2>
+        <div>
+            <a href="{{ url_for('categorias_inventario') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver a Categorías
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tag"></i> Información de la Categoría</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label">Nombre de la Categoría *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required 
+                                   placeholder="Ej: Almacén General, Químicos, Poscosecha">
+                            <div class="form-text">Nombre único para identificar la categoría</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="descripcion" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="4" 
+                                      placeholder="Describe qué tipo de productos pertenecen a esta categoría..."></textarea>
+                            <div class="form-text">Descripción opcional para ayudar a identificar el propósito de la categoría</div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('categorias_inventario') }}" class="btn btn-secondary me-2">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Crear Categoría
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Ayuda -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-lightbulb"></i> Consejos</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            <strong>Nombre claro:</strong> Usa nombres descriptivos y fáciles de recordar.
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            <strong>Organización:</strong> Las categorías ayudan a organizar mejor los productos.
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            <strong>Filtros:</strong> Permiten filtrar productos por tipo.
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            <strong>Reportes:</strong> Facilitan la generación de reportes por categoría.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-info"></i> Sugerencias</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Basándome en tus archivos Excel, te sugiero estas categorías:</p>
+                    <div class="mb-2">
+                        <span class="badge bg-primary">Almacén General</span>
+                        <small class="text-muted d-block">Herramientas, repuestos, materiales</small>
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge bg-warning">Químicos</span>
+                        <small class="text-muted d-block">Pesticidas, fertilizantes</small>
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge bg-success">Poscosecha</span>
+                        <small class="text-muted d-block">Embalajes, tapas, empaques</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-question-circle"></i> ¿Por qué categorías?</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">
+                        Las categorías te permiten:
+                    </p>
+                    <ul class="small text-muted">
+                        <li>Organizar productos por tipo</li>
+                        <li>Filtrar inventarios fácilmente</li>
+                        <li>Generar reportes específicos</li>
+                        <li>Mantener control por áreas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

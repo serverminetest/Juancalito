@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Movimiento de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-exchange-alt"></i> Nuevo Movimiento de Inventario</h2>
+        <div>
+            <a href="{{ url_for('movimientos_inventario') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver a Movimientos
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-boxes"></i> Registro de Movimiento</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <!-- Información del Movimiento -->
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3"><i class="fas fa-info-circle"></i> Información del Movimiento</h6>
+                                
+                                <div class="mb-3">
+                                    <label for="producto_id" class="form-label">Producto *</label>
+                                    <select class="form-select" id="producto_id" name="producto_id" required>
+                                        <option value="">Seleccionar producto</option>
+                                        {% for producto in productos %}
+                                        <option value="{{ producto.id }}" 
+                                                data-stock="{{ producto.stock_actual }}"
+                                                data-unidad="{{ producto.unidad_medida }}"
+                                                data-precio="{{ producto.precio_unitario }}">
+                                            {{ producto.codigo }} - {{ producto.nombre }} 
+                                            (Stock: {{ producto.stock_actual }} {{ producto.unidad_medida }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="tipo_movimiento" class="form-label">Tipo de Movimiento *</label>
+                                    <select class="form-select" id="tipo_movimiento" name="tipo_movimiento" required>
+                                        <option value="">Seleccionar tipo</option>
+                                        <option value="ENTRADA">Entrada (Ingreso)</option>
+                                        <option value="SALIDA">Salida (Egreso)</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="cantidad" class="form-label">Cantidad *</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="cantidad" name="cantidad" 
+                                               min="1" required>
+                                        <span class="input-group-text" id="unidad_medida">-</span>
+                                    </div>
+                                    <div class="form-text" id="stock_info">Selecciona un producto para ver el stock actual</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="precio_unitario" class="form-label">Precio Unitario</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
+                                               step="0.01" min="0" value="0">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Información Adicional -->
+                            <div class="col-md-6">
+                                <h6 class="text-success mb-3"><i class="fas fa-clipboard-list"></i> Información Adicional</h6>
+                                
+                                <div class="mb-3">
+                                    <label for="motivo" class="form-label">Motivo del Movimiento</label>
+                                    <select class="form-select" id="motivo" name="motivo">
+                                        <option value="">Seleccionar motivo</option>
+                                        <option value="COMPRA">Compra</option>
+                                        <option value="VENTA">Venta</option>
+                                        <option value="TRANSFERENCIA">Transferencia</option>
+                                        <option value="AJUSTE">Ajuste de Inventario</option>
+                                        <option value="DONACION">Donación</option>
+                                        <option value="PERDIDA">Pérdida</option>
+                                        <option value="VENCIMIENTO">Vencimiento</option>
+                                        <option value="OTRO">Otro</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="referencia" class="form-label">Referencia</label>
+                                    <input type="text" class="form-control" id="referencia" name="referencia" 
+                                           placeholder="Número de factura, orden, etc.">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="responsable" class="form-label">Responsable</label>
+                                    <input type="text" class="form-control" id="responsable" name="responsable" 
+                                           placeholder="Nombre de la persona responsable">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="observaciones" class="form-label">Observaciones</label>
+                                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
+                                              placeholder="Observaciones adicionales..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen del Movimiento -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="text-info mb-3"><i class="fas fa-calculator"></i> Resumen del Movimiento</h6>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <strong>Total:</strong> $<span id="total_movimiento">0.00</span>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Stock Después:</strong> <span id="stock_despues">-</span>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <strong>Estado:</strong> <span id="estado_movimiento" class="badge">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-end">
+                                    <a href="{{ url_for('movimientos_inventario') }}" class="btn btn-secondary me-2">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </a>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save"></i> Registrar Movimiento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Ayuda -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-lightbulb"></i> Tipos de Movimiento</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-success"><i class="fas fa-arrow-down"></i> Entrada</h6>
+                        <p class="small text-muted">Aumenta el stock del producto. Usado para compras, donaciones, ajustes positivos.</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6 class="text-danger"><i class="fas fa-arrow-up"></i> Salida</h6>
+                        <p class="small text-muted">Disminuye el stock del producto. Usado para ventas, transferencias, pérdidas.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Validaciones</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled small">
+                        <li class="mb-1">
+                            <i class="fas fa-check text-success"></i>
+                            El stock no puede ser negativo
+                        </li>
+                        <li class="mb-1">
+                            <i class="fas fa-check text-success"></i>
+                            La cantidad debe ser mayor a 0
+                        </li>
+                        <li class="mb-1">
+                            <i class="fas fa-check text-success"></i>
+                            Se actualiza automáticamente el stock
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productoSelect = document.getElementById('producto_id');
+    const tipoMovimientoSelect = document.getElementById('tipo_movimiento');
+    const cantidadInput = document.getElementById('cantidad');
+    const precioInput = document.getElementById('precio_unitario');
+    const unidadSpan = document.getElementById('unidad_medida');
+    const stockInfo = document.getElementById('stock_info');
+    const totalSpan = document.getElementById('total_movimiento');
+    const stockDespuesSpan = document.getElementById('stock_despues');
+    const estadoSpan = document.getElementById('estado_movimiento');
+
+    function actualizarInfo() {
+        const productoOption = productoSelect.options[productoSelect.selectedIndex];
+        const stockActual = parseInt(productoOption.dataset.stock) || 0;
+        const unidad = productoOption.dataset.unidad || '';
+        const precio = parseFloat(productoOption.dataset.precio) || 0;
+        const cantidad = parseInt(cantidadInput.value) || 0;
+        const precioUnitario = parseFloat(precioInput.value) || 0;
+        const tipoMovimiento = tipoMovimientoSelect.value;
+
+        // Actualizar unidad de medida
+        unidadSpan.textContent = unidad;
+
+        // Actualizar información de stock
+        if (productoSelect.value) {
+            stockInfo.textContent = `Stock actual: ${stockActual} ${unidad}`;
+        } else {
+            stockInfo.textContent = 'Selecciona un producto para ver el stock actual';
+        }
+
+        // Calcular total
+        const total = cantidad * precioUnitario;
+        totalSpan.textContent = total.toFixed(2);
+
+        // Calcular stock después del movimiento
+        if (productoSelect.value && tipoMovimiento && cantidad) {
+            let stockDespues = stockActual;
+            if (tipoMovimiento === 'ENTRADA') {
+                stockDespues = stockActual + cantidad;
+            } else if (tipoMovimiento === 'SALIDA') {
+                stockDespues = stockActual - cantidad;
+            }
+            stockDespuesSpan.textContent = `${stockDespues} ${unidad}`;
+
+            // Actualizar estado
+            if (stockDespues < 0) {
+                estadoSpan.textContent = 'Stock Insuficiente';
+                estadoSpan.className = 'badge bg-danger';
+            } else if (stockDespues === 0) {
+                estadoSpan.textContent = 'Stock Agotado';
+                estadoSpan.className = 'badge bg-warning';
+            } else {
+                estadoSpan.textContent = 'OK';
+                estadoSpan.className = 'badge bg-success';
+            }
+        } else {
+            stockDespuesSpan.textContent = '-';
+            estadoSpan.textContent = '-';
+            estadoSpan.className = 'badge';
+        }
+
+        // Establecer precio por defecto
+        if (precioInput.value === '0' && precio > 0) {
+            precioInput.value = precio;
+        }
+    }
+
+    // Event listeners
+    productoSelect.addEventListener('change', actualizarInfo);
+    tipoMovimientoSelect.addEventListener('change', actualizarInfo);
+    cantidadInput.addEventListener('input', actualizarInfo);
+    precioInput.addEventListener('input', actualizarInfo);
+
+    // Cargar producto desde URL si existe
+    const urlParams = new URLSearchParams(window.location.search);
+    const productoId = urlParams.get('producto_id');
+    if (productoId) {
+        productoSelect.value = productoId;
+        actualizarInfo();
+    }
+});
+</script>
+{% endblock %}

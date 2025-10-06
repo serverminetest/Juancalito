@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Categorías de Inventario{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tags"></i> Categorías de Inventario</h2>
+        <div>
+            <a href="{{ url_for('inventarios') }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <a href="{{ url_for('nueva_categoria_inventario') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Nueva Categoría
+            </a>
+        </div>
+    </div>
+
+    <!-- Lista de Categorías -->
+    <div class="row">
+        {% if categorias %}
+        {% for categoria in categorias %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ categoria.nombre }}</h5>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                onclick="editarCategoria({{ categoria.id }})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                onclick="eliminarCategoria({{ categoria.id }}, '{{ categoria.nombre }}')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if categoria.descripcion %}
+                    <p class="card-text">{{ categoria.descripcion }}</p>
+                    {% else %}
+                    <p class="card-text text-muted">Sin descripción</p>
+                    {% endif %}
+                    
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h6 class="text-primary">{{ categoria.productos|length }}</h6>
+                            <small class="text-muted">Productos</small>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-success">
+                                {% if categoria.activa %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle"></i>
+                                {% endif %}
+                            </h6>
+                            <small class="text-muted">Estado</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('productos_inventario', categoria_id=categoria.id) }}" 
+                       class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-boxes"></i> Ver Productos
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="text-center py-5">
+                <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay categorías creadas</h5>
+                <p class="text-muted">Las categorías te ayudan a organizar los productos del inventario</p>
+                <a href="{{ url_for('nueva_categoria_inventario') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Crear Primera Categoría
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sugerencias de Categorías -->
+    {% if not categorias %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-lightbulb"></i> Sugerencias de Categorías</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Basándome en tus archivos Excel, te sugiero estas categorías:</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-warehouse fa-2x text-primary mb-2"></i>
+                                    <h6>Almacén General</h6>
+                                    <p class="small text-muted">Herramientas, repuestos, materiales generales</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-warning">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-flask fa-2x text-warning mb-2"></i>
+                                    <h6>Químicos</h6>
+                                    <p class="small text-muted">Pesticidas, fertilizantes, productos químicos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-seedling fa-2x text-success mb-2"></i>
+                                    <h6>Poscosecha</h6>
+                                    <p class="small text-muted">Embalajes, tapas, materiales de empaque</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmación para Eliminar -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalEliminarLabel">
+                    <i class="fas fa-trash me-2"></i>Eliminar Categoría
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas <strong>eliminar permanentemente</strong> la categoría:</p>
+                <div class="alert alert-danger">
+                    <strong id="nombreCategoriaEliminar"></strong>
+                </div>
+                <p class="text-muted"><strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer y afectará todos los productos asociados.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminar">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let categoriaIdActual = null;
+
+function editarCategoria(id) {
+    // Aquí puedes implementar la edición de categorías
+    alert('Función de edición en desarrollo');
+}
+
+function eliminarCategoria(id, nombre) {
+    categoriaIdActual = id;
+    document.getElementById('nombreCategoriaEliminar').textContent = nombre;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminar'));
+    modal.show();
+}
+
+// Event listener para confirmar eliminación
+document.getElementById('confirmarEliminar').addEventListener('click', function() {
+    if (categoriaIdActual) {
+        // Aquí puedes implementar la eliminación via AJAX
+        alert('Función de eliminación en desarrollo');
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEliminar'));
+        modal.hide();
+    }
+});
+</script>
+{% endblock %}

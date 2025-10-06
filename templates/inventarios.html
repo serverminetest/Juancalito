@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Sistema de Inventarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-boxes"></i> Sistema de Inventarios</h2>
+        <div>
+            <a href="{{ url_for('nueva_categoria_inventario') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-tags"></i> Nueva Categoría
+            </a>
+            <a href="{{ url_for('nuevo_producto_inventario') }}" class="btn btn-success me-2">
+                <i class="fas fa-plus"></i> Nuevo Producto
+            </a>
+            <a href="{{ url_for('nuevo_movimiento_inventario') }}" class="btn btn-warning">
+                <i class="fas fa-exchange-alt"></i> Nuevo Movimiento
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ total_productos }}</h4>
+                            <p class="mb-0">Total Productos</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-boxes fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ productos_bajo_stock }}</h4>
+                            <p class="mb-0">Stock Bajo</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>${{ "{:,.0f}".format(valor_total_inventario) }}</h4>
+                            <p class="mb-0">Valor Total</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-dollar-sign fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ categorias|length }}</h4>
+                            <p class="mb-0">Categorías</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-tags fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación Rápida -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-compass"></i> Navegación Rápida</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('productos_inventario') }}" class="btn btn-outline-primary btn-lg w-100 mb-2">
+                                <i class="fas fa-boxes"></i><br>
+                                <small>Gestionar Productos</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('categorias_inventario') }}" class="btn btn-outline-secondary btn-lg w-100 mb-2">
+                                <i class="fas fa-tags"></i><br>
+                                <small>Gestionar Categorías</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('movimientos_inventario') }}" class="btn btn-outline-info btn-lg w-100 mb-2">
+                                <i class="fas fa-history"></i><br>
+                                <small>Historial Movimientos</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('nuevo_movimiento_inventario') }}" class="btn btn-outline-warning btn-lg w-100 mb-2">
+                                <i class="fas fa-exchange-alt"></i><br>
+                                <small>Entrada/Salida</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos con Stock Bajo -->
+    {% if productos_bajo_stock > 0 %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Categoría</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Unidad</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for producto in productos %}
+                                    {% if producto.stock_actual <= producto.stock_minimo %}
+                                    <tr class="table-warning">
+                                        <td><strong>{{ producto.codigo }}</strong></td>
+                                        <td>{{ producto.nombre }}</td>
+                                        <td>{{ producto.categoria.nombre }}</td>
+                                        <td><span class="badge bg-danger">{{ producto.stock_actual }}</span></td>
+                                        <td>{{ producto.stock_minimo }}</td>
+                                        <td>{{ producto.unidad_medida }}</td>
+                                        <td>
+                                            <a href="{{ url_for('nuevo_movimiento_inventario') }}?producto_id={{ producto.id }}" 
+                                               class="btn btn-sm btn-warning">
+                                                <i class="fas fa-plus"></i> Entrada
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Categorías -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tags"></i> Categorías de Inventario</h5>
+                </div>
+                <div class="card-body">
+                    {% if categorias %}
+                    <div class="row">
+                        {% for categoria in categorias %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ categoria.nombre }}</h6>
+                                    {% if categoria.descripcion %}
+                                    <p class="card-text text-muted">{{ categoria.descripcion }}</p>
+                                    {% endif %}
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">
+                                            {{ categoria.productos|length }} productos
+                                        </small>
+                                        <a href="{{ url_for('productos_inventario', categoria_id=categoria.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            Ver Productos
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay categorías creadas</h5>
+                        <p class="text-muted">Crea tu primera categoría para organizar los productos</p>
+                        <a href="{{ url_for('nueva_categoria_inventario') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Crear Primera Categoría
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
