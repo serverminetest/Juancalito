@@ -2443,6 +2443,160 @@ def movimientos_inventario():
                          fecha_desde_actual=fecha_desde,
                          fecha_hasta_actual=fecha_hasta)
 
+@app.route('/inventarios/categorias')
+@login_required
+def categorias_inventario():
+    """Listar categorías de inventario"""
+    categorias = CategoriaInventario.query.order_by(CategoriaInventario.nombre).all()
+    return render_template('categorias_inventario.html', categorias=categorias)
+
+@app.route('/inventarios/categorias/nueva', methods=['GET', 'POST'])
+@login_required
+def nueva_categoria_inventario():
+    """Crear nueva categoría de inventario"""
+    if request.method == 'POST':
+        try:
+            nombre = request.form['nombre'].strip().upper()
+            descripcion = request.form.get('descripcion', '').strip()
+            
+            # Validaciones
+            if not nombre:
+                flash('El nombre de la categoría es obligatorio', 'error')
+                return redirect(url_for('nueva_categoria_inventario'))
+            
+            # Verificar si ya existe
+            categoria_existente = CategoriaInventario.query.filter_by(nombre=nombre).first()
+            if categoria_existente:
+                flash(f'Ya existe una categoría con el nombre "{nombre}"', 'error')
+                return redirect(url_for('nueva_categoria_inventario'))
+            
+            # Crear nueva categoría
+            nueva_categoria = CategoriaInventario(
+                nombre=nombre,
+                descripcion=descripcion,
+                activa=True
+            )
+            
+            db.session.add(nueva_categoria)
+            db.session.commit()
+            
+            flash(f'Categoría "{nombre}" creada exitosamente', 'success')
+            return redirect(url_for('categorias_inventario'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la categoría: {str(e)}', 'error')
+            return redirect(url_for('nueva_categoria_inventario'))
+    
+    return render_template('nueva_categoria_inventario.html')
+
+@app.route('/inventarios/categorias/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_categoria_inventario(id):
+    """Editar categoría de inventario"""
+    categoria = CategoriaInventario.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        try:
+            nombre = request.form['nombre'].strip().upper()
+            descripcion = request.form.get('descripcion', '').strip()
+            activa = 'activa' in request.form
+            
+            # Validaciones
+            if not nombre:
+                flash('El nombre de la categoría es obligatorio', 'error')
+                return redirect(url_for('editar_categoria_inventario', id=id))
+            
+            # Verificar si ya existe (excluyendo la actual)
+            categoria_existente = CategoriaInventario.query.filter(
+                CategoriaInventario.nombre == nombre,
+                CategoriaInventario.id != id
+            ).first()
+            
+            if categoria_existente:
+                flash(f'Ya existe una categoría con el nombre "{nombre}"', 'error')
+                return redirect(url_for('editar_categoria_inventario', id=id))
+            
+            # Actualizar categoría
+            categoria.nombre = nombre
+            categoria.descripcion = descripcion
+            categoria.activa = activa
+            
+            db.session.commit()
+            
+            flash(f'Categoría "{nombre}" actualizada exitosamente', 'success')
+            return redirect(url_for('categorias_inventario'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la categoría: {str(e)}', 'error')
+            return redirect(url_for('editar_categoria_inventario', id=id))
+    
+    return render_template('editar_categoria_inventario.html', categoria=categoria)
+
+@app.route('/inventarios/categorias/eliminar/<int:id>', methods=['POST'])
+@login_required
+def eliminar_categoria_inventario(id):
+    """Eliminar categoría de inventario"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden eliminar categorías', 'error')
+        return redirect(url_for('categorias_inventario'))
+    
+    try:
+        categoria = CategoriaInventario.query.get_or_404(id)
+        
+        # Verificar si tiene productos asociados
+        productos_count = Producto.query.filter_by(categoria_id=id).count()
+        if productos_count > 0:
+            flash(f'No se puede eliminar la categoría "{categoria.nombre}" porque tiene {productos_count} productos asociados', 'error')
+            return redirect(url_for('categorias_inventario'))
+        
+        # Eliminar categoría
+        db.session.delete(categoria)
+        db.session.commit()
+        
+        flash(f'Categoría "{categoria.nombre}" eliminada exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la categoría: {str(e)}', 'error')
+    
+    return redirect(url_for('categorias_inventario'))
+
+@app.route('/inventarios/categorias/activar/<int:id>', methods=['POST'])
+@login_required
+def activar_categoria_inventario(id):
+    """Activar categoría de inventario"""
+    try:
+        categoria = CategoriaInventario.query.get_or_404(id)
+        categoria.activa = True
+        db.session.commit()
+        
+        flash(f'Categoría "{categoria.nombre}" activada exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al activar la categoría: {str(e)}', 'error')
+    
+    return redirect(url_for('categorias_inventario'))
+
+@app.route('/inventarios/categorias/desactivar/<int:id>', methods=['POST'])
+@login_required
+def desactivar_categoria_inventario(id):
+    """Desactivar categoría de inventario"""
+    try:
+        categoria = CategoriaInventario.query.get_or_404(id)
+        categoria.activa = False
+        db.session.commit()
+        
+        flash(f'Categoría "{categoria.nombre}" desactivada exitosamente', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al desactivar la categoría: {str(e)}', 'error')
+    
+    return redirect(url_for('categorias_inventario'))
+
 @app.route('/inventarios/importar', methods=['GET', 'POST'])
 @login_required
 def importar_inventarios():

@@ -164,8 +164,7 @@
 let categoriaIdActual = null;
 
 function editarCategoria(id) {
-    // Aquí puedes implementar la edición de categorías
-    alert('Función de edición en desarrollo');
+    window.location.href = `/inventarios/categorias/editar/${id}`;
 }
 
 function eliminarCategoria(id, nombre) {
@@ -178,10 +177,12 @@ function eliminarCategoria(id, nombre) {
 // Event listener para confirmar eliminación
 document.getElementById('confirmarEliminar').addEventListener('click', function() {
     if (categoriaIdActual) {
-        // Aquí puedes implementar la eliminación via AJAX
-        alert('Función de eliminación en desarrollo');
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEliminar'));
-        modal.hide();
+        // Crear formulario para eliminar
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/inventarios/categorias/eliminar/${categoriaIdActual}`;
+        document.body.appendChild(form);
+        form.submit();
     }
 });
 </script>
