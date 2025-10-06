@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Previa - {{ contrato.empleado.nombre_completo }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .viewer-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .viewer-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .viewer-content {
+            padding: 0;
+            height: 80vh;
+            position: relative;
+        }
+        .google-viewer {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .action-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+        .btn-floating {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        .btn-floating:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        .contract-info {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .info-value {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center py-3">
+                    <h2><i class="fas fa-file-contract"></i> Vista Previa del Contrato</h2>
+                    <a href="{{ url_for('contratos_generados') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Contrato -->
+        <div class="row">
+            <div class="col-12">
+                <div class="contract-info">
+                    <h5><i class="fas fa-info-circle"></i> Información del Contrato</h5>
+                    <div class="info-item">
+                        <span class="info-label">Empleado:</span>
+                        <span class="info-value">{{ contrato.empleado.nombre_completo }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Tipo de Contrato:</span>
+                        <span class="info-value">{{ contrato.tipo_contrato }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Fecha de Generación:</span>
+                        <span class="info-value">{{ contrato.fecha_generacion.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Salario:</span>
+                        <span class="info-value">${{ "{:,.0f}".format(contrato.empleado.salario) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Docs Viewer -->
+        <div class="row">
+            <div class="col-12">
+                <div class="viewer-container">
+                    <div class="viewer-header">
+                        <h4><i class="fab fa-google-drive"></i> Vista Previa con Google Docs Viewer</h4>
+                        <p class="mb-0">Documento renderizado por Google Docs</p>
+                    </div>
+                    <div class="viewer-content">
+                        <div class="loading-overlay" id="loadingOverlay">
+                            <div class="text-center">
+                                <div class="spinner"></div>
+                                <p class="mt-3">Cargando documento...</p>
+                            </div>
+                        </div>
+                        <iframe 
+                            class="google-viewer" 
+                            src="{{ google_viewer_url }}"
+                            onload="hideLoading()"
+                            onerror="showError()">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de Acción Flotantes -->
+    <div class="action-buttons">
+        <a href="{{ url_for('descargar_contrato', id=contrato.id) }}" 
+           class="btn btn-success btn-floating" 
+           title="Descargar Contrato">
+            <i class="fas fa-download"></i>
+        </a>
+        <button onclick="window.print()" 
+                class="btn btn-primary btn-floating" 
+                title="Imprimir">
+            <i class="fas fa-print"></i>
+        </button>
+        <button onclick="toggleFullscreen()" 
+                class="btn btn-info btn-floating" 
+                title="Pantalla Completa">
+            <i class="fas fa-expand"></i>
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
+        function showError() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5>Error al cargar el documento</h5>
+                        <p>No se pudo cargar la vista previa. Intenta descargar el archivo.</p>
+                        <a href="{{ url_for('descargar_contrato', id=contrato.id) }}" class="btn btn-primary">
+                            <i class="fas fa-download"></i> Descargar Contrato
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        function toggleFullscreen() {
+            const iframe = document.querySelector('.google-viewer');
+            if (!document.fullscreenElement) {
+                iframe.requestFullscreen().catch(err => {
+                    console.log('Error al entrar en pantalla completa:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Ocultar loading después de 10 segundos como máximo
+        setTimeout(() => {
+            hideLoading();
+        }, 10000);
+
+        // Manejar teclas de acceso rápido
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey) {
+                switch(e.key) {
+                    case 'p':
+                        e.preventDefault();
+                        window.print();
+                        break;
+                    case 'd':
+                        e.preventDefault();
+                        window.open('{{ url_for("descargar_contrato", id=contrato.id) }}', '_blank');
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                }
+            }
+        });
+
+        // Mostrar mensaje de atajos de teclado
+        console.log('Atajos de teclado disponibles:');
+        console.log('Ctrl + P: Imprimir');
+        console.log('Ctrl + D: Descargar');
+        console.log('Ctrl + F: Pantalla completa');
+    </script>
+</body>
+</html>

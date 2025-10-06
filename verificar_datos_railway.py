@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script para verificar el estado de los datos en la aplicación
+Script para verificar el estado de los datos en Railway CLI
 """
 
 import os
@@ -10,13 +10,10 @@ import sys
 if 'DATABASE_PUBLIC_URL' in os.environ:
     os.environ['DATABASE_URL'] = os.environ['DATABASE_PUBLIC_URL']
 
-# Agregar el directorio actual al path para importar app
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-def verificar_datos():
-    """Verificar el estado actual de todos los datos"""
+def verificar_datos_railway():
+    """Verificar el estado actual de todos los datos en Railway"""
     
-    print("📊 VERIFICACIÓN DE DATOS DE LA APLICACIÓN")
+    print("📊 VERIFICACIÓN DE DATOS EN RAILWAY")
     print("=" * 60)
     
     try:
@@ -29,7 +26,7 @@ def verificar_datos():
         )
         
         with app.app_context():
-            print("📊 Conectando a la base de datos...")
+            print("📊 Conectando a la base de datos de Railway...")
             
             # Contar registros
             usuarios_count = User.query.count()
@@ -60,9 +57,8 @@ def verificar_datos():
             else:
                 print("\n❌ No se encontró usuario administrador")
             
-            # Verificar empleados activos
-            empleados_activos = Empleado.query.filter_by(activo=True).count()
-            print(f"👥 Empleados activos: {empleados_activos}")
+            # Verificar empleados (el modelo Empleado no tiene campo activo)
+            print(f"👥 Total empleados: {empleados_count}")
             
             # Verificar productos con stock bajo
             productos_bajo_stock = Producto.query.filter(
@@ -119,4 +115,4 @@ def verificar_datos():
     return True
 
 if __name__ == "__main__":
-    verificar_datos()
+    verificar_datos_railway()

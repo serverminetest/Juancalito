@@ -1785,6 +1785,48 @@ def vista_previa_simple(id):
         </html>
         """, 500
 
+@app.route('/contratos/vista-previa-google/<int:id>')
+@login_required
+def vista_previa_google_contrato(id):
+    """Vista previa del contrato usando Google Docs Viewer"""
+    try:
+        contrato_generado = ContratoGenerado.query.get_or_404(id)
+        
+        # Verificar que el archivo existe
+        if not contrato_generado.archivo_data:
+            flash('El archivo del contrato no está disponible', 'error')
+            return redirect(url_for('contratos_generados'))
+        
+        # Crear un archivo temporal y convertirlo a base64
+        import base64
+        import tempfile
+        import os
+        
+        # Crear archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(contrato_generado.archivo_data)
+            tmp_file_path = tmp_file.name
+        
+        # Convertir a base64 para Google Docs Viewer
+        with open(tmp_file_path, 'rb') as f:
+            file_data = f.read()
+            base64_data = base64.b64encode(file_data).decode('utf-8')
+        
+        # Limpiar archivo temporal
+        os.unlink(tmp_file_path)
+        
+        # Crear URL para Google Docs Viewer
+        google_viewer_url = f"https://docs.google.com/gview?url=data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64_data}&embedded=true"
+        
+        # Renderizar template con Google Docs Viewer
+        return render_template('vista_previa_google.html', 
+                             contrato=contrato_generado,
+                             google_viewer_url=google_viewer_url)
+        
+    except Exception as e:
+        flash(f'Error al generar vista previa: {str(e)}', 'error')
+        return redirect(url_for('contratos_generados'))
+
 @app.route('/contratos/vista_previa/<int:id>')
 @login_required
 def vista_previa_contrato(id):
