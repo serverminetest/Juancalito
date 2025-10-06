@@ -2266,47 +2266,6 @@ def inventarios():
                          productos_bajo_stock=productos_bajo_stock,
                          valor_total_inventario=valor_total_inventario)
 
-@app.route('/inventarios/categorias')
-@login_required
-def categorias_inventario():
-    """Gestión de categorías de inventario"""
-    categorias = CategoriaInventario.query.all()
-    return render_template('categorias_inventario.html', categorias=categorias)
-
-@app.route('/inventarios/categorias/nueva', methods=['GET', 'POST'])
-@login_required
-def nueva_categoria_inventario():
-    """Crear nueva categoría de inventario"""
-    if request.method == 'POST':
-        nombre = request.form['nombre'].strip()
-        descripcion = request.form.get('descripcion', '').strip()
-        
-        if not nombre:
-            flash('El nombre de la categoría es obligatorio', 'error')
-            return render_template('nueva_categoria_inventario.html')
-        
-        # Verificar si ya existe
-        categoria_existente = CategoriaInventario.query.filter_by(nombre=nombre).first()
-        if categoria_existente:
-            flash('Ya existe una categoría con ese nombre', 'error')
-            return render_template('nueva_categoria_inventario.html')
-        
-        try:
-            nueva_categoria = CategoriaInventario(
-                nombre=nombre,
-                descripcion=descripcion
-            )
-            db.session.add(nueva_categoria)
-            db.session.commit()
-            flash(f'Categoría "{nombre}" creada exitosamente', 'success')
-            return redirect(url_for('categorias_inventario'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al crear la categoría: {str(e)}', 'error')
-            return render_template('nueva_categoria_inventario.html')
-    
-    return render_template('nueva_categoria_inventario.html')
-
 @app.route('/inventarios/productos')
 @login_required
 def productos_inventario():
