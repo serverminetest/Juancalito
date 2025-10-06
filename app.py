@@ -2120,6 +2120,17 @@ def reporte_visitantes():
 # Inicialización de la base de datos
 def init_db():
     try:
+        # Ejecutar migración automática primero
+        try:
+            print("🔄 Ejecutando migración automática...")
+            from migrate_database import migrate_database
+            if migrate_database():
+                print("✅ Migración automática completada")
+            else:
+                print("⚠️ Migración automática falló, continuando con inicialización normal...")
+        except Exception as e:
+            print(f"⚠️ Error en migración automática: {str(e)}, continuando...")
+        
         with app.app_context():
             print("📊 Creando tablas de la base de datos...")
             db.create_all()
