@@ -1788,7 +1788,7 @@ def vista_previa_simple(id):
 @app.route('/contratos/vista-previa-google/<int:id>')
 @login_required
 def vista_previa_google_contrato(id):
-    """Vista previa del contrato usando Google Docs Viewer"""
+    """Vista previa del contrato usando Google Docs Viewer - Redirección directa"""
     try:
         contrato_generado = ContratoGenerado.query.get_or_404(id)
         
@@ -1815,13 +1815,11 @@ def vista_previa_google_contrato(id):
         # Limpiar archivo temporal
         os.unlink(tmp_file_path)
         
-        # Crear URL para Google Docs Viewer
+        # Crear URL para Google Docs Viewer y redirigir directamente
         google_viewer_url = f"https://docs.google.com/gview?url=data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64_data}&embedded=true"
         
-        # Renderizar template con Google Docs Viewer
-        return render_template('vista_previa_google.html', 
-                             contrato=contrato_generado,
-                             google_viewer_url=google_viewer_url)
+        # Redirigir directamente a Google Docs Viewer
+        return redirect(google_viewer_url)
         
     except Exception as e:
         flash(f'Error al generar vista previa: {str(e)}', 'error')
