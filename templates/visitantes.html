@@ -165,27 +165,25 @@
                         <td>
                             <div class="btn-group" role="group">
                                 <!-- Botón de Entrada/Salida -->
-                                <form method="POST" action="{{ url_for('registrar_entrada_salida_visitante', id=visitante.id) }}" style="display: inline;">
-                                    {% if visitante.estado_visita == 'En visita' %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                                onclick="return confirm('¿Registrar SALIDA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
-                                                title="Registrar salida">
-                                            <i class="fas fa-sign-out-alt"></i>
-                                        </button>
-                                    {% elif visitante.estado_visita == 'Pendiente' %}
-                                        <button type="submit" class="btn btn-sm btn-outline-success" 
-                                                onclick="return confirm('¿Registrar ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
-                                                title="Registrar entrada">
-                                            <i class="fas fa-sign-in-alt"></i>
-                                        </button>
-                                    {% else %}
-                                        <button type="submit" class="btn btn-sm btn-outline-primary" 
-                                                onclick="return confirm('¿Registrar NUEVA ENTRADA de {{ visitante.nombre }} {{ visitante.apellido }}?')"
-                                                title="Registrar nueva entrada">
-                                            <i class="fas fa-redo"></i>
-                                        </button>
-                                    {% endif %}
-                                </form>
+                                {% if visitante.estado_visita == 'En visita' %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="confirmarAccionVisitante({{ visitante.id }}, '{{ visitante.nombre }} {{ visitante.apellido }}', 'salida')"
+                                            title="Registrar salida">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                    </button>
+                                {% elif visitante.estado_visita == 'Pendiente' %}
+                                    <button type="button" class="btn btn-sm btn-outline-success" 
+                                            onclick="confirmarAccionVisitante({{ visitante.id }}, '{{ visitante.nombre }} {{ visitante.apellido }}', 'entrada')"
+                                            title="Registrar entrada">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            onclick="confirmarAccionVisitante({{ visitante.id }}, '{{ visitante.nombre }} {{ visitante.apellido }}', 'nueva_entrada')"
+                                            title="Registrar nueva entrada">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                {% endif %}
                                 
                                 <!-- Botón de Ver Detalles -->
                                 <a href="{{ url_for('detalles_visitante', id=visitante.id) }}" 
@@ -287,20 +285,115 @@
     </div>
 </div>
 
+<!-- Modal de Confirmación para Visitantes -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeader">
+                <h5 class="modal-title" id="confirmModalLabel">
+                    <i class="fas fa-question-circle me-2"></i>Confirmar Acción
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-check fa-3x mb-3" id="modalIcon"></i>
+                    <h4 id="modalTitle">¿Confirmar Acción?</h4>
+                </div>
+                <div class="alert alert-info">
+                    <strong>Visitante:</strong> <span id="modalVisitante"></span><br>
+                    <strong>Acción:</strong> <span id="modalAccion"></span>
+                </div>
+                <p class="text-muted" id="modalDescripcion">Esta acción se registrará en el sistema.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn" id="confirmButton" onclick="ejecutarAccionVisitante()">
+                    <i class="fas fa-check me-2"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Variables globales para la acción
+let visitanteIdActual = null;
+let accionActual = null;
+
+function confirmarAccionVisitante(visitanteId, nombreVisitante, accion) {
+    visitanteIdActual = visitanteId;
+    accionActual = accion;
+    
+    const modal = document.getElementById('confirmModal');
+    const modalHeader = document.getElementById('modalHeader');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalVisitante = document.getElementById('modalVisitante');
+    const modalAccion = document.getElementById('modalAccion');
+    const modalDescripcion = document.getElementById('modalDescripcion');
+    const confirmButton = document.getElementById('confirmButton');
+    
+    // Configurar según la acción
+    if (accion === 'entrada') {
+        modalHeader.className = 'modal-header bg-success text-white';
+        modalIcon.className = 'fas fa-sign-in-alt fa-3x mb-3 text-success';
+        modalTitle.textContent = '¿Registrar Entrada?';
+        modalAccion.textContent = 'Registrar entrada del visitante';
+        modalDescripcion.textContent = 'Se registrará la hora de entrada del visitante al edificio.';
+        confirmButton.className = 'btn btn-success';
+        confirmButton.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Registrar Entrada';
+    } else if (accion === 'salida') {
+        modalHeader.className = 'modal-header bg-danger text-white';
+        modalIcon.className = 'fas fa-sign-out-alt fa-3x mb-3 text-danger';
+        modalTitle.textContent = '¿Registrar Salida?';
+        modalAccion.textContent = 'Registrar salida del visitante';
+        modalDescripcion.textContent = 'Se registrará la hora de salida del visitante del edificio.';
+        confirmButton.className = 'btn btn-danger';
+        confirmButton.innerHTML = '<i class="fas fa-sign-out-alt me-2"></i>Registrar Salida';
+    } else if (accion === 'nueva_entrada') {
+        modalHeader.className = 'modal-header bg-primary text-white';
+        modalIcon.className = 'fas fa-redo fa-3x mb-3 text-primary';
+        modalTitle.textContent = '¿Registrar Nueva Entrada?';
+        modalAccion.textContent = 'Registrar nueva entrada del visitante';
+        modalDescripcion.textContent = 'Se registrará una nueva entrada del visitante al edificio.';
+        confirmButton.className = 'btn btn-primary';
+        confirmButton.innerHTML = '<i class="fas fa-redo me-2"></i>Registrar Nueva Entrada';
+    }
+    
+    modalVisitante.textContent = nombreVisitante;
+    
+    // Mostrar modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function ejecutarAccionVisitante() {
+    if (!visitanteIdActual) return;
+    
+    // Crear formulario y enviar
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/visitantes/registrar-entrada-salida/${visitanteIdActual}`;
+    form.style.display = 'none';
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
 // Calcular visitas de hoy
 document.addEventListener('DOMContentLoaded', function() {
     const hoy = new Date().toISOString().split('T')[0];
     const visitasHoy = {{ visitantes|selectattr('fecha_entrada')|list|length }};
     // En una implementación real, filtrarías por fecha aquí
-    document.getElementById('visitasHoy').textContent = visitasHoy;
+    if (document.getElementById('visitasHoy')) {
+        document.getElementById('visitasHoy').textContent = visitasHoy;
+    }
 });
-
-// Auto-refresh eliminado para evitar interrupciones del usuario
-
-// Función JavaScript eliminada - usando página separada para detalles
 </script>
 {% endblock %}

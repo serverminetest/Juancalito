@@ -128,27 +128,21 @@
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     {% if producto.activo %}
-                                        <form method="POST" action="{{ url_for('desactivar_producto_inventario', id=producto.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning" 
-                                                    onclick="return confirm('¿Desactivar el producto \'{{ producto.nombre }}\'?')" title="Desactivar">
-                                                <i class="fas fa-pause"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                onclick="confirmarAccionProducto({{ producto.id }}, '{{ producto.nombre }}', 'desactivar')" title="Desactivar">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
                                     {% else %}
-                                        <form method="POST" action="{{ url_for('activar_producto_inventario', id=producto.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" 
-                                                    onclick="return confirm('¿Activar el producto \'{{ producto.nombre }}\'?')" title="Activar">
-                                                <i class="fas fa-play"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                onclick="confirmarAccionProducto({{ producto.id }}, '{{ producto.nombre }}', 'activar')" title="Activar">
+                                            <i class="fas fa-play"></i>
+                                        </button>
                                     {% endif %}
                                     {% if current_user.is_admin %}
-                                        <form method="POST" action="{{ url_for('eliminar_producto_inventario', id=producto.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                                    onclick="return confirm('¿Eliminar el producto \'{{ producto.nombre }}\'?\\n\\nEsta acción no se puede deshacer.')" title="Eliminar">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmarAccionProducto({{ producto.id }}, '{{ producto.nombre }}', 'eliminar')" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     {% endif %}
                                 </div>
                             </td>
@@ -196,6 +190,39 @@
         </div>
     </div>
 </div>
+<!-- Modal de Confirmación para Productos -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeader">
+                <h5 class="modal-title" id="confirmModalLabel">
+                    <i class="fas fa-question-circle me-2"></i>Confirmar Acción
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-box fa-3x mb-3" id="modalIcon"></i>
+                    <h4 id="modalTitle">¿Confirmar Acción?</h4>
+                </div>
+                <div class="alert alert-info">
+                    <strong>Producto:</strong> <span id="modalProducto"></span><br>
+                    <strong>Acción:</strong> <span id="modalAccion"></span>
+                </div>
+                <p class="text-muted" id="modalDescripcion">Esta acción se aplicará al producto.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn" id="confirmButton" onclick="ejecutarAccionProducto()">
+                    <i class="fas fa-check me-2"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -209,6 +236,79 @@ function verDetalles(productoId) {
 
 function editarProducto(productoId) {
     window.location.href = `/inventarios/productos/editar/${productoId}`;
+}
+
+// Variables globales para la acción
+let productoIdActual = null;
+let accionActual = null;
+
+function confirmarAccionProducto(productoId, nombreProducto, accion) {
+    productoIdActual = productoId;
+    accionActual = accion;
+    
+    const modal = document.getElementById('confirmModal');
+    const modalHeader = document.getElementById('modalHeader');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalProducto = document.getElementById('modalProducto');
+    const modalAccion = document.getElementById('modalAccion');
+    const modalDescripcion = document.getElementById('modalDescripcion');
+    const confirmButton = document.getElementById('confirmButton');
+    
+    // Configurar según la acción
+    if (accion === 'activar') {
+        modalHeader.className = 'modal-header bg-success text-white';
+        modalIcon.className = 'fas fa-play fa-3x mb-3 text-success';
+        modalTitle.textContent = '¿Activar Producto?';
+        modalAccion.textContent = 'Activar el producto';
+        modalDescripcion.textContent = 'El producto estará disponible para uso y movimientos.';
+        confirmButton.className = 'btn btn-success';
+        confirmButton.innerHTML = '<i class="fas fa-play me-2"></i>Activar';
+    } else if (accion === 'desactivar') {
+        modalHeader.className = 'modal-header bg-warning text-dark';
+        modalIcon.className = 'fas fa-pause fa-3x mb-3 text-warning';
+        modalTitle.textContent = '¿Desactivar Producto?';
+        modalAccion.textContent = 'Desactivar el producto';
+        modalDescripcion.textContent = 'El producto no estará disponible para nuevos movimientos.';
+        confirmButton.className = 'btn btn-warning';
+        confirmButton.innerHTML = '<i class="fas fa-pause me-2"></i>Desactivar';
+    } else if (accion === 'eliminar') {
+        modalHeader.className = 'modal-header bg-danger text-white';
+        modalIcon.className = 'fas fa-trash fa-3x mb-3 text-danger';
+        modalTitle.textContent = '¿Eliminar Producto?';
+        modalAccion.textContent = 'Eliminar el producto permanentemente';
+        modalDescripcion.textContent = 'Esta acción no se puede deshacer. Se eliminará el producto y su historial.';
+        confirmButton.className = 'btn btn-danger';
+        confirmButton.innerHTML = '<i class="fas fa-trash me-2"></i>Eliminar';
+    }
+    
+    modalProducto.textContent = nombreProducto;
+    
+    // Mostrar modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function ejecutarAccionProducto() {
+    if (!productoIdActual || !accionActual) return;
+    
+    let url = '';
+    if (accionActual === 'activar') {
+        url = `/inventarios/productos/activar/${productoIdActual}`;
+    } else if (accionActual === 'desactivar') {
+        url = `/inventarios/productos/desactivar/${productoIdActual}`;
+    } else if (accionActual === 'eliminar') {
+        url = `/inventarios/productos/eliminar/${productoIdActual}`;
+    }
+    
+    // Crear formulario y enviar
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+    form.style.display = 'none';
+    
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 {% endblock %}
