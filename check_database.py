@@ -13,10 +13,10 @@ def check_database():
     print("🔍 VERIFICACIÓN DE BASE DE DATOS")
     print("=" * 50)
     
-    # Obtener URL de la base de datos
-    database_url = os.environ.get('DATABASE_URL')
+    # Obtener URL de la base de datos (usar URL pública para CLI)
+    database_url = os.environ.get('DATABASE_PUBLIC_URL') or os.environ.get('DATABASE_URL')
     if not database_url:
-        print("❌ Error: DATABASE_URL no está configurada")
+        print("❌ Error: DATABASE_URL o DATABASE_PUBLIC_URL no está configurada")
         sys.exit(1)
     
     try:
