@@ -1788,7 +1788,7 @@ def vista_previa_simple(id):
 @app.route('/contratos/vista-previa-google/<int:id>')
 @login_required
 def vista_previa_google_contrato(id):
-    """Vista previa del contrato usando Google Docs Viewer - Redirección directa"""
+    """Vista previa del contrato usando iframe embebido"""
     try:
         contrato_generado = ContratoGenerado.query.get_or_404(id)
         
@@ -1815,11 +1815,101 @@ def vista_previa_google_contrato(id):
         # Limpiar archivo temporal
         os.unlink(tmp_file_path)
         
-        # Crear URL para Google Docs Viewer y redirigir directamente
+        # Crear URL para Google Docs Viewer
         google_viewer_url = f"https://docs.google.com/gview?url=data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64_data}&embedded=true"
         
-        # Redirigir directamente a Google Docs Viewer
-        return redirect(google_viewer_url)
+        # Renderizar página simple con iframe
+        return f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Vista Previa - {contrato_generado.empleado.nombre_completo}</title>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 20px;
+                    font-family: Arial, sans-serif;
+                    background-color: #f5f5f5;
+                }}
+                .header {{
+                    background: white;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }}
+                .viewer-container {{
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }}
+                iframe {{
+                    width: 100%;
+                    height: 80vh;
+                    border: none;
+                }}
+                .btn {{
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    text-decoration: none;
+                    display: inline-block;
+                }}
+                .btn-secondary {{
+                    background-color: #6c757d;
+                    color: white;
+                }}
+                .btn-primary {{
+                    background-color: #007bff;
+                    color: white;
+                }}
+                .btn:hover {{
+                    opacity: 0.8;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>📄 Vista Previa del Contrato - {contrato_generado.empleado.nombre_completo}</h2>
+                <div>
+                    <a href="/contratos/descargar/{id}" class="btn btn-primary">📥 Descargar</a>
+                    <a href="/contratos/generados" class="btn btn-secondary">← Volver</a>
+                </div>
+            </div>
+            
+            <div class="viewer-container">
+                <iframe src="{google_viewer_url}" 
+                        onload="console.log('Documento cargado')"
+                        onerror="console.log('Error al cargar documento')">
+                </iframe>
+            </div>
+            
+            <script>
+                // Si hay error, mostrar mensaje
+                setTimeout(() => {{
+                    const iframe = document.querySelector('iframe');
+                    if (!iframe.contentDocument || iframe.contentDocument.body.innerHTML.includes('Error')) {{
+                        iframe.style.display = 'none';
+                        document.querySelector('.viewer-container').innerHTML = `
+                            <div style="padding: 40px; text-align: center;">
+                                <h3>⚠️ No se pudo cargar la vista previa</h3>
+                                <p>El documento no se puede mostrar en el navegador.</p>
+                                <a href="/contratos/descargar/{id}" class="btn btn-primary">📥 Descargar Contrato</a>
+                            </div>
+                        `;
+                    }}
+                }}, 5000);
+            </script>
+        </body>
+        </html>
+        """
         
     except Exception as e:
         flash(f'Error al generar vista previa: {str(e)}', 'error')
