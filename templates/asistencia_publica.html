@@ -331,7 +331,7 @@
         }
 
         // Función para mostrar modal de confirmación
-        function mostrarModalConfirmacion(documento, nombre) {
+        function mostrarModalConfirmacion(documento, nombre, tipoRegistro) {
             // Llenar datos en el modal
             document.getElementById('confirmNombre').textContent = nombre;
             document.getElementById('confirmDocumento').textContent = documento;
@@ -348,8 +348,19 @@
             document.getElementById('confirmSubmit').onclick = function() {
                 // Cerrar modal
                 modal.hide();
+                
+                // Crear un input oculto para el tipo de registro
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'tipo_registro';
+                hiddenInput.value = tipoRegistro;
+                
+                // Agregar el input al formulario
+                const form = document.querySelector('form');
+                form.appendChild(hiddenInput);
+                
                 // Enviar formulario
-                document.querySelector('form').submit();
+                form.submit();
             };
         }
 
@@ -364,9 +375,17 @@
                 return false;
             }
             
+            // Obtener el tipo de registro del botón presionado
+            const tipoRegistro = e.submitter ? e.submitter.value : '';
+            if (!tipoRegistro) {
+                e.preventDefault();
+                alert('Por favor seleccione el tipo de registro (entrada o salida)');
+                return false;
+            }
+            
             // Mostrar modal de confirmación en lugar de confirm() nativo
             e.preventDefault();
-            mostrarModalConfirmacion(documento, nombre);
+            mostrarModalConfirmacion(documento, nombre, tipoRegistro);
         });
 
         // Limpiar campos después de un registro exitoso
