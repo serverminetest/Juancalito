@@ -84,17 +84,17 @@
             <table class="table table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
+                        <th class="d-none d-md-table-cell">ID</th>
                         <th>Nombre Completo</th>
-                        <th>Documento</th>
-                        <th>EPS</th>
-                        <th>RH</th>
-                        <th>Teléfono</th>
-                        <th>Empresa</th>
-                        <th>Empleado Visitado</th>
-                        <th>Motivo</th>
-                        <th>Hora Entrada</th>
-                        <th>Hora Salida</th>
+                        <th class="d-none d-lg-table-cell">Documento</th>
+                        <th class="d-none d-xl-table-cell">EPS</th>
+                        <th class="d-none d-xl-table-cell">RH</th>
+                        <th class="d-none d-lg-table-cell">Teléfono</th>
+                        <th class="d-none d-xl-table-cell">Empresa</th>
+                        <th class="d-none d-xl-table-cell">Empleado Visitado</th>
+                        <th class="d-none d-lg-table-cell">Motivo</th>
+                        <th class="d-none d-md-table-cell">Hora Entrada</th>
+                        <th class="d-none d-md-table-cell">Hora Salida</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -102,30 +102,35 @@
                 <tbody>
                     {% for visitante in visitantes %}
                     <tr>
-                        <td>{{ visitante.id }}</td>
-                        <td>{{ visitante.nombre }} {{ visitante.apellido }}</td>
-                        <td>{{ visitante.documento or 'N/A' }}</td>
+                        <td class="d-none d-md-table-cell">{{ visitante.id }}</td>
                         <td>
+                            <div class="d-flex flex-column">
+                                <strong>{{ visitante.nombre }} {{ visitante.apellido }}</strong>
+                                <small class="text-muted d-md-none">{{ visitante.documento or 'Sin documento' }}</small>
+                            </div>
+                        </td>
+                        <td class="d-none d-lg-table-cell">{{ visitante.documento or 'N/A' }}</td>
+                        <td class="d-none d-xl-table-cell">
                             <span class="d-inline-block text-truncate" style="max-width: 100px;" title="{{ visitante.eps }}">
                                 {{ visitante.eps or 'N/A' }}
                             </span>
                         </td>
-                        <td>
+                        <td class="d-none d-xl-table-cell">
                             <span class="badge bg-info">{{ visitante.rh or 'N/A' }}</span>
                         </td>
-                        <td>{{ visitante.telefono or 'N/A' }}</td>
-                        <td>
+                        <td class="d-none d-lg-table-cell">{{ visitante.telefono or 'N/A' }}</td>
+                        <td class="d-none d-xl-table-cell">
                             <span class="d-inline-block text-truncate" style="max-width: 100px;" title="{{ visitante.empresa }}">
                                 {{ visitante.empresa or 'N/A' }}
                             </span>
                         </td>
-                        <td>{{ visitante.empleado_visitado or 'N/A' }}</td>
-                        <td>
+                        <td class="d-none d-xl-table-cell">{{ visitante.empleado_visitado or 'N/A' }}</td>
+                        <td class="d-none d-lg-table-cell">
                             <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ visitante.motivo_visita }}">
                                 {{ visitante.motivo_visita or 'N/A' }}
                             </span>
                         </td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             {% if visitante.fecha_entrada %}
                                 {% set fecha_entrada_col = visitante.fecha_entrada | colombia_time %}
                                 <small class="text-muted">{{ fecha_entrada_col.strftime('%d/%m/%Y') }}</small><br>
@@ -134,7 +139,7 @@
                                 <span class="text-muted">N/A</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             {% if visitante.fecha_salida %}
                                 {% set fecha_salida_col = visitante.fecha_salida | colombia_time %}
                                 <small class="text-muted">{{ fecha_salida_col.strftime('%d/%m/%Y') }}</small><br>
@@ -146,24 +151,54 @@
                         <td>
                             {% if visitante.estado_visita == 'En visita' %}
                                 <span class="badge bg-success">
-                                    <i class="fas fa-user-check"></i> En visita
+                                    <i class="fas fa-user-check"></i> <span class="d-none d-sm-inline">En visita</span>
                                 </span>
                             {% elif visitante.estado_visita == 'Finalizada' %}
                                 <span class="badge bg-secondary">
-                                    <i class="fas fa-user-times"></i> Finalizada
+                                    <i class="fas fa-user-times"></i> <span class="d-none d-sm-inline">Finalizada</span>
                                 </span>
                             {% elif visitante.estado_visita == 'Pendiente' %}
                                 <span class="badge bg-warning">
-                                    <i class="fas fa-clock"></i> Pendiente
+                                    <i class="fas fa-clock"></i> <span class="d-none d-sm-inline">Pendiente</span>
                                 </span>
                             {% else %}
                                 <span class="badge bg-info">
-                                    <i class="fas fa-question"></i> {{ visitante.estado_visita or 'N/A' }}
+                                    <i class="fas fa-question"></i> <span class="d-none d-sm-inline">{{ visitante.estado_visita or 'N/A' }}</span>
                                 </span>
                             {% endif %}
                         </td>
                         <td>
-                            <div class="btn-group" role="group">
+                            <div class="btn-group-vertical btn-group-sm d-md-none" role="group">
+                                <!-- Botón de Entrada/Salida -->
+                                {% if visitante.estado_visita == 'En visita' %}
+                                    <button type="button" class="btn btn-outline-danger mb-1" 
+                                            onclick="confirmarAccionVisitante({{ visitante.id }}, '{{ visitante.nombre }} {{ visitante.apellido }}', 'salida')"
+                                            title="Registrar salida">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                    </button>
+                                {% elif visitante.estado_visita == 'Pendiente' %}
+                                    <button type="button" class="btn btn-outline-success mb-1" 
+                                            onclick="confirmarAccionVisitante({{ visitante.id }}, '{{ visitante.nombre }} {{ visitante.apellido }}', 'entrada')"
+                                            title="Registrar entrada">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-outline-primary mb-1" 
+                                            onclick="confirmarAccionVisitante({{ visitante.id }}, '{{ visitante.nombre }} {{ visitante.apellido }}', 'nueva_entrada')"
+                                            title="Registrar nueva entrada">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                {% endif %}
+                                
+                                <!-- Botón de Ver Detalles -->
+                                <a href="{{ url_for('detalles_visitante', id=visitante.id) }}" 
+                                   class="btn btn-outline-success" 
+                                   title="Ver detalles completos">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            
+                            <div class="btn-group d-none d-md-flex" role="group">
                                 <!-- Botón de Entrada/Salida -->
                                 {% if visitante.estado_visita == 'En visita' %}
                                     <button type="button" class="btn btn-sm btn-outline-danger" 
@@ -196,7 +231,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="13" class="text-center text-muted">
+                        <td colspan="4" class="text-center text-muted">
                             <i class="fas fa-user-friends fa-3x mb-3"></i>
                             <br>No hay visitantes registrados
                         </td>

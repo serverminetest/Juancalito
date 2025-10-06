@@ -22,12 +22,12 @@
             <table class="table table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
+                        <th class="d-none d-md-table-cell">ID</th>
                         <th>Empleado</th>
-                        <th>Tipo</th>
-                        <th>Fecha Inicio</th>
-                        <th>Fecha Fin</th>
-                        <th>Salario</th>
+                        <th class="d-none d-lg-table-cell">Tipo</th>
+                        <th class="d-none d-xl-table-cell">Fecha Inicio</th>
+                        <th class="d-none d-xl-table-cell">Fecha Fin</th>
+                        <th class="d-none d-md-table-cell">Salario</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -35,25 +35,79 @@
                 <tbody>
                     {% for contrato in contratos %}
                     <tr>
-                        <td>{{ contrato.id }}</td>
-                        <td>{{ contrato.empleado.nombre_completo }}</td>
+                        <td class="d-none d-md-table-cell">{{ contrato.id }}</td>
                         <td>
+                            <div class="d-flex flex-column">
+                                <strong>{{ contrato.empleado.nombre_completo }}</strong>
+                                <small class="text-muted d-lg-none">
+                                    <span class="badge bg-{{ 'primary' if contrato.tipo_contrato == 'Indefinido' else 'warning' }}">
+                                        {{ contrato.tipo_contrato }}
+                                    </span>
+                                </small>
+                            </div>
+                        </td>
+                        <td class="d-none d-lg-table-cell">
                             <span class="badge bg-{{ 'primary' if contrato.tipo_contrato == 'Indefinido' else 'warning' }}">
                                 {{ contrato.tipo_contrato }}
                             </span>
                         </td>
-                        <td>{{ contrato.fecha_inicio.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ contrato.fecha_fin.strftime('%d/%m/%Y') if contrato.fecha_fin else 'Indefinido' }}</td>
-                        <td>${{ "{:,.2f}".format(contrato.salario) }}</td>
+                        <td class="d-none d-xl-table-cell">{{ contrato.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                        <td class="d-none d-xl-table-cell">{{ contrato.fecha_fin.strftime('%d/%m/%Y') if contrato.fecha_fin else 'Indefinido' }}</td>
+                        <td class="d-none d-md-table-cell">${{ "{:,.2f}".format(contrato.salario) }}</td>
                         <td>
                             {% if contrato.activo %}
-                                <span class="badge bg-success">Activo</span>
+                                <span class="badge bg-success">
+                                    <span class="d-none d-sm-inline">Activo</span>
+                                    <span class="d-sm-none">A</span>
+                                </span>
                             {% else %}
-                                <span class="badge bg-secondary">Inactivo</span>
+                                <span class="badge bg-secondary">
+                                    <span class="d-none d-sm-inline">Inactivo</span>
+                                    <span class="d-sm-none">I</span>
+                                </span>
                             {% endif %}
                         </td>
                         <td>
-                            <div class="btn-group" role="group">
+                            <div class="btn-group-vertical btn-group-sm d-md-none" role="group">
+                                <!-- Botón Generar Contrato -->
+                                <button type="button" class="btn btn-success mb-1" 
+                                        title="Generar contrato Excel"
+                                        onclick="confirmarGenerar({{ contrato.id }}, '{{ contrato.empleado.nombre_completo }}')">
+                                    <i class="fas fa-file-excel"></i>
+                                </button>
+                                
+                                <!-- Botón Ver Detalles -->
+                                <button type="button" class="btn btn-outline-info mb-1" onclick="verDetalles({{ contrato.id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                <!-- Botón Editar -->
+                                <a href="{{ url_for('editar_contrato', id=contrato.id) }}" class="btn btn-outline-warning mb-1">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                
+                                <!-- Botón Desactivar/Activar -->
+                                {% if contrato.activo %}
+                                    <button type="button" class="btn btn-outline-warning mb-1" 
+                                            title="Desactivar contrato"
+                                            onclick="confirmarDesactivar({{ contrato.id }}, '{{ contrato.empleado.nombre_completo }}')">
+                                        <i class="fas fa-pause"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-outline-success mb-1" 
+                                            title="Activar contrato"
+                                            onclick="confirmarActivar({{ contrato.id }}, '{{ contrato.empleado.nombre_completo }}')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                {% endif %}
+                                
+                                <!-- Botón Eliminar -->
+                                <button type="button" class="btn btn-outline-danger" onclick="eliminarContrato({{ contrato.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="btn-group d-none d-md-flex" role="group">
                                 <!-- Botón Generar Contrato -->
                                 <button type="button" class="btn btn-sm btn-success" 
                                         title="Generar contrato Excel"
@@ -95,7 +149,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted">
+                        <td colspan="4" class="text-center text-muted">
                             <i class="fas fa-file-contract fa-3x mb-3"></i>
                             <br>No hay contratos registrados
                         </td>
