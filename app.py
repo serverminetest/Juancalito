@@ -2514,10 +2514,14 @@ def nuevo_movimiento_inventario():
 if __name__ == '__main__':
     try:
         print("🚀 Iniciando aplicación...")
+        print("🔄 Llamando a init_db()...")
         init_db()
+        print("✅ init_db() completado exitosamente")
         port = int(os.environ.get('PORT', 5000))
         print(f"🌐 Servidor iniciado en puerto {port}")
         app.run(host='0.0.0.0', port=port, debug=False)
     except Exception as e:
         print(f"❌ Error al iniciar la aplicación: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise
