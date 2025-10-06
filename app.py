@@ -2120,94 +2120,105 @@ def reporte_visitantes():
 # Inicialización de la base de datos
 def init_db():
     try:
+        print("🚀 INICIANDO INICIALIZACIÓN DE BASE DE DATOS")
+        print("=" * 60)
+        
         with app.app_context():
             print("📊 Creando tablas de la base de datos...")
             db.create_all()
+            print("✅ Tablas principales creadas")
             
             # Ejecutar migración de tablas de inventario
-            try:
-                print("🔄 Creando tablas de inventario...")
-                from sqlalchemy import text
-                
-                # Crear tablas de inventario si no existen
-                tablas_inventario = [
+            print("🔄 Iniciando migración de tablas de inventario...")
+            from sqlalchemy import text
+            
+            # Crear tablas de inventario si no existen
+            tablas_inventario = [
+                {
+                    'nombre': 'categoria_inventario',
+                    'sql': """
+                        CREATE TABLE IF NOT EXISTS categoria_inventario (
+                            id SERIAL PRIMARY KEY,
+                            nombre VARCHAR(100) NOT NULL UNIQUE,
+                            descripcion TEXT,
+                            activa BOOLEAN DEFAULT TRUE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
                     """
-                    CREATE TABLE IF NOT EXISTS categoria_inventario (
-                        id SERIAL PRIMARY KEY,
-                        nombre VARCHAR(100) NOT NULL UNIQUE,
-                        descripcion TEXT,
-                        activa BOOLEAN DEFAULT TRUE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
-                    """,
+                },
+                {
+                    'nombre': 'producto',
+                    'sql': """
+                        CREATE TABLE IF NOT EXISTS producto (
+                            id SERIAL PRIMARY KEY,
+                            codigo VARCHAR(50) NOT NULL UNIQUE,
+                            nombre VARCHAR(200) NOT NULL,
+                            descripcion TEXT,
+                            categoria_id INTEGER NOT NULL REFERENCES categoria_inventario(id),
+                            unidad_medida VARCHAR(20) NOT NULL,
+                            precio_unitario NUMERIC(10, 2) DEFAULT 0,
+                            stock_minimo INTEGER DEFAULT 0,
+                            stock_actual INTEGER DEFAULT 0,
+                            ubicacion VARCHAR(100),
+                            proveedor VARCHAR(200),
+                            fecha_vencimiento DATE,
+                            lote VARCHAR(50),
+                            activo BOOLEAN DEFAULT TRUE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
                     """
-                    CREATE TABLE IF NOT EXISTS producto (
-                        id SERIAL PRIMARY KEY,
-                        codigo VARCHAR(50) NOT NULL UNIQUE,
-                        nombre VARCHAR(200) NOT NULL,
-                        descripcion TEXT,
-                        categoria_id INTEGER NOT NULL REFERENCES categoria_inventario(id),
-                        unidad_medida VARCHAR(20) NOT NULL,
-                        precio_unitario NUMERIC(10, 2) DEFAULT 0,
-                        stock_minimo INTEGER DEFAULT 0,
-                        stock_actual INTEGER DEFAULT 0,
-                        ubicacion VARCHAR(100),
-                        proveedor VARCHAR(200),
-                        fecha_vencimiento DATE,
-                        lote VARCHAR(50),
-                        activo BOOLEAN DEFAULT TRUE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
-                    """,
+                },
+                {
+                    'nombre': 'movimiento_inventario',
+                    'sql': """
+                        CREATE TABLE IF NOT EXISTS movimiento_inventario (
+                            id SERIAL PRIMARY KEY,
+                            producto_id INTEGER NOT NULL REFERENCES producto(id),
+                            tipo_movimiento VARCHAR(20) NOT NULL,
+                            cantidad INTEGER NOT NULL,
+                            precio_unitario NUMERIC(10, 2),
+                            total NUMERIC(10, 2),
+                            motivo VARCHAR(200),
+                            referencia VARCHAR(100),
+                            responsable VARCHAR(200),
+                            observaciones TEXT,
+                            fecha_movimiento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            created_by INTEGER REFERENCES "user"(id)
+                        );
                     """
-                    CREATE TABLE IF NOT EXISTS movimiento_inventario (
-                        id SERIAL PRIMARY KEY,
-                        producto_id INTEGER NOT NULL REFERENCES producto(id),
-                        tipo_movimiento VARCHAR(20) NOT NULL,
-                        cantidad INTEGER NOT NULL,
-                        precio_unitario NUMERIC(10, 2),
-                        total NUMERIC(10, 2),
-                        motivo VARCHAR(200),
-                        referencia VARCHAR(100),
-                        responsable VARCHAR(200),
-                        observaciones TEXT,
-                        fecha_movimiento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        created_by INTEGER REFERENCES "user"(id)
-                    );
-                    """
-                ]
-                
-                for i, sql in enumerate(tablas_inventario, 1):
-                    tabla_nombres = ['categoria_inventario', 'producto', 'movimiento_inventario']
-                    tabla_nombre = tabla_nombres[i-1]
-                    
-                    try:
-                        with db.engine.connect() as conn:
-                            conn.execute(text(sql))
-                            conn.commit()
-                        print(f"✅ Tabla {tabla_nombre} creada/verificada")
-                    except Exception as e:
-                        print(f"⚠️ Error con tabla {tabla_nombre}: {str(e)[:50]}...")
-                
-                # Verificar columna archivo_data en contrato_generado
+                }
+            ]
+            
+            for tabla in tablas_inventario:
+                print(f"📝 Procesando tabla {tabla['nombre']}...")
                 try:
                     with db.engine.connect() as conn:
-                        conn.execute(text("""
-                            ALTER TABLE contrato_generado 
-                            ADD COLUMN IF NOT EXISTS archivo_data BYTEA;
-                        """))
+                        conn.execute(text(tabla['sql']))
                         conn.commit()
-                    print("✅ Columna archivo_data verificada")
+                    print(f"✅ Tabla {tabla['nombre']} creada/verificada exitosamente")
                 except Exception as e:
-                    print(f"⚠️ Columna archivo_data: {str(e)[:50]}...")
-                
-                print("✅ Migración de inventarios completada")
-                
+                    print(f"❌ ERROR con tabla {tabla['nombre']}: {str(e)}")
+                    # Continuar con las demás tablas
+                    continue
+            
+            # Verificar columna archivo_data en contrato_generado
+            print("📝 Verificando columna archivo_data en contrato_generado...")
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text("""
+                        ALTER TABLE contrato_generado 
+                        ADD COLUMN IF NOT EXISTS archivo_data BYTEA;
+                    """))
+                    conn.commit()
+                print("✅ Columna archivo_data verificada exitosamente")
             except Exception as e:
-                print(f"⚠️ Error en migración de inventarios: {str(e)}")
+                print(f"⚠️ Columna archivo_data: {str(e)}")
+            
+            print("✅ Migración de inventarios completada")
             
             # Crear usuario administrador por defecto
+            print("👤 Verificando usuario administrador...")
             admin_user = User.query.filter_by(email='admin@juancalito.com').first()
             if not admin_user:
                 admin_user = User(
@@ -2222,9 +2233,16 @@ def init_db():
             else:
                 print("✅ Usuario administrador ya existe")
             
-            print("✅ Base de datos inicializada correctamente")
+            print("=" * 60)
+            print("🎉 BASE DE DATOS INICIALIZADA CORRECTAMENTE")
+            print("=" * 60)
+            
     except Exception as e:
-        print(f"❌ Error al inicializar la base de datos: {str(e)}")
+        print("=" * 60)
+        print(f"❌ ERROR CRÍTICO al inicializar la base de datos: {str(e)}")
+        print("=" * 60)
+        import traceback
+        traceback.print_exc()
         raise
 
 # ===== RUTAS PARA SISTEMA DE INVENTARIOS =====
