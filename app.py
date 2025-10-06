@@ -1023,11 +1023,25 @@ def asistencia_publica(token):
             flash('Por favor complete todos los campos y seleccione el tipo de registro', 'error')
             return render_template('asistencia_publica.html', token=token)
         
-        # Buscar empleado por documento
+        # Buscar empleado por documento (exacto)
         empleado = Empleado.query.filter_by(cedula=documento).first()
         
+        # Si no se encuentra por documento exacto, buscar por nombre (ignorando acentos)
         if not empleado:
-            flash('No se encontró un empleado con ese documento', 'error')
+            # Normalizar nombre para búsqueda (quitar acentos)
+            import unicodedata
+            nombre_normalizado = unicodedata.normalize('NFD', nombre).encode('ascii', 'ignore').decode('ascii').lower()
+            
+            # Buscar empleados que coincidan con el nombre normalizado
+            empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
+            for emp in empleados:
+                nombre_emp_normalizado = unicodedata.normalize('NFD', emp.nombre_completo).encode('ascii', 'ignore').decode('ascii').lower()
+                if nombre_normalizado in nombre_emp_normalizado or nombre_emp_normalizado in nombre_normalizado:
+                    empleado = emp
+                    break
+        
+        if not empleado:
+            flash('No se encontró un empleado con ese documento o nombre. Verifique los datos ingresados.', 'error')
             return render_template('asistencia_publica.html', token=token)
         
         # Verificar que el nombre coincida (validación más flexible)

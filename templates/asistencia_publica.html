@@ -236,6 +236,40 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmación antes de enviar -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="confirmModalLabel">
+                        <i class="fas fa-question-circle me-2"></i>Confirmar Registro
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-check fa-3x text-primary mb-3"></i>
+                        <h4>¿Confirma el registro de asistencia?</h4>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Empleado:</strong> <span id="confirmNombre"></span><br>
+                        <strong>Documento:</strong> <span id="confirmDocumento"></span><br>
+                        <strong>Hora actual:</strong> <span id="confirmHora"></span>
+                    </div>
+                    <p class="text-muted">Esta acción registrará su asistencia en el sistema.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="confirmSubmit">
+                        <i class="fas fa-check me-2"></i>Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Actualizar fecha y hora en tiempo real
@@ -296,6 +330,29 @@
             document.getElementById('documento').focus();
         }
 
+        // Función para mostrar modal de confirmación
+        function mostrarModalConfirmacion(documento, nombre) {
+            // Llenar datos en el modal
+            document.getElementById('confirmNombre').textContent = nombre;
+            document.getElementById('confirmDocumento').textContent = documento;
+            document.getElementById('confirmHora').textContent = new Date().toLocaleTimeString('es-ES', {
+                hour: '2-digit', 
+                minute: '2-digit'
+            });
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            modal.show();
+            
+            // Configurar botón de confirmación
+            document.getElementById('confirmSubmit').onclick = function() {
+                // Cerrar modal
+                modal.hide();
+                // Enviar formulario
+                document.querySelector('form').submit();
+            };
+        }
+
         // Validación del formulario
         document.querySelector('form').addEventListener('submit', function(e) {
             const documento = document.getElementById('documento').value.trim();
@@ -307,11 +364,9 @@
                 return false;
             }
             
-            // Confirmar antes de enviar
-            if (!confirm('¿Confirma que desea registrar su asistencia?')) {
-                e.preventDefault();
-                return false;
-            }
+            // Mostrar modal de confirmación en lugar de confirm() nativo
+            e.preventDefault();
+            mostrarModalConfirmacion(documento, nombre);
         });
 
         // Limpiar campos después de un registro exitoso
