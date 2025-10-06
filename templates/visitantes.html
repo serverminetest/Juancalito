@@ -379,7 +379,7 @@ function ejecutarAccionVisitante() {
     // Crear formulario y enviar
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/visitantes/registrar-entrada-salida/${visitanteIdActual}`;
+    form.action = `/visitantes/${visitanteIdActual}/entrada-salida`;
     form.style.display = 'none';
     
     document.body.appendChild(form);
