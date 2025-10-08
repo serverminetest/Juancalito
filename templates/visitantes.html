@@ -84,7 +84,6 @@
             <table class="table table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th class="d-none d-md-table-cell">ID</th>
                         <th>Nombre Completo</th>
                         <th class="d-none d-lg-table-cell">Documento</th>
                         <th class="d-none d-xl-table-cell">EPS</th>
@@ -102,7 +101,6 @@
                 <tbody>
                     {% for visitante in visitantes %}
                     <tr>
-                        <td class="d-none d-md-table-cell">{{ visitante.id }}</td>
                         <td>
                             <div class="d-flex flex-column">
                                 <strong>{{ visitante.nombre }} {{ visitante.apellido }}</strong>
