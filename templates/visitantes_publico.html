@@ -310,6 +310,14 @@
             }
         });
         
+        // Activar polling rápido cuando se envía el formulario
+        document.querySelector('form').addEventListener('submit', function() {
+            // Activar polling rápido para notificaciones
+            if (typeof window.activarPollingRapido === 'function') {
+                window.activarPollingRapido();
+            }
+        });
+        
         // Función para recargar el formulario
         function recargarFormulario() {
             // Limpiar el formulario

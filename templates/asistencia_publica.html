@@ -359,6 +359,11 @@
                 const form = document.querySelector('form');
                 form.appendChild(hiddenInput);
                 
+                // Activar polling rápido para notificaciones
+                if (typeof window.activarPollingRapido === 'function') {
+                    window.activarPollingRapido();
+                }
+                
                 // Enviar formulario
                 form.submit();
             };

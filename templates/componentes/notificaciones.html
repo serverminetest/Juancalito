@@ -131,10 +131,42 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarNotificacionesSilencioso();
     
     // Actualizar notificaciones cada 3 segundos
-    setInterval(cargarNotificaciones, 3000);
+    // Polling cada 3 segundos (normal)
+    let intervaloNormal = setInterval(cargarNotificaciones, 3000);
+    let intervaloRapido = null;
+    let ultimaActividad = Date.now();
+
+    // Polling más frecuente cuando hay actividad reciente
+    function verificarActividad() {
+        const ahora = Date.now();
+        const tiempoTranscurrido = ahora - ultimaActividad;
+        
+        // Si han pasado más de 30 segundos sin actividad, volver al polling normal
+        if (tiempoTranscurrido > 30000 && intervaloRapido) {
+            clearInterval(intervaloRapido);
+            intervaloRapido = null;
+            console.log('🔄 Volviendo a polling normal (3s)');
+        }
+    }
+
+    // Verificar actividad cada 10 segundos
+    setInterval(verificarActividad, 10000);
+
+    // Función para activar polling rápido
+    function activarPollingRapido() {
+        if (!intervaloRapido) {
+            console.log('⚡ Activando polling rápido (1s)');
+            intervaloRapido = setInterval(cargarNotificaciones, 1000);
+        }
+        ultimaActividad = Date.now();
+    }
     
     // Verificar si el usuario quiere sonidos
     sonidosHabilitados = localStorage.getItem('notificaciones_sonido') !== 'false';
+    
+    // Hacer funciones globales para activar desde otros scripts
+    window.activarPollingRapido = activarPollingRapido;
+    window.cargarNotificaciones = cargarNotificaciones;
 });
 
 function toggleNotificaciones() {
@@ -176,16 +208,26 @@ function cargarNotificaciones() {
                     mostrarNotificacionesEnPanel(data.notificaciones);
                 }
                 
-                // Verificar si hay nuevas notificaciones
-                const nuevasNotificaciones = data.notificaciones.filter(n => 
-                    !notificacionesActivas.some(na => na.id === n.id)
-                );
+                // Verificar si hay nuevas notificaciones (comparar por ID y fecha)
+                const nuevasNotificaciones = data.notificaciones.filter(n => {
+                    const existe = notificacionesActivas.some(na => na.id === n.id);
+                    if (!existe) {
+                        console.log(`🆕 Nueva notificación encontrada: ID ${n.id} - ${n.titulo}`);
+                        return true;
+                    }
+                    return false;
+                });
                 
-                console.log('🆕 Nuevas notificaciones:', nuevasNotificaciones);
+                console.log('🆕 Nuevas notificaciones encontradas:', nuevasNotificaciones.length);
                 
                 if (nuevasNotificaciones.length > 0) {
-                    console.log('🎉 Mostrando toast para nuevas notificaciones');
+                    console.log('🎉 Mostrando toast para nuevas notificaciones:', nuevasNotificaciones);
                     mostrarNotificacionesToast(nuevasNotificaciones);
+                    
+                    // Activar polling rápido cuando hay nuevas notificaciones
+                    if (typeof activarPollingRapido === 'function') {
+                        activarPollingRapido();
+                    }
                 }
                 
                 notificacionesActivas = data.notificaciones;
@@ -240,7 +282,7 @@ function crearToast(notificacion) {
                                           notificacion.tipo === 'error' ? 'danger' : 'info'} text-white">
             <i class="${notificacion.icono} me-2"></i>
             <strong class="me-auto">${notificacion.titulo}</strong>
-            <small class="text-white-50">${notificacion.timestamp}</small>
+            <small class="text-white-50">${formatearFecha(notificacion.fecha_creacion)}</small>
             <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()"></button>
         </div>
         <div class="toast-body bg-white">
@@ -248,6 +290,17 @@ function crearToast(notificacion) {
         </div>
     `;
     return toast;
+}
+
+function formatearFecha(fechaStr) {
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleString('es-CO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 function mostrarNotificacionesEnPanel(notificaciones) {
