@@ -1146,7 +1146,7 @@ def asistencia_publica(token):
                 # Enviar notificación
                 notificar_asistencia_salida(
                     empleado.nombre_completo, 
-                    colombia_now().strftime("%H:%M")
+                    hora_actual.strftime("%H:%M")
                 )
                 
                 flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
@@ -1329,7 +1329,7 @@ def registrar_asistencia():
             # Enviar notificación
             notificar_asistencia_salida(
                 empleado.nombre_completo, 
-                colombia_now().strftime("%H:%M")
+                hora_salida.strftime("%H:%M")
             )
             
             flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
