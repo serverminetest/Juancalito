@@ -275,7 +275,7 @@ function mostrarNotificacionesEnPanel(notificaciones) {
                     <p class="mb-1 text-muted">${notificacion.mensaje}</p>
                     <small class="text-muted">
                         <i class="fas fa-clock me-1"></i>
-                        ${notificacion.fecha} ${notificacion.timestamp}
+                        ${new Date(notificacion.fecha_creacion).toLocaleString()}
                     </small>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="event.stopPropagation(); eliminarNotificacion(${notificacion.id})" title="Eliminar">

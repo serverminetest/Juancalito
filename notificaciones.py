@@ -11,6 +11,18 @@ import threading
 import queue
 import os
 
+# Intentar importar db y Notificacion desde app.py
+try:
+    from app import db, Notificacion
+    DB_AVAILABLE = True
+    print("✅ DB y Notificacion importados correctamente")
+except ImportError as e:
+    print(f"⚠️ No se pudo importar db y Notificacion de app.py: {e}")
+    DB_AVAILABLE = False
+except Exception as e:
+    print(f"⚠️ Error al importar db y Notificacion: {e}")
+    DB_AVAILABLE = False
+
 # Intentar importar playsound, si no está disponible usar un fallback
 try:
     from playsound import playsound
@@ -42,15 +54,38 @@ class NotificacionManager:
         """Procesa las notificaciones en cola"""
         while True:
             try:
-                notificacion = self.queue_notificaciones.get(timeout=1)
-                if notificacion is None:
+                notificacion_data = self.queue_notificaciones.get(timeout=1)
+                if notificacion_data is None:
                     break
                 
-                # Agregar a la lista de notificaciones
-                self.notificaciones.append(notificacion)
+                print(f"⚙️ Procesando notificación: {notificacion_data['titulo']}")
+
+                # Guardar en la base de datos si está disponible
+                if DB_AVAILABLE:
+                    try:
+                        nueva_notificacion_db = Notificacion(
+                            titulo=notificacion_data['titulo'],
+                            mensaje=notificacion_data['mensaje'],
+                            tipo=notificacion_data['tipo'],
+                            tipo_sonido=notificacion_data['tipo_sonido'],
+                            icono=notificacion_data['icono'],
+                            fecha_creacion=datetime.fromisoformat(notificacion_data['fecha_creacion']),
+                            leida=False,
+                            usuario_id=notificacion_data.get('usuario_id')
+                        )
+                        db.session.add(nueva_notificacion_db)
+                        db.session.commit()
+                        notificacion_data['id'] = nueva_notificacion_db.id
+                        print(f"✅ Notificación guardada en BD con ID: {nueva_notificacion_db.id}")
+                    except Exception as e:
+                        db.session.rollback()
+                        print(f"❌ Error al guardar notificación en BD: {e}")
+
+                # Agregar a la lista de notificaciones (para compatibilidad)
+                self.notificaciones.append(notificacion_data)
                 
                 # Reproducir sonido si está disponible
-                self._reproducir_sonido(notificacion.get('tipo_sonido', 'alerta'))
+                self._reproducir_sonido(notificacion_data.get('tipo_sonido', 'alerta'))
                 
                 # Limpiar notificaciones antiguas (mantener solo las últimas 50)
                 if len(self.notificaciones) > 50:
@@ -85,30 +120,60 @@ class NotificacionManager:
         except Exception as e:
             print(f"Error reproduciendo sonido: {e}")
     
-    def agregar_notificacion(self, titulo, mensaje, tipo='info', tipo_sonido='alerta', icono='fas fa-bell'):
+    def agregar_notificacion(self, titulo, mensaje, tipo='info', tipo_sonido='alerta', icono='fas fa-bell', usuario_id=None):
         """Agrega una nueva notificación"""
         ahora = datetime.now()
-        notificacion = {
-            'id': int(time.time() * 1000),  # ID único basado en timestamp
+        temp_id = int(time.time() * 1000)
+        
+        notificacion_data = {
+            'id': temp_id,
             'titulo': titulo,
             'mensaje': mensaje,
-            'tipo': tipo,  # success, info, warning, error
+            'tipo': tipo,
             'tipo_sonido': tipo_sonido,
             'icono': icono,
-            'timestamp': ahora.strftime('%H:%M:%S'),
-            'fecha': ahora.strftime('%Y-%m-%d'),
-            'leida': False
+            'fecha_creacion': ahora.isoformat(),
+            'leida': False,
+            'usuario_id': usuario_id
         }
         
         print(f"🔔 Agregando notificación: {titulo} - {mensaje}")
-        self.queue_notificaciones.put(notificacion)
-        return notificacion['id']
+        self.queue_notificaciones.put(notificacion_data)
+        return temp_id
     
     def obtener_notificaciones(self, no_leidas=False):
-        """Obtiene las notificaciones"""
-        if no_leidas:
-            return [n for n in self.notificaciones if not n['leida']]
-        return self.notificaciones
+        """Obtiene las notificaciones de la base de datos"""
+        if DB_AVAILABLE:
+            try:
+                query = Notificacion.query
+                if no_leidas:
+                    query = query.filter_by(leida=False)
+                # Ordenar por fecha_creacion descendente
+                notificaciones_db = query.order_by(Notificacion.fecha_creacion.desc()).all()
+                
+                # Convertir objetos del modelo a diccionarios para jsonify
+                result = []
+                for n in notificaciones_db:
+                    result.append({
+                        'id': n.id,
+                        'titulo': n.titulo,
+                        'mensaje': n.mensaje,
+                        'tipo': n.tipo,
+                        'tipo_sonido': n.tipo_sonido,
+                        'icono': n.icono,
+                        'fecha_creacion': n.fecha_creacion.isoformat(),
+                        'leida': n.leida,
+                        'usuario_id': n.usuario_id
+                    })
+                return result
+            except Exception as e:
+                print(f"❌ Error al obtener notificaciones de la BD: {e}")
+                return []
+        else:
+            # Fallback a la lista en memoria
+            if no_leidas:
+                return [n for n in self.notificaciones if not n['leida']]
+            return self.notificaciones
     
     def marcar_como_leida(self, notificacion_id):
         """Marca una notificación como leída"""
@@ -250,14 +315,20 @@ def notificar_exito(titulo, mensaje):
 # Funciones para la API
 def obtener_notificaciones_api(no_leidas=False):
     """API para obtener notificaciones"""
-    notificaciones = notificacion_manager.obtener_notificaciones(no_leidas)
-    print(f"📋 Obteniendo notificaciones - Total: {len(notificaciones)}, No leídas: {len([n for n in notificaciones if not n['leida']])}")
-    return jsonify({
-        'success': True,
-        'notificaciones': notificaciones,
-        'total': len(notificaciones),
-        'no_leidas': len([n for n in notificaciones if not n['leida']])
-    })
+    try:
+        notificaciones = notificacion_manager.obtener_notificaciones(no_leidas)
+        total_notificaciones = len(notificaciones)
+        no_leidas_count = len([n for n in notificaciones if not n['leida']])
+        print(f"📋 API: Obteniendo notificaciones - Total: {total_notificaciones}, No leídas: {no_leidas_count}")
+        return jsonify({
+            'success': True,
+            'notificaciones': notificaciones,
+            'total': total_notificaciones,
+            'no_leidas': no_leidas_count
+        })
+    except Exception as e:
+        print(f"❌ API Error al obtener notificaciones: {e}")
+        return jsonify({'success': False, 'message': str(e), 'notificaciones': [], 'total': 0, 'no_leidas': 0}), 500
 
 def marcar_notificacion_leida_api(notificacion_id):
     """API para marcar notificación como leída"""
