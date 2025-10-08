@@ -639,6 +639,22 @@ class MovimientoInventario(db.Model):
     # Relación con usuario
     usuario = db.relationship('User', backref='movimientos_inventario')
 
+class Notificacion(db.Model):
+    __tablename__ = 'notificacion'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(200), nullable=False)
+    mensaje = db.Column(db.Text, nullable=False)
+    tipo = db.Column(db.String(20), nullable=False, default='info')  # success, info, warning, error
+    tipo_sonido = db.Column(db.String(20), nullable=False, default='alerta')  # entrada, salida, visitante, alerta
+    icono = db.Column(db.String(50), nullable=False, default='fas fa-bell')
+    leida = db.Column(db.Boolean, nullable=False, default=False)
+    fecha_creacion = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # Relaciones
+    usuario = db.relationship('User', backref='notificaciones')
+
 class Asistencia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     empleado_id = db.Column(db.Integer, db.ForeignKey('empleado.id'), nullable=False)
@@ -2397,6 +2413,28 @@ def init_db():
             
             db.session.commit()
             print("✅ Categorías de inventario verificadas/creadas")
+            
+            # Crear tabla de notificaciones
+            print("🔔 Creando tabla de notificaciones...")
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text("""
+                        CREATE TABLE IF NOT EXISTS notificacion (
+                            id SERIAL PRIMARY KEY,
+                            titulo VARCHAR(200) NOT NULL,
+                            mensaje TEXT NOT NULL,
+                            tipo VARCHAR(20) NOT NULL DEFAULT 'info',
+                            tipo_sonido VARCHAR(20) NOT NULL DEFAULT 'alerta',
+                            icono VARCHAR(50) NOT NULL DEFAULT 'fas fa-bell',
+                            leida BOOLEAN NOT NULL DEFAULT FALSE,
+                            fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            usuario_id INTEGER REFERENCES "user"(id)
+                        )
+                    """))
+                    conn.commit()
+                print("✅ Tabla de notificaciones creada exitosamente")
+            except Exception as e:
+                print(f"⚠️ Tabla de notificaciones: {str(e)}")
             
             # Crear usuario administrador por defecto
             print("👤 Verificando usuario administrador...")
