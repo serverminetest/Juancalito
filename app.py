@@ -13,6 +13,20 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment
 import shutil
 
+# Importar sistema de notificaciones
+from notificaciones import (
+    notificacion_manager, 
+    notificar_asistencia_entrada, 
+    notificar_asistencia_salida,
+    notificar_visitante_nuevo,
+    notificar_visitante_salida,
+    notificar_error,
+    notificar_exito,
+    obtener_notificaciones_api,
+    marcar_notificacion_leida_api,
+    limpiar_notificaciones_api
+)
+
 # Configurar zona horaria de Colombia (UTC-5)
 COLOMBIA_TZ = timezone(timedelta(hours=-5))
 
@@ -1085,6 +1099,13 @@ def asistencia_publica(token):
             try:
                 db.session.add(asistencia)
                 db.session.commit()
+                
+                # Enviar notificación
+                notificar_asistencia_entrada(
+                    empleado.nombre_completo, 
+                    colombia_now().strftime("%H:%M")
+                )
+                
                 flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
             except Exception as e:
                 db.session.rollback()
@@ -1105,6 +1126,13 @@ def asistencia_publica(token):
             
             try:
                 db.session.commit()
+                
+                # Enviar notificación
+                notificar_asistencia_salida(
+                    empleado.nombre_completo, 
+                    colombia_now().strftime("%H:%M")
+                )
+                
                 flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
             except Exception as e:
                 db.session.rollback()
@@ -1188,6 +1216,13 @@ def visitantes_publico(token):
         try:
             db.session.add(visitante)
             db.session.commit()
+            
+            # Enviar notificación
+            notificar_visitante_nuevo(
+                f"{nombre} {apellido}",
+                empresa or "Sin empresa"
+            )
+            
             flash(f'Visitante {nombre} {apellido} registrado exitosamente a las {colombia_now().strftime("%H:%M")}', 'success')
         except Exception as e:
             db.session.rollback()
@@ -1238,6 +1273,13 @@ def registrar_asistencia():
         try:
             db.session.add(asistencia)
             db.session.commit()
+            
+            # Enviar notificación
+            notificar_asistencia_entrada(
+                empleado.nombre_completo, 
+                colombia_now().strftime("%H:%M")
+            )
+            
             flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
         except Exception as e:
             db.session.rollback()
@@ -1267,6 +1309,13 @@ def registrar_asistencia():
         
         try:
             db.session.commit()
+            
+            # Enviar notificación
+            notificar_asistencia_salida(
+                empleado.nombre_completo, 
+                colombia_now().strftime("%H:%M")
+            )
+            
             flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
         except Exception as e:
             db.session.rollback()
@@ -2160,6 +2209,10 @@ def registrar_entrada_salida_visitante(id):
         visitante.estado_visita = 'Finalizada'
         visitante.activo = False
         db.session.commit()
+        
+        # Enviar notificación
+        notificar_visitante_salida(f"{visitante.nombre} {visitante.apellido}")
+        
         flash(f'Salida registrada para {visitante.nombre} {visitante.apellido} a las {visitante.fecha_salida.strftime("%H:%M")}', 'success')
     else:
         # Registrar entrada (nuevo visitante)
@@ -2168,6 +2221,13 @@ def registrar_entrada_salida_visitante(id):
         visitante.activo = True
         visitante.fecha_salida = None
         db.session.commit()
+        
+        # Enviar notificación
+        notificar_visitante_nuevo(
+            f"{visitante.nombre} {visitante.apellido}",
+            visitante.empresa or "Sin empresa"
+        )
+        
         flash(f'Entrada registrada para {visitante.nombre} {visitante.apellido} a las {visitante.fecha_entrada.strftime("%H:%M")}', 'success')
     
     return redirect(url_for('visitantes'))
@@ -3004,6 +3064,84 @@ def nuevo_movimiento_inventario():
     
     productos = Producto.query.filter_by(activo=True).all()
     return render_template('nuevo_movimiento_inventario.html', productos=productos)
+
+# ===== RUTAS PARA SISTEMA DE NOTIFICACIONES =====
+
+@app.route('/api/notificaciones')
+@login_required
+def api_notificaciones():
+    """API para obtener notificaciones"""
+    no_leidas = request.args.get('no_leidas', 'false').lower() == 'true'
+    return obtener_notificaciones_api(no_leidas)
+
+@app.route('/api/notificaciones/<int:notificacion_id>/leida', methods=['POST'])
+@login_required
+def api_marcar_notificacion_leida(notificacion_id):
+    """API para marcar una notificación como leída"""
+    return marcar_notificacion_leida_api(notificacion_id)
+
+@app.route('/api/notificaciones/marcar-todas-leidas', methods=['POST'])
+@login_required
+def api_marcar_todas_leidas():
+    """API para marcar todas las notificaciones como leídas"""
+    try:
+        notificaciones = notificacion_manager.obtener_notificaciones()
+        for notificacion in notificaciones:
+            notificacion['leida'] = True
+        return jsonify({'success': True, 'message': 'Todas las notificaciones marcadas como leídas'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/notificaciones/<int:notificacion_id>/eliminar', methods=['DELETE'])
+@login_required
+def api_eliminar_notificacion(notificacion_id):
+    """API para eliminar una notificación específica"""
+    try:
+        notificaciones = notificacion_manager.obtener_notificaciones()
+        notificacion_manager.notificaciones = [n for n in notificaciones if n['id'] != notificacion_id]
+        return jsonify({'success': True, 'message': 'Notificación eliminada'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/notificaciones/limpiar', methods=['POST'])
+@login_required
+def api_limpiar_notificaciones():
+    """API para limpiar todas las notificaciones"""
+    return limpiar_notificaciones_api()
+
+@app.route('/api/notificaciones/crear', methods=['POST'])
+@login_required
+def api_crear_notificacion():
+    """API para crear una notificación manual"""
+    try:
+        data = request.get_json()
+        titulo = data.get('titulo', 'Notificación')
+        mensaje = data.get('mensaje', '')
+        tipo = data.get('tipo', 'info')
+        tipo_sonido = data.get('tipo_sonido', 'alerta')
+        
+        notificacion_id = notificacion_manager.agregar_notificacion(
+            titulo=titulo,
+            mensaje=mensaje,
+            tipo=tipo,
+            tipo_sonido=tipo_sonido
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Notificación creada',
+            'notificacion_id': notificacion_id
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/sounds/<path:filename>')
+def servir_sonidos(filename):
+    """Servir archivos de sonido"""
+    try:
+        return send_file(f'sounds/{filename}', mimetype='audio/wav')
+    except FileNotFoundError:
+        return jsonify({'error': 'Archivo de sonido no encontrado'}), 404
 
 if __name__ == '__main__':
     try:

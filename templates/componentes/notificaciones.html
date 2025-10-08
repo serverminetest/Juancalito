@@ -1,0 +1,393 @@
+<!-- Componente de Notificaciones -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1060;">
+    <div id="notificaciones-container">
+        <!-- Las notificaciones se insertarán aquí dinámicamente -->
+    </div>
+</div>
+
+<!-- Contador de notificaciones en el navbar -->
+<div class="position-relative">
+    <button class="btn btn-outline-light position-relative" onclick="toggleNotificaciones()" title="Notificaciones">
+        <i class="fas fa-bell"></i>
+        <span id="contador-notificaciones" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+            0
+        </span>
+    </button>
+</div>
+
+<!-- Panel de notificaciones -->
+<div id="panel-notificaciones" class="position-fixed top-0 end-0 bg-white shadow-lg border rounded-3" 
+     style="width: 350px; height: 500px; z-index: 1055; margin-top: 60px; margin-right: 10px; display: none; overflow-y: auto;">
+    
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+        <h6 class="mb-0">
+            <i class="fas fa-bell text-primary me-2"></i>
+            Notificaciones
+        </h6>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary me-2" onclick="marcarTodasLeidas()" title="Marcar todas como leídas">
+                <i class="fas fa-check-double"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="limpiarNotificaciones()" title="Limpiar todas">
+                <i class="fas fa-trash"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="toggleNotificaciones()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div id="lista-notificaciones" class="p-2">
+        <!-- Las notificaciones se cargarán aquí -->
+    </div>
+    
+    <div id="sin-notificaciones" class="text-center p-4 text-muted" style="display: none;">
+        <i class="fas fa-bell-slash fa-3x mb-3"></i>
+        <p class="mb-0">No hay notificaciones</p>
+    </div>
+</div>
+
+<style>
+.notificacion-toast {
+    animation: slideInRight 0.3s ease-out;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-left: 4px solid;
+    max-width: 350px;
+}
+
+.notificacion-toast.success {
+    border-left-color: #28a745;
+}
+
+.notificacion-toast.info {
+    border-left-color: #17a2b8;
+}
+
+.notificacion-toast.warning {
+    border-left-color: #ffc107;
+}
+
+.notificacion-toast.error {
+    border-left-color: #dc3545;
+}
+
+.notificacion-item {
+    border-left: 4px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.notificacion-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notificacion-item.leida {
+    opacity: 0.6;
+}
+
+.notificacion-item.no-leida {
+    border-left-color: #007bff;
+    background-color: #f0f8ff;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.pulse {
+    animation: pulse 0.5s ease-in-out;
+}
+</style>
+
+<script>
+let notificacionesActivas = [];
+let panelAbierto = false;
+let sonidosHabilitados = true;
+
+// Inicializar sistema de notificaciones
+document.addEventListener('DOMContentLoaded', function() {
+    cargarNotificaciones();
+    
+    // Actualizar notificaciones cada 3 segundos
+    setInterval(cargarNotificaciones, 3000);
+    
+    // Verificar si el usuario quiere sonidos
+    sonidosHabilitados = localStorage.getItem('notificaciones_sonido') !== 'false';
+});
+
+function toggleNotificaciones() {
+    const panel = document.getElementById('panel-notificaciones');
+    panelAbierto = !panelAbierto;
+    panel.style.display = panelAbierto ? 'block' : 'none';
+    
+    if (panelAbierto) {
+        cargarNotificaciones();
+    }
+}
+
+function cargarNotificaciones() {
+    fetch('/api/notificaciones')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                actualizarContador(data.no_leidas);
+                
+                if (panelAbierto) {
+                    mostrarNotificacionesEnPanel(data.notificaciones);
+                }
+                
+                // Verificar si hay nuevas notificaciones
+                const nuevasNotificaciones = data.notificaciones.filter(n => 
+                    !notificacionesActivas.some(na => na.id === n.id)
+                );
+                
+                if (nuevasNotificaciones.length > 0) {
+                    mostrarNotificacionesToast(nuevasNotificaciones);
+                }
+                
+                notificacionesActivas = data.notificaciones;
+            }
+        })
+        .catch(error => console.error('Error cargando notificaciones:', error));
+}
+
+function actualizarContador(noLeidas) {
+    const contador = document.getElementById('contador-notificaciones');
+    if (noLeidas > 0) {
+        contador.textContent = noLeidas;
+        contador.style.display = 'block';
+        contador.classList.add('pulse');
+    } else {
+        contador.style.display = 'none';
+        contador.classList.remove('pulse');
+    }
+}
+
+function mostrarNotificacionesToast(notificaciones) {
+    const container = document.getElementById('notificaciones-container');
+    
+    notificaciones.forEach(notificacion => {
+        const toast = crearToast(notificacion);
+        container.appendChild(toast);
+        
+        // Reproducir sonido si está habilitado
+        if (sonidosHabilitados) {
+            reproducirSonido(notificacion.tipo_sonido);
+        }
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    });
+}
+
+function crearToast(notificacion) {
+    const toast = document.createElement('div');
+    toast.className = `notificacion-toast ${notificacion.tipo}`;
+    toast.innerHTML = `
+        <div class="toast-header bg-${notificacion.tipo === 'success' ? 'success' : 
+                                          notificacion.tipo === 'warning' ? 'warning' : 
+                                          notificacion.tipo === 'error' ? 'danger' : 'info'} text-white">
+            <i class="${notificacion.icono} me-2"></i>
+            <strong class="me-auto">${notificacion.titulo}</strong>
+            <small class="text-white-50">${notificacion.timestamp}</small>
+            <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+        <div class="toast-body bg-white">
+            ${notificacion.mensaje}
+        </div>
+    `;
+    return toast;
+}
+
+function mostrarNotificacionesEnPanel(notificaciones) {
+    const lista = document.getElementById('lista-notificaciones');
+    const sinNotificaciones = document.getElementById('sin-notificaciones');
+    
+    if (notificaciones.length === 0) {
+        lista.style.display = 'none';
+        sinNotificaciones.style.display = 'block';
+        return;
+    }
+    
+    lista.style.display = 'block';
+    sinNotificaciones.style.display = 'none';
+    
+    lista.innerHTML = notificaciones.map(notificacion => `
+        <div class="notificacion-item p-3 border-bottom ${notificacion.leida ? 'leida' : 'no-leida'}" 
+             onclick="marcarComoLeida(${notificacion.id})">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="${notificacion.icono} text-${notificacion.tipo === 'success' ? 'success' : 
+                                                                  notificacion.tipo === 'warning' ? 'warning' : 
+                                                                  notificacion.tipo === 'error' ? 'danger' : 'info'} me-2"></i>
+                        <h6 class="mb-0">${notificacion.titulo}</h6>
+                        ${!notificacion.leida ? '<span class="badge bg-primary ms-2">Nueva</span>' : ''}
+                    </div>
+                    <p class="mb-1 text-muted">${notificacion.mensaje}</p>
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        ${notificacion.fecha} ${notificacion.timestamp}
+                    </small>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="event.stopPropagation(); eliminarNotificacion(${notificacion.id})" title="Eliminar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function marcarComoLeida(notificacionId) {
+    fetch(`/api/notificaciones/${notificacionId}/leida`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            cargarNotificaciones();
+        }
+    })
+    .catch(error => console.error('Error marcando notificación:', error));
+}
+
+function marcarTodasLeidas() {
+    fetch('/api/notificaciones/marcar-todas-leidas', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            cargarNotificaciones();
+        }
+    })
+    .catch(error => console.error('Error marcando todas como leídas:', error));
+}
+
+function limpiarNotificaciones() {
+    if (confirm('¿Estás seguro de que quieres eliminar todas las notificaciones?')) {
+        fetch('/api/notificaciones/limpiar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                cargarNotificaciones();
+            }
+        })
+        .catch(error => console.error('Error limpiando notificaciones:', error));
+    }
+}
+
+function eliminarNotificacion(notificacionId) {
+    fetch(`/api/notificaciones/${notificacionId}/eliminar`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            cargarNotificaciones();
+        }
+    })
+    .catch(error => console.error('Error eliminando notificación:', error));
+}
+
+function reproducirSonido(tipo) {
+    if (!sonidosHabilitados) return;
+    
+    try {
+        // Crear un elemento de audio temporal
+        const audio = document.createElement('audio');
+        
+        // Mapear tipos de sonido a archivos
+        const sonidos = {
+            'entrada': '/sounds/entrada.wav',
+            'salida': '/sounds/salida.wav',
+            'visitante': '/sounds/visitante.wav',
+            'alerta': '/sounds/alerta.wav'
+        };
+        
+        const archivoSonido = sonidos[tipo] || sonidos['alerta'];
+        audio.src = archivoSonido;
+        audio.volume = 0.5;
+        
+        // Reproducir
+        audio.play().catch(e => console.log('No se pudo reproducir el sonido:', e));
+        
+    } catch (error) {
+        console.log('Error reproduciendo sonido:', error);
+    }
+}
+
+function toggleSonidos() {
+    sonidosHabilitados = !sonidosHabilitados;
+    localStorage.setItem('notificaciones_sonido', sonidosHabilitados.toString());
+    
+    const boton = document.getElementById('toggle-sonidos');
+    if (boton) {
+        boton.innerHTML = sonidosHabilitados ? 
+            '<i class="fas fa-volume-up"></i>' : 
+            '<i class="fas fa-volume-mute"></i>';
+    }
+}
+
+// Función para notificar desde otras partes de la aplicación
+function notificar(titulo, mensaje, tipo = 'info', tipoSonido = 'alerta') {
+    fetch('/api/notificaciones/crear', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            titulo: titulo,
+            mensaje: mensaje,
+            tipo: tipo,
+            tipo_sonido: tipoSonido
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            cargarNotificaciones();
+        }
+    })
+    .catch(error => console.error('Error creando notificación:', error));
+}
+</script>
