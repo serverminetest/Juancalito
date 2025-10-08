@@ -12,16 +12,27 @@ import queue
 import os
 
 # Intentar importar db y Notificacion desde app.py
-try:
-    from app import db, Notificacion
-    DB_AVAILABLE = True
-    print("✅ DB y Notificacion importados correctamente")
-except ImportError as e:
-    print(f"⚠️ No se pudo importar db y Notificacion de app.py: {e}")
-    DB_AVAILABLE = False
-except Exception as e:
-    print(f"⚠️ Error al importar db y Notificacion: {e}")
-    DB_AVAILABLE = False
+# Usar import lazy para evitar import circular
+DB_AVAILABLE = False
+db = None
+Notificacion = None
+
+def _import_db_models():
+    global DB_AVAILABLE, db, Notificacion
+    if not DB_AVAILABLE:
+        try:
+            from app import db as _db, Notificacion as _Notificacion
+            db = _db
+            Notificacion = _Notificacion
+            DB_AVAILABLE = True
+            print("✅ DB y Notificacion importados correctamente")
+        except ImportError as e:
+            print(f"⚠️ No se pudo importar db y Notificacion de app.py: {e}")
+            DB_AVAILABLE = False
+        except Exception as e:
+            print(f"⚠️ Error al importar db y Notificacion: {e}")
+            DB_AVAILABLE = False
+    return DB_AVAILABLE
 
 # Intentar importar playsound, si no está disponible usar un fallback
 try:
@@ -61,24 +72,29 @@ class NotificacionManager:
                 print(f"⚙️ Procesando notificación: {notificacion_data['titulo']}")
 
                 # Guardar en la base de datos si está disponible
-                if DB_AVAILABLE:
+                if _import_db_models():
                     try:
-                        nueva_notificacion_db = Notificacion(
-                            titulo=notificacion_data['titulo'],
-                            mensaje=notificacion_data['mensaje'],
-                            tipo=notificacion_data['tipo'],
-                            tipo_sonido=notificacion_data['tipo_sonido'],
-                            icono=notificacion_data['icono'],
-                            fecha_creacion=datetime.fromisoformat(notificacion_data['fecha_creacion']),
-                            leida=False,
-                            usuario_id=notificacion_data.get('usuario_id')
-                        )
-                        db.session.add(nueva_notificacion_db)
-                        db.session.commit()
-                        notificacion_data['id'] = nueva_notificacion_db.id
-                        print(f"✅ Notificación guardada en BD con ID: {nueva_notificacion_db.id}")
+                        from flask import current_app
+                        with current_app.app_context():
+                            nueva_notificacion_db = Notificacion(
+                                titulo=notificacion_data['titulo'],
+                                mensaje=notificacion_data['mensaje'],
+                                tipo=notificacion_data['tipo'],
+                                tipo_sonido=notificacion_data['tipo_sonido'],
+                                icono=notificacion_data['icono'],
+                                fecha_creacion=datetime.fromisoformat(notificacion_data['fecha_creacion']),
+                                leida=False,
+                                usuario_id=notificacion_data.get('usuario_id')
+                            )
+                            db.session.add(nueva_notificacion_db)
+                            db.session.commit()
+                            notificacion_data['id'] = nueva_notificacion_db.id
+                            print(f"✅ Notificación guardada en BD con ID: {nueva_notificacion_db.id}")
                     except Exception as e:
-                        db.session.rollback()
+                        try:
+                            db.session.rollback()
+                        except:
+                            pass
                         print(f"❌ Error al guardar notificación en BD: {e}")
 
                 # Agregar a la lista de notificaciones (para compatibilidad)
@@ -143,29 +159,31 @@ class NotificacionManager:
     
     def obtener_notificaciones(self, no_leidas=False):
         """Obtiene las notificaciones de la base de datos"""
-        if DB_AVAILABLE:
+        if _import_db_models():
             try:
-                query = Notificacion.query
-                if no_leidas:
-                    query = query.filter_by(leida=False)
-                # Ordenar por fecha_creacion descendente
-                notificaciones_db = query.order_by(Notificacion.fecha_creacion.desc()).all()
-                
-                # Convertir objetos del modelo a diccionarios para jsonify
-                result = []
-                for n in notificaciones_db:
-                    result.append({
-                        'id': n.id,
-                        'titulo': n.titulo,
-                        'mensaje': n.mensaje,
-                        'tipo': n.tipo,
-                        'tipo_sonido': n.tipo_sonido,
-                        'icono': n.icono,
-                        'fecha_creacion': n.fecha_creacion.isoformat(),
-                        'leida': n.leida,
-                        'usuario_id': n.usuario_id
-                    })
-                return result
+                from flask import current_app
+                with current_app.app_context():
+                    query = Notificacion.query
+                    if no_leidas:
+                        query = query.filter_by(leida=False)
+                    # Ordenar por fecha_creacion descendente
+                    notificaciones_db = query.order_by(Notificacion.fecha_creacion.desc()).all()
+                    
+                    # Convertir objetos del modelo a diccionarios para jsonify
+                    result = []
+                    for n in notificaciones_db:
+                        result.append({
+                            'id': n.id,
+                            'titulo': n.titulo,
+                            'mensaje': n.mensaje,
+                            'tipo': n.tipo,
+                            'tipo_sonido': n.tipo_sonido,
+                            'icono': n.icono,
+                            'fecha_creacion': n.fecha_creacion.isoformat(),
+                            'leida': n.leida,
+                            'usuario_id': n.usuario_id
+                        })
+                    return result
             except Exception as e:
                 print(f"❌ Error al obtener notificaciones de la BD: {e}")
                 return []
