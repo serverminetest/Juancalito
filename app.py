@@ -3158,3 +3158,15 @@ if __name__ == '__main__':
         import traceback
         traceback.print_exc()
         raise
+
+# Configuración para gunicorn en producción
+if __name__ != '__main__':
+    # Inicializar la base de datos cuando se ejecuta con gunicorn
+    try:
+        print("🚀 Inicializando aplicación con gunicorn...")
+        init_db()
+        print("✅ Aplicación lista para gunicorn")
+    except Exception as e:
+        print(f"❌ Error al inicializar con gunicorn: {str(e)}")
+        import traceback
+        traceback.print_exc()
