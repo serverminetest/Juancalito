@@ -3072,6 +3072,7 @@ def nuevo_movimiento_inventario():
 def api_notificaciones():
     """API para obtener notificaciones"""
     no_leidas = request.args.get('no_leidas', 'false').lower() == 'true'
+    print(f"📡 API notificaciones llamada - no_leidas: {no_leidas}")
     return obtener_notificaciones_api(no_leidas)
 
 @app.route('/api/notificaciones/<int:notificacion_id>/leida', methods=['POST'])

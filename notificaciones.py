@@ -23,10 +23,10 @@ class NotificacionManager:
     def __init__(self):
         self.notificaciones = []
         self.sonidos_disponibles = {
-            'entrada': 'sounds/entrada.mp3',
-            'salida': 'sounds/salida.mp3', 
-            'visitante': 'sounds/visitante.mp3',
-            'alerta': 'sounds/alerta.mp3'
+            'entrada': 'sounds/entrada.wav',
+            'salida': 'sounds/salida.wav', 
+            'visitante': 'sounds/visitante.wav',
+            'alerta': 'sounds/alerta.wav'
         }
         self.queue_notificaciones = queue.Queue()
         self.thread_procesador = None
@@ -65,23 +65,25 @@ class NotificacionManager:
     
     def _reproducir_sonido(self, tipo_sonido):
         """Reproduce un sonido según el tipo"""
-        if not PLAYSOUND_AVAILABLE:
-            return
-        
-        archivo_sonido = self.sonidos_disponibles.get(tipo_sonido)
-        if not archivo_sonido or not os.path.exists(archivo_sonido):
-            # Usar sonido por defecto si no existe el específico
-            archivo_sonido = self.sonidos_disponibles.get('alerta')
-        
-        if archivo_sonido and os.path.exists(archivo_sonido):
-            try:
-                # Reproducir en un hilo separado para no bloquear
-                threading.Thread(
-                    target=lambda: playsound(archivo_sonido, block=False),
-                    daemon=True
-                ).start()
-            except Exception as e:
-                print(f"Error reproduciendo sonido: {e}")
+        try:
+            archivo_sonido = self.sonidos_disponibles.get(tipo_sonido)
+            if not archivo_sonido or not os.path.exists(archivo_sonido):
+                # Usar sonido por defecto si no existe el específico
+                archivo_sonido = self.sonidos_disponibles.get('alerta')
+            
+            if archivo_sonido and os.path.exists(archivo_sonido):
+                print(f"🔊 Reproduciendo sonido: {archivo_sonido}")
+                
+                if PLAYSOUND_AVAILABLE:
+                    # Reproducir en un hilo separado para no bloquear
+                    threading.Thread(
+                        target=lambda: playsound(archivo_sonido, block=False),
+                        daemon=True
+                    ).start()
+                else:
+                    print("⚠️ playsound no disponible, usando sonido del navegador")
+        except Exception as e:
+            print(f"Error reproduciendo sonido: {e}")
     
     def agregar_notificacion(self, titulo, mensaje, tipo='info', tipo_sonido='alerta', icono='fas fa-bell'):
         """Agrega una nueva notificación"""
@@ -97,6 +99,7 @@ class NotificacionManager:
             'leida': False
         }
         
+        print(f"🔔 Agregando notificación: {titulo} - {mensaje}")
         self.queue_notificaciones.put(notificacion)
         return notificacion['id']
     
@@ -174,6 +177,7 @@ notificacion_manager = NotificacionManager()
 
 def notificar_asistencia_entrada(empleado_nombre, hora):
     """Notifica cuando un empleado registra entrada"""
+    print(f"🚪 Notificando entrada de {empleado_nombre} a las {hora}")
     titulo = "Entrada Registrada"
     mensaje = f"{empleado_nombre} registró entrada a las {hora}"
     return notificacion_manager.agregar_notificacion(
@@ -186,6 +190,7 @@ def notificar_asistencia_entrada(empleado_nombre, hora):
 
 def notificar_asistencia_salida(empleado_nombre, hora):
     """Notifica cuando un empleado registra salida"""
+    print(f"🚪 Notificando salida de {empleado_nombre} a las {hora}")
     titulo = "Salida Registrada"
     mensaje = f"{empleado_nombre} registró salida a las {hora}"
     return notificacion_manager.agregar_notificacion(
@@ -198,6 +203,7 @@ def notificar_asistencia_salida(empleado_nombre, hora):
 
 def notificar_visitante_nuevo(visitante_nombre, empresa):
     """Notifica cuando llega un nuevo visitante"""
+    print(f"👥 Notificando llegada de visitante: {visitante_nombre} ({empresa})")
     titulo = "Nuevo Visitante"
     mensaje = f"{visitante_nombre} ({empresa}) ha llegado"
     return notificacion_manager.agregar_notificacion(
@@ -244,6 +250,7 @@ def notificar_exito(titulo, mensaje):
 def obtener_notificaciones_api(no_leidas=False):
     """API para obtener notificaciones"""
     notificaciones = notificacion_manager.obtener_notificaciones(no_leidas)
+    print(f"📋 Obteniendo notificaciones - Total: {len(notificaciones)}, No leídas: {len([n for n in notificaciones if not n['leida']])}")
     return jsonify({
         'success': True,
         'notificaciones': notificaciones,
