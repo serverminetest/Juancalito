@@ -3226,6 +3226,21 @@ def servir_sonidos(filename):
     except FileNotFoundError:
         return jsonify({'error': 'Archivo de sonido no encontrado'}), 404
 
+@app.route('/test-notificacion')
+@login_required
+def test_notificacion():
+    """Ruta de prueba para notificaciones"""
+    try:
+        print("🧪 TEST: Creando notificación de prueba...")
+        notif_id = notificar_asistencia_entrada("Usuario Prueba", "12:00")
+        print(f"✅ TEST: Notificación creada con ID: {notif_id}")
+        flash('Notificación de prueba creada', 'success')
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"❌ TEST: Error creando notificación: {e}")
+        flash(f'Error en prueba: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
 if __name__ == '__main__':
     try:
         print("🚀 Iniciando aplicación...")

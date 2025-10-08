@@ -261,16 +261,25 @@ notificacion_manager = NotificacionManager()
 
 def notificar_asistencia_entrada(empleado_nombre, hora):
     """Notifica cuando un empleado registra entrada"""
-    print(f"🚪 Notificando entrada de {empleado_nombre} a las {hora}")
+    print(f"🚪 FUNCIÓN LLAMADA: notificar_asistencia_entrada({empleado_nombre}, {hora})")
     titulo = "Entrada Registrada"
     mensaje = f"{empleado_nombre} registró entrada a las {hora}"
-    return notificacion_manager.agregar_notificacion(
-        titulo=titulo,
-        mensaje=mensaje,
-        tipo='success',
-        tipo_sonido='entrada',
-        icono='fas fa-sign-in-alt'
-    )
+    print(f"🔔 Creando notificación: {titulo} - {mensaje}")
+    try:
+        notif_id = notificacion_manager.agregar_notificacion(
+            titulo=titulo,
+            mensaje=mensaje,
+            tipo='success',
+            tipo_sonido='entrada',
+            icono='fas fa-sign-in-alt'
+        )
+        print(f"✅ Notificación creada con ID: {notif_id}")
+        return notif_id
+    except Exception as e:
+        print(f"❌ Error creando notificación: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 def notificar_asistencia_salida(empleado_nombre, hora):
     """Notifica cuando un empleado registra salida"""

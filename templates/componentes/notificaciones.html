@@ -163,11 +163,13 @@ function cargarNotificacionesSilencioso() {
 }
 
 function cargarNotificaciones() {
+    console.log('🔄 Cargando notificaciones...');
     fetch('/api/notificaciones')
         .then(response => response.json())
         .then(data => {
             console.log('📡 Datos recibidos:', data);
             if (data.success) {
+                console.log(`📊 Total: ${data.total}, No leídas: ${data.no_leidas}`);
                 actualizarContador(data.no_leidas);
                 
                 if (panelAbierto) {
@@ -182,6 +184,7 @@ function cargarNotificaciones() {
                 console.log('🆕 Nuevas notificaciones:', nuevasNotificaciones);
                 
                 if (nuevasNotificaciones.length > 0) {
+                    console.log('🎉 Mostrando toast para nuevas notificaciones');
                     mostrarNotificacionesToast(nuevasNotificaciones);
                 }
                 
