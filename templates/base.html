@@ -205,18 +205,14 @@
                         
                         <!-- Botón de notificaciones -->
                         <div class="btn-group me-2">
-                            <button class="btn btn-outline-dark position-relative" onclick="toggleNotificaciones()" title="Notificaciones" style="border-color: #000 !important;">
+                            <button class="btn btn-outline-dark position-relative" onclick="toggleNotificaciones()" title="Notificaciones" 
+                                    style="border-color: #000 !important; transition: all 0.3s ease;" 
+                                    onmouseover="this.style.backgroundColor='#fff'; this.style.borderColor='#000'; this.style.transform='scale(1.1)'" 
+                                    onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='#000'; this.style.transform='scale(1)'">
                                 <i class="fas fa-bell" style="color: #000 !important;"></i>
                                 <span id="contador-notificaciones" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
                                     0
                                 </span>
-                            </button>
-                        </div>
-                        
-                        <!-- Botón de prueba de notificaciones (solo para desarrollo) -->
-                        <div class="btn-group me-2">
-                            <button class="btn btn-outline-warning btn-sm" onclick="probarNotificaciones()" title="Probar Notificaciones" style="border-color: #ffc107 !important;">
-                                <i class="fas fa-vial" style="color: #ffc107 !important;"></i>
                             </button>
                         </div>
                     </div>

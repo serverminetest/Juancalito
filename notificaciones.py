@@ -87,6 +87,7 @@ class NotificacionManager:
     
     def agregar_notificacion(self, titulo, mensaje, tipo='info', tipo_sonido='alerta', icono='fas fa-bell'):
         """Agrega una nueva notificación"""
+        ahora = datetime.now()
         notificacion = {
             'id': int(time.time() * 1000),  # ID único basado en timestamp
             'titulo': titulo,
@@ -94,8 +95,8 @@ class NotificacionManager:
             'tipo': tipo,  # success, info, warning, error
             'tipo_sonido': tipo_sonido,
             'icono': icono,
-            'timestamp': datetime.now().strftime('%H:%M:%S'),
-            'fecha': datetime.now().strftime('%Y-%m-%d'),
+            'timestamp': ahora.strftime('%H:%M:%S'),
+            'fecha': ahora.strftime('%Y-%m-%d'),
             'leida': False
         }
         

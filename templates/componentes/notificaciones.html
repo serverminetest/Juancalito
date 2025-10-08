@@ -127,7 +127,8 @@ let sonidosHabilitados = true;
 
 // Inicializar sistema de notificaciones
 document.addEventListener('DOMContentLoaded', function() {
-    cargarNotificaciones();
+    // Cargar notificaciones existentes sin mostrar toast
+    cargarNotificacionesSilencioso();
     
     // Actualizar notificaciones cada 3 segundos
     setInterval(cargarNotificaciones, 3000);
@@ -144,6 +145,21 @@ function toggleNotificaciones() {
     if (panelAbierto) {
         cargarNotificaciones();
     }
+}
+
+function cargarNotificacionesSilencioso() {
+    fetch('/api/notificaciones')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                actualizarContador(data.no_leidas);
+                notificacionesActivas = data.notificaciones;
+                console.log('📡 Notificaciones cargadas silenciosamente:', data.notificaciones.length);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando notificaciones:', error);
+        });
 }
 
 function cargarNotificaciones() {
@@ -176,8 +192,6 @@ function cargarNotificaciones() {
         })
         .catch(error => {
             console.error('❌ Error cargando notificaciones:', error);
-            // Mostrar notificación de prueba si hay error
-            mostrarNotificacionPrueba();
         });
 }
 
@@ -400,54 +414,5 @@ function notificar(titulo, mensaje, tipo = 'info', tipoSonido = 'alerta') {
     .catch(error => console.error('Error creando notificación:', error));
 }
 
-// Función para mostrar notificación de prueba
-function mostrarNotificacionPrueba() {
-    console.log('🧪 Mostrando notificación de prueba');
-    const container = document.getElementById('notificaciones-container');
-    
-    const toast = document.createElement('div');
-    toast.className = 'notificacion-toast success';
-    toast.innerHTML = `
-        <div class="toast-header bg-success text-white">
-            <i class="fas fa-bell me-2"></i>
-            <strong class="me-auto">Sistema de Notificaciones</strong>
-            <small class="text-white-50">${new Date().toLocaleTimeString()}</small>
-            <button type="button" class="btn-close btn-close-white ms-2" onclick="this.parentElement.parentElement.remove()"></button>
-        </div>
-        <div class="toast-body bg-white">
-            ¡El sistema de notificaciones está funcionando correctamente!
-        </div>
-    `;
-    container.appendChild(toast);
-    
-    // Reproducir sonido de prueba
-    reproducirSonido('alerta');
-    
-    // Auto-eliminar después de 5 segundos
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.remove();
-        }
-    }, 5000);
-}
 
-// Función para probar notificaciones (llamada desde consola o botón)
-function probarNotificaciones() {
-    console.log('🧪 Probando notificaciones...');
-    
-    // Probar notificación de entrada
-    setTimeout(() => {
-        notificar('Entrada Registrada', 'Juan Pérez registró entrada a las 08:30', 'success', 'entrada');
-    }, 1000);
-    
-    // Probar notificación de visitante
-    setTimeout(() => {
-        notificar('Nuevo Visitante', 'María García (Empresa ABC) ha llegado', 'warning', 'visitante');
-    }, 3000);
-    
-    // Probar notificación de salida
-    setTimeout(() => {
-        notificar('Salida Registrada', 'Juan Pérez registró salida a las 17:30', 'info', 'salida');
-    }, 5000);
-}
 </script>
