@@ -1091,7 +1091,7 @@ def asistencia_publica(token):
             return render_template('asistencia_publica.html', token=token)
         
         fecha_hoy = date.today()
-        hora_actual = datetime.now().time()
+        hora_actual = colombia_now().time()
         
         # Buscar asistencia existente para hoy
         asistencia_existente = Asistencia.query.filter_by(
@@ -1281,7 +1281,7 @@ def registrar_asistencia():
         asistencia = Asistencia(
             empleado_id=empleado_id,
             fecha=fecha,
-            hora_entrada=datetime.now().time(),
+            hora_entrada=colombia_now().time(),
             observaciones=observaciones,
             token_diario='Manual'  # Marcar como registro manual
         )
@@ -1311,7 +1311,7 @@ def registrar_asistencia():
             return redirect(url_for('asistencia'))
         
         # Registrar salida
-        hora_salida = datetime.now().time()
+        hora_salida = colombia_now().time()
         asistencia_existente.hora_salida = hora_salida
         
         # Calcular horas trabajadas
