@@ -225,14 +225,47 @@ class NotificacionManager:
     
     def marcar_como_leida(self, notificacion_id):
         """Marca una notificación como leída"""
+        if _import_db_models():
+            try:
+                from flask import current_app
+                with current_app.app_context():
+                    notificacion = Notificacion.query.get(notificacion_id)
+                    if notificacion:
+                        notificacion.leida = True
+                        db.session.commit()
+                        print(f"✅ Notificación {notificacion_id} marcada como leída en BD")
+                        return True
+                    else:
+                        print(f"⚠️ Notificación {notificacion_id} no encontrada")
+                        return False
+            except Exception as e:
+                print(f"❌ Error marcando notificación como leída: {e}")
+                return False
+        
+        # Fallback a la lista en memoria
         for notificacion in self.notificaciones:
             if notificacion['id'] == notificacion_id:
                 notificacion['leida'] = True
                 break
+        return True
     
     def limpiar_notificaciones(self):
         """Limpia todas las notificaciones"""
+        if _import_db_models():
+            try:
+                from flask import current_app
+                with current_app.app_context():
+                    Notificacion.query.delete()
+                    db.session.commit()
+                    print("🗑️ Todas las notificaciones eliminadas de la BD")
+                    return True
+            except Exception as e:
+                print(f"❌ Error limpiando notificaciones: {e}")
+                return False
+        
+        # Fallback a la lista en memoria
         self.notificaciones.clear()
+        return True
     
     def crear_sonidos_por_defecto(self):
         """Crea archivos de sonido por defecto si no existen"""

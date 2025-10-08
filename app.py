@@ -3168,11 +3168,16 @@ def api_marcar_notificacion_leida(notificacion_id):
 def api_marcar_todas_leidas():
     """API para marcar todas las notificaciones como leídas"""
     try:
-        notificaciones = notificacion_manager.obtener_notificaciones()
+        # Marcar todas como leídas en la base de datos
+        notificaciones = Notificacion.query.filter_by(leida=False).all()
         for notificacion in notificaciones:
-            notificacion['leida'] = True
+            notificacion.leida = True
+        db.session.commit()
+        print(f"✅ {len(notificaciones)} notificaciones marcadas como leídas en BD")
         return jsonify({'success': True, 'message': 'Todas las notificaciones marcadas como leídas'})
     except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error marcando todas como leídas: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/notificaciones/<int:notificacion_id>/eliminar', methods=['DELETE'])
@@ -3180,17 +3185,35 @@ def api_marcar_todas_leidas():
 def api_eliminar_notificacion(notificacion_id):
     """API para eliminar una notificación específica"""
     try:
-        notificaciones = notificacion_manager.obtener_notificaciones()
-        notificacion_manager.notificaciones = [n for n in notificaciones if n['id'] != notificacion_id]
-        return jsonify({'success': True, 'message': 'Notificación eliminada'})
+        # Eliminar de la base de datos
+        notificacion = Notificacion.query.get(notificacion_id)
+        if notificacion:
+            db.session.delete(notificacion)
+            db.session.commit()
+            print(f"🗑️ Notificación {notificacion_id} eliminada de la BD")
+            return jsonify({'success': True, 'message': 'Notificación eliminada'})
+        else:
+            return jsonify({'success': False, 'message': 'Notificación no encontrada'}), 404
     except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error eliminando notificación: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/notificaciones/limpiar', methods=['POST'])
 @login_required
 def api_limpiar_notificaciones():
     """API para limpiar todas las notificaciones"""
-    return limpiar_notificaciones_api()
+    try:
+        # Eliminar todas las notificaciones de la base de datos
+        count = Notificacion.query.count()
+        Notificacion.query.delete()
+        db.session.commit()
+        print(f"🗑️ {count} notificaciones eliminadas de la BD")
+        return jsonify({'success': True, 'message': f'{count} notificaciones eliminadas'})
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error limpiando notificaciones: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/notificaciones/crear', methods=['POST'])
 @login_required
