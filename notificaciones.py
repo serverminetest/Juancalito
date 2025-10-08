@@ -74,8 +74,11 @@ class NotificacionManager:
                 # Guardar en la base de datos si está disponible
                 if _import_db_models():
                     try:
+                        # Usar el contexto de aplicación actual
                         from flask import current_app
-                        with current_app.app_context():
+                        app = current_app._get_current_object() if hasattr(current_app, '_get_current_object') else current_app
+                        
+                        with app.app_context():
                             nueva_notificacion_db = Notificacion(
                                 titulo=notificacion_data['titulo'],
                                 mensaje=notificacion_data['mensaje'],
@@ -154,8 +157,35 @@ class NotificacionManager:
         }
         
         print(f"🔔 Agregando notificación: {titulo} - {mensaje}")
-        self.queue_notificaciones.put(notificacion_data)
-        return temp_id
+        
+        # Guardar directamente en la BD si estamos en contexto de Flask
+        if _import_db_models():
+            try:
+                from flask import current_app
+                with current_app.app_context():
+                    nueva_notificacion_db = Notificacion(
+                        titulo=notificacion_data['titulo'],
+                        mensaje=notificacion_data['mensaje'],
+                        tipo=notificacion_data['tipo'],
+                        tipo_sonido=notificacion_data['tipo_sonido'],
+                        icono=notificacion_data['icono'],
+                        fecha_creacion=datetime.fromisoformat(notificacion_data['fecha_creacion']),
+                        leida=False,
+                        usuario_id=notificacion_data.get('usuario_id')
+                    )
+                    db.session.add(nueva_notificacion_db)
+                    db.session.commit()
+                    notificacion_data['id'] = nueva_notificacion_db.id
+                    print(f"✅ Notificación guardada directamente en BD con ID: {nueva_notificacion_db.id}")
+            except Exception as e:
+                print(f"❌ Error al guardar notificación directamente en BD: {e}")
+                # Si falla, agregar a la cola como fallback
+                self.queue_notificaciones.put(notificacion_data)
+        else:
+            # Si no hay BD, agregar a la cola
+            self.queue_notificaciones.put(notificacion_data)
+        
+        return notificacion_data['id']
     
     def obtener_notificaciones(self, no_leidas=False):
         """Obtiene las notificaciones de la base de datos"""
