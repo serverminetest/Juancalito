@@ -2370,6 +2370,34 @@ def init_db():
             
             print("✅ Migración de inventarios completada")
             
+            # Crear categorías por defecto
+            print("📂 Creando categorías de inventario por defecto...")
+            categorias_por_defecto = [
+                {'nombre': 'ALMACEN GENERAL', 'descripcion': 'Productos de almacén general'},
+                {'nombre': 'QUIMICOS', 'descripcion': 'Productos químicos y agroquímicos'},
+                {'nombre': 'POSCOSECHA', 'descripcion': 'Productos de poscosecha'}
+            ]
+            
+            for categoria_data in categorias_por_defecto:
+                try:
+                    # Verificar si la categoría ya existe
+                    categoria_existente = CategoriaInventario.query.filter_by(nombre=categoria_data['nombre']).first()
+                    if not categoria_existente:
+                        nueva_categoria = CategoriaInventario(
+                            nombre=categoria_data['nombre'],
+                            descripcion=categoria_data['descripcion'],
+                            activa=True
+                        )
+                        db.session.add(nueva_categoria)
+                        print(f"✅ Categoría creada: {categoria_data['nombre']}")
+                    else:
+                        print(f"✅ Categoría ya existe: {categoria_data['nombre']}")
+                except Exception as e:
+                    print(f"⚠️ Error creando categoría {categoria_data['nombre']}: {e}")
+            
+            db.session.commit()
+            print("✅ Categorías de inventario verificadas/creadas")
+            
             # Crear usuario administrador por defecto
             print("👤 Verificando usuario administrador...")
             admin_user = User.query.filter_by(email='admin@juancalito.com').first()
@@ -2608,6 +2636,12 @@ def editar_categoria_inventario(id):
     """Editar categoría de inventario"""
     categoria = CategoriaInventario.query.get_or_404(id)
     
+    # Verificar si es una categoría por defecto
+    categorias_por_defecto = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    if categoria.nombre in categorias_por_defecto:
+        flash(f'No se puede editar la categoría "{categoria.nombre}" porque es una categoría del sistema', 'error')
+        return redirect(url_for('categorias_inventario'))
+    
     if request.method == 'POST':
         try:
             nombre = request.form['nombre'].strip().upper()
@@ -2656,6 +2690,12 @@ def eliminar_categoria_inventario(id):
     
     try:
         categoria = CategoriaInventario.query.get_or_404(id)
+        
+        # Verificar si es una categoría por defecto
+        categorias_por_defecto = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+        if categoria.nombre in categorias_por_defecto:
+            flash(f'No se puede eliminar la categoría "{categoria.nombre}" porque es una categoría del sistema', 'error')
+            return redirect(url_for('categorias_inventario'))
         
         # Verificar si tiene productos asociados
         productos_count = Producto.query.filter_by(categoria_id=id).count()
@@ -2892,7 +2932,11 @@ def importar_inventarios():
                         result = conn.execute(text("""
                             SELECT id FROM categoria_inventario WHERE nombre = :nombre
                         """), {'nombre': tipo_inventario})
-                        categoria_id = result.fetchone()[0]
+                        categoria_row = result.fetchone()
+                        if categoria_row is None:
+                            flash(f'Error: La categoría "{tipo_inventario}" no existe', 'error')
+                            return redirect(url_for('importar_inventarios'))
+                        categoria_id = categoria_row[0]
                         
                         productos_importados = 0
                         productos_duplicados = 0
