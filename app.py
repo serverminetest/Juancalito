@@ -3354,6 +3354,100 @@ def limpiar_bd_ruta():
         </html>
         """
 
+@app.route('/limpiar-todo-bd')
+@login_required
+def limpiar_todo_bd_ruta():
+    """Ruta para limpiar TODA la base de datos excepto usuarios"""
+    if not current_user.is_admin:
+        flash('No tienes permisos para esta acción', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        from sqlalchemy import text
+        
+        # Lista de tablas a eliminar (TODO excepto user)
+        tablas_a_eliminar = [
+            'asistencia', 'visitante', 'notificacion',
+            'categoria_inventario', 'producto', 'movimiento_inventario', 
+            'contrato_generado', 'contrato', 'empleado'
+        ]
+        
+        mensajes = []
+        mensajes.append("🧹 LIMPIANDO TODA LA BASE DE DATOS")
+        mensajes.append("📋 Manteniendo SOLO: user (usuarios)")
+        mensajes.append("🗑️ Eliminando TODO: empleados, contratos, asistencias, visitantes, inventario, notificaciones")
+        
+        # Eliminar tablas
+        for tabla in tablas_a_eliminar:
+            try:
+                with db.engine.connect() as conn:
+                    result = conn.execute(text(f"""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = '{tabla}'
+                        );
+                    """))
+                    existe = result.fetchone()[0]
+                    
+                    if existe:
+                        conn.execute(text(f"DROP TABLE IF EXISTS {tabla} CASCADE;"))
+                        conn.commit()
+                        mensajes.append(f"✅ Tabla {tabla} eliminada")
+                    else:
+                        mensajes.append(f"⚠️ Tabla {tabla} no existe")
+            except Exception as e:
+                mensajes.append(f"❌ Error con {tabla}: {str(e)}")
+        
+        # Regenerar secuencia de user
+        mensajes.append("🔄 Regenerando secuencias...")
+        try:
+            with db.engine.connect() as conn:
+                result = conn.execute(text("SELECT COALESCE(MAX(id), 0) FROM \"user\";"))
+                max_id = result.fetchone()[0]
+                
+                if max_id > 0:
+                    conn.execute(text(f"ALTER SEQUENCE user_id_seq RESTART WITH {max_id + 1};"))
+                    conn.commit()
+                    mensajes.append(f"✅ Secuencia user_id_seq reiniciada en {max_id + 1}")
+                else:
+                    conn.execute(text("ALTER SEQUENCE user_id_seq RESTART WITH 1;"))
+                    conn.commit()
+                    mensajes.append(f"✅ Secuencia user_id_seq reiniciada en 1")
+        except Exception as e:
+            mensajes.append(f"❌ Error con secuencia user_id_seq: {str(e)}")
+        
+        mensajes.append("🎉 LIMPIEZA COMPLETA EXITOSA")
+        mensajes.append("⚠️ IMPORTANTE: Solo usuarios administradores quedaron")
+        
+        # Mostrar resultado
+        resultado = "<br>".join(mensajes)
+        return f"""
+        <html>
+        <head><title>Limpieza Completa BD</title></head>
+        <body style="font-family: monospace; background: #f5f5f5; padding: 20px;">
+            <h1>🧹 Limpieza Completa de Base de Datos</h1>
+            <div style="background: white; padding: 20px; border-radius: 5px; border-left: 4px solid #dc3545;">
+                <pre style="white-space: pre-wrap; word-wrap: break-word;">{resultado}</pre>
+            </div>
+            <br><a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Volver al Dashboard</a>
+        </body>
+        </html>
+        """
+        
+    except Exception as e:
+        return f"""
+        <html>
+        <head><title>Error</title></head>
+        <body style="font-family: monospace; background: #f5f5f5; padding: 20px;">
+            <h1>❌ Error en limpieza completa</h1>
+            <div style="background: white; padding: 20px; border-radius: 5px; border-left: 4px solid #dc3545;">
+                <p>Error: {str(e)}</p>
+            </div>
+            <br><a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Volver al Dashboard</a>
+        </body>
+        </html>
+        """
+
 if __name__ == '__main__':
     try:
         print("🚀 Iniciando aplicación...")
