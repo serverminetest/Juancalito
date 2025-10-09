@@ -10,6 +10,10 @@ from flask import jsonify
 import threading
 import queue
 import os
+import warnings
+
+# Suprimir advertencias de playsound
+warnings.filterwarnings("ignore", category=UserWarning, module="playsound")
 
 # Intentar importar db y Notificacion desde app.py
 # Usar import lazy para evitar import circular
@@ -130,10 +134,14 @@ class NotificacionManager:
                 
                 if PLAYSOUND_AVAILABLE:
                     # Reproducir en un hilo separado para no bloquear
-                    threading.Thread(
-                        target=lambda: playsound(archivo_sonido, block=False),
-                        daemon=True
-                    ).start()
+                    # Suprimir mensajes de playsound
+                    def reproducir_silencioso():
+                        try:
+                            playsound(archivo_sonido, block=False)
+                        except Exception as e:
+                            print(f"Error reproduciendo sonido: {e}")
+                    
+                    threading.Thread(target=reproducir_silencioso, daemon=True).start()
                 else:
                     print("⚠️ playsound no disponible, usando sonido del navegador")
         except Exception as e:
