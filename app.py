@@ -480,9 +480,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Configuración de base de datos
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
-    # Producción: usar PostgreSQL
+    # Producción: usar PostgreSQL con psycopg
+    # Convertir postgresql:// a postgresql+psycopg:// para usar psycopg en lugar de psycopg2
+    if database_url.startswith('postgresql://'):
+        database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    print(f"🔗 Usando PostgreSQL en producción")
+    print(f"🔗 Usando PostgreSQL con psycopg en producción")
 else:
     # Verificar si estamos en producción (Railway, Heroku, etc.)
     if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DYNO') or os.environ.get('PORT'):
