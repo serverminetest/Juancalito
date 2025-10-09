@@ -513,7 +513,7 @@ function confirmarEliminacion(asistenciaId) {
 }
 
 // Activar polling rápido cuando se envía el formulario manual
-document.querySelector('form[action="{{ url_for(\'registrar_asistencia\') }}"]').addEventListener('submit', function() {
+document.querySelector('form[action="{{ url_for('registrar_asistencia') }}"]').addEventListener('submit', function() {
     // Activar polling rápido para notificaciones
     if (typeof window.activarPollingRapido === 'function') {
         window.activarPollingRapido();
