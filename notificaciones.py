@@ -134,12 +134,13 @@ class NotificacionManager:
                 
                 if PLAYSOUND_AVAILABLE:
                     # Reproducir en un hilo separado para no bloquear
-                    # Suprimir mensajes de playsound
                     def reproducir_silencioso():
                         try:
+                            # Intentar reproducir con diferentes métodos
                             playsound(archivo_sonido, block=False)
                         except Exception as e:
-                            print(f"Error reproduciendo sonido: {e}")
+                            print(f"⚠️ Error reproduciendo sonido: {e}")
+                            print("⚠️ Continuando sin sonido...")
                     
                     threading.Thread(target=reproducir_silencioso, daemon=True).start()
                 else:
