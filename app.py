@@ -3264,6 +3264,96 @@ def test_notificacion():
         flash(f'Error en prueba: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
+@app.route('/limpiar-bd')
+@login_required
+def limpiar_bd_ruta():
+    """Ruta temporal para limpiar base de datos"""
+    if not current_user.is_admin:
+        flash('No tienes permisos para esta acción', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        from sqlalchemy import text
+        
+        # Lista de tablas a eliminar
+        tablas_a_eliminar = [
+            'asistencia', 'visitante', 'notificacion',
+            'categoria_inventario', 'producto', 'movimiento_inventario', 'contrato_generado'
+        ]
+        
+        mensajes = []
+        mensajes.append("🧹 LIMPIANDO BASE DE DATOS")
+        mensajes.append("📋 Manteniendo: user, empleado, contrato")
+        
+        # Eliminar tablas
+        for tabla in tablas_a_eliminar:
+            try:
+                with db.engine.connect() as conn:
+                    result = conn.execute(text(f"""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = '{tabla}'
+                        );
+                    """))
+                    existe = result.fetchone()[0]
+                    
+                    if existe:
+                        conn.execute(text(f"DROP TABLE IF EXISTS {tabla} CASCADE;"))
+                        conn.commit()
+                        mensajes.append(f"✅ Tabla {tabla} eliminada")
+                    else:
+                        mensajes.append(f"⚠️ Tabla {tabla} no existe")
+            except Exception as e:
+                mensajes.append(f"❌ Error con {tabla}: {str(e)}")
+        
+        # Regenerar secuencias
+        mensajes.append("🔄 Regenerando secuencias...")
+        secuencias = [('user', 'id'), ('empleado', 'id'), ('contrato', 'id')]
+        
+        for tabla, columna in secuencias:
+            try:
+                with db.engine.connect() as conn:
+                    result = conn.execute(text(f"SELECT COALESCE(MAX({columna}), 0) FROM {tabla};"))
+                    max_id = result.fetchone()[0]
+                    
+                    if max_id > 0:
+                        conn.execute(text(f"ALTER SEQUENCE {tabla}_{columna}_seq RESTART WITH {max_id + 1};"))
+                        conn.commit()
+                        mensajes.append(f"✅ Secuencia {tabla}_{columna}_seq reiniciada en {max_id + 1}")
+                    else:
+                        conn.execute(text(f"ALTER SEQUENCE {tabla}_{columna}_seq RESTART WITH 1;"))
+                        conn.commit()
+                        mensajes.append(f"✅ Secuencia {tabla}_{columna}_seq reiniciada en 1")
+            except Exception as e:
+                mensajes.append(f"❌ Error con secuencia {tabla}_{columna}_seq: {str(e)}")
+        
+        mensajes.append("🎉 LIMPIEZA COMPLETADA")
+        
+        # Mostrar resultado
+        resultado = "<br>".join(mensajes)
+        return f"""
+        <html>
+        <head><title>Limpieza BD</title></head>
+        <body>
+            <h1>Limpieza de Base de Datos</h1>
+            <pre>{resultado}</pre>
+            <br><a href="/">Volver al Dashboard</a>
+        </body>
+        </html>
+        """
+        
+    except Exception as e:
+        return f"""
+        <html>
+        <head><title>Error</title></head>
+        <body>
+            <h1>Error en limpieza</h1>
+            <p>Error: {str(e)}</p>
+            <br><a href="/">Volver al Dashboard</a>
+        </body>
+        </html>
+        """
+
 if __name__ == '__main__':
     try:
         print("🚀 Iniciando aplicación...")
