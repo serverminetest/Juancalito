@@ -1254,7 +1254,7 @@ def visitantes_publico(token):
 @app.route('/asistencia/registrar', methods=['POST'])
 @login_required
 def registrar_asistencia():
-    empleado_id = request.form['empleado_id']
+    empleado_id = int(request.form['empleado_id'])  # Convertir a entero
     fecha = datetime.strptime(request.form['fecha'], '%Y-%m-%d').date()
     tipo_registro = request.form.get('tipo_registro', '').strip()
     observaciones = request.form.get('observaciones', '')
