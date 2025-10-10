@@ -594,22 +594,12 @@ class ContratoGenerado(db.Model):
     contrato = db.relationship('Contrato', backref='documentos_generados')
 
 # Modelos para Sistema de Inventarios
-class CategoriaInventario(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False, unique=True)
-    descripcion = db.Column(db.Text)
-    activa = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=colombia_now)
-    
-    # Relación con productos
-    productos = db.relationship('Producto', backref='categoria', lazy=True)
-
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.String(50), nullable=False, unique=True)
     nombre = db.Column(db.String(200), nullable=False)
     descripcion = db.Column(db.Text)
-    categoria_id = db.Column(db.Integer, db.ForeignKey('categoria_inventario.id'), nullable=False)
+    categoria = db.Column(db.String(50), nullable=False)  # ALMACEN GENERAL, QUIMICOS, POSCOSECHA
     unidad_medida = db.Column(db.String(20), nullable=False)  # kg, litros, unidades, etc.
     precio_unitario = db.Column(db.Numeric(10, 2), default=0)
     stock_minimo = db.Column(db.Integer, default=0)
@@ -2389,33 +2379,7 @@ def init_db():
             
             print("✅ Migración de inventarios completada")
             
-            # Crear categorías por defecto
-            print("📂 Creando categorías de inventario por defecto...")
-            categorias_por_defecto = [
-                {'nombre': 'ALMACEN GENERAL', 'descripcion': 'Productos de almacén general'},
-                {'nombre': 'QUIMICOS', 'descripcion': 'Productos químicos y agroquímicos'},
-                {'nombre': 'POSCOSECHA', 'descripcion': 'Productos de poscosecha'}
-            ]
-            
-            for categoria_data in categorias_por_defecto:
-                try:
-                    # Verificar si la categoría ya existe
-                    categoria_existente = CategoriaInventario.query.filter_by(nombre=categoria_data['nombre']).first()
-                    if not categoria_existente:
-                        nueva_categoria = CategoriaInventario(
-                            nombre=categoria_data['nombre'],
-                            descripcion=categoria_data['descripcion'],
-                            activa=True
-                        )
-                        db.session.add(nueva_categoria)
-                        print(f"✅ Categoría creada: {categoria_data['nombre']}")
-                    else:
-                        print(f"✅ Categoría ya existe: {categoria_data['nombre']}")
-                except Exception as e:
-                    print(f"⚠️ Error creando categoría {categoria_data['nombre']}: {e}")
-            
-            db.session.commit()
-            print("✅ Categorías de inventario verificadas/creadas")
+            print("✅ Sistema de inventarios simplificado - categorías fijas: ALMACEN GENERAL, QUIMICOS, POSCOSECHA")
             
             # Crear tabla de notificaciones
             print("🔔 Creando tabla de notificaciones...")
@@ -2527,7 +2491,7 @@ def nuevo_producto_inventario():
             codigo = request.form['codigo'].strip()
             nombre = request.form['nombre'].strip()
             descripcion = request.form.get('descripcion', '').strip()
-            categoria_id = request.form['categoria_id']
+            categoria = request.form['categoria']
             unidad_medida = request.form['unidad_medida'].strip()
             precio_unitario = float(request.form.get('precio_unitario', 0))
             stock_minimo = int(request.form.get('stock_minimo', 0))
@@ -2538,7 +2502,7 @@ def nuevo_producto_inventario():
             lote = request.form.get('lote', '').strip()
             
             # Validaciones
-            if not codigo or not nombre or not categoria_id or not unidad_medida:
+            if not codigo or not nombre or not categoria or not unidad_medida:
                 flash('Los campos código, nombre, categoría y unidad de medida son obligatorios', 'error')
                 return redirect(url_for('nuevo_producto_inventario'))
             
@@ -2557,7 +2521,7 @@ def nuevo_producto_inventario():
                 codigo=codigo,
                 nombre=nombre,
                 descripcion=descripcion,
-                categoria_id=categoria_id,
+                categoria=categoria,
                 unidad_medida=unidad_medida,
                 precio_unitario=precio_unitario,
                 stock_minimo=stock_minimo,
@@ -2579,8 +2543,8 @@ def nuevo_producto_inventario():
             flash(f'Error al crear el producto: {str(e)}', 'error')
             return redirect(url_for('nuevo_producto_inventario'))
     
-    categorias = CategoriaInventario.query.filter_by(activa=True).all()
-    return render_template('nuevo_producto_inventario.html', categorias=categorias)
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    return render_template('nuevo_producto_inventario.html', categorias=categorias_fijas)
 
 @app.route('/inventarios/movimientos')
 @login_required
@@ -2624,171 +2588,7 @@ def movimientos_inventario():
                          fecha_desde_actual=fecha_desde,
                          fecha_hasta_actual=fecha_hasta)
 
-@app.route('/inventarios/categorias')
-@login_required
-def categorias_inventario():
-    """Listar categorías de inventario"""
-    categorias = CategoriaInventario.query.order_by(CategoriaInventario.nombre).all()
-    return render_template('categorias_inventario.html', categorias=categorias)
-
-@app.route('/inventarios/categorias/nueva', methods=['GET', 'POST'])
-@login_required
-def nueva_categoria_inventario():
-    """Crear nueva categoría de inventario"""
-    if request.method == 'POST':
-        try:
-            nombre = request.form['nombre'].strip().upper()
-            descripcion = request.form.get('descripcion', '').strip()
-            
-            # Validaciones
-            if not nombre:
-                flash('El nombre de la categoría es obligatorio', 'error')
-                return redirect(url_for('nueva_categoria_inventario'))
-            
-            # Verificar si ya existe
-            categoria_existente = CategoriaInventario.query.filter_by(nombre=nombre).first()
-            if categoria_existente:
-                flash(f'Ya existe una categoría con el nombre "{nombre}"', 'error')
-                return redirect(url_for('nueva_categoria_inventario'))
-            
-            # Crear nueva categoría
-            nueva_categoria = CategoriaInventario(
-                nombre=nombre,
-                descripcion=descripcion,
-                activa=True
-            )
-            
-            db.session.add(nueva_categoria)
-            db.session.commit()
-            
-            flash(f'Categoría "{nombre}" creada exitosamente', 'success')
-            return redirect(url_for('categorias_inventario'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al crear la categoría: {str(e)}', 'error')
-            return redirect(url_for('nueva_categoria_inventario'))
-    
-    return render_template('nueva_categoria_inventario.html')
-
-@app.route('/inventarios/categorias/editar/<int:id>', methods=['GET', 'POST'])
-@login_required
-def editar_categoria_inventario(id):
-    """Editar categoría de inventario"""
-    categoria = CategoriaInventario.query.get_or_404(id)
-    
-    # Verificar si es una categoría por defecto
-    categorias_por_defecto = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
-    if categoria.nombre in categorias_por_defecto:
-        flash(f'No se puede editar la categoría "{categoria.nombre}" porque es una categoría del sistema', 'error')
-        return redirect(url_for('categorias_inventario'))
-    
-    if request.method == 'POST':
-        try:
-            nombre = request.form['nombre'].strip().upper()
-            descripcion = request.form.get('descripcion', '').strip()
-            activa = 'activa' in request.form
-            
-            # Validaciones
-            if not nombre:
-                flash('El nombre de la categoría es obligatorio', 'error')
-                return redirect(url_for('editar_categoria_inventario', id=id))
-            
-            # Verificar si ya existe (excluyendo la actual)
-            categoria_existente = CategoriaInventario.query.filter(
-                CategoriaInventario.nombre == nombre,
-                CategoriaInventario.id != id
-            ).first()
-            
-            if categoria_existente:
-                flash(f'Ya existe una categoría con el nombre "{nombre}"', 'error')
-                return redirect(url_for('editar_categoria_inventario', id=id))
-            
-            # Actualizar categoría
-            categoria.nombre = nombre
-            categoria.descripcion = descripcion
-            categoria.activa = activa
-            
-            db.session.commit()
-            
-            flash(f'Categoría "{nombre}" actualizada exitosamente', 'success')
-            return redirect(url_for('categorias_inventario'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error al actualizar la categoría: {str(e)}', 'error')
-            return redirect(url_for('editar_categoria_inventario', id=id))
-    
-    return render_template('editar_categoria_inventario.html', categoria=categoria)
-
-@app.route('/inventarios/categorias/eliminar/<int:id>', methods=['POST'])
-@login_required
-def eliminar_categoria_inventario(id):
-    """Eliminar categoría de inventario"""
-    if not current_user.is_admin:
-        flash('Solo los administradores pueden eliminar categorías', 'error')
-        return redirect(url_for('categorias_inventario'))
-    
-    try:
-        categoria = CategoriaInventario.query.get_or_404(id)
-        
-        # Verificar si es una categoría por defecto
-        categorias_por_defecto = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
-        if categoria.nombre in categorias_por_defecto:
-            flash(f'No se puede eliminar la categoría "{categoria.nombre}" porque es una categoría del sistema', 'error')
-            return redirect(url_for('categorias_inventario'))
-        
-        # Verificar si tiene productos asociados
-        productos_count = Producto.query.filter_by(categoria_id=id).count()
-        if productos_count > 0:
-            flash(f'No se puede eliminar la categoría "{categoria.nombre}" porque tiene {productos_count} productos asociados', 'error')
-            return redirect(url_for('categorias_inventario'))
-        
-        # Eliminar categoría
-        db.session.delete(categoria)
-        db.session.commit()
-        
-        flash(f'Categoría "{categoria.nombre}" eliminada exitosamente', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al eliminar la categoría: {str(e)}', 'error')
-    
-    return redirect(url_for('categorias_inventario'))
-
-@app.route('/inventarios/categorias/activar/<int:id>', methods=['POST'])
-@login_required
-def activar_categoria_inventario(id):
-    """Activar categoría de inventario"""
-    try:
-        categoria = CategoriaInventario.query.get_or_404(id)
-        categoria.activa = True
-        db.session.commit()
-        
-        flash(f'Categoría "{categoria.nombre}" activada exitosamente', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al activar la categoría: {str(e)}', 'error')
-    
-    return redirect(url_for('categorias_inventario'))
-
-@app.route('/inventarios/categorias/desactivar/<int:id>', methods=['POST'])
-@login_required
-def desactivar_categoria_inventario(id):
-    """Desactivar categoría de inventario"""
-    try:
-        categoria = CategoriaInventario.query.get_or_404(id)
-        categoria.activa = False
-        db.session.commit()
-        
-        flash(f'Categoría "{categoria.nombre}" desactivada exitosamente', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al desactivar la categoría: {str(e)}', 'error')
-    
-    return redirect(url_for('categorias_inventario'))
+# Rutas de categorías eliminadas - se usan categorías fijas: ALMACEN GENERAL, QUIMICOS, POSCOSECHA
 
 @app.route('/inventarios/productos/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -2801,7 +2601,7 @@ def editar_producto_inventario(id):
             codigo = request.form['codigo'].strip().upper()
             nombre = request.form['nombre'].strip().upper()
             descripcion = request.form.get('descripcion', '').strip()
-            categoria_id = request.form['categoria_id']
+            categoria = request.form['categoria']
             unidad_medida = request.form['unidad_medida']
             precio_unitario = float(request.form.get('precio_unitario', 0))
             stock_minimo = int(request.form.get('stock_minimo', 0))
@@ -2813,7 +2613,7 @@ def editar_producto_inventario(id):
             activo = 'activo' in request.form
             
             # Validaciones
-            if not codigo or not nombre or not categoria_id:
+            if not codigo or not nombre or not categoria:
                 flash('Código, nombre y categoría son obligatorios', 'error')
                 return redirect(url_for('editar_producto_inventario', id=id))
             
@@ -2831,7 +2631,7 @@ def editar_producto_inventario(id):
             producto.codigo = codigo
             producto.nombre = nombre
             producto.descripcion = descripcion
-            producto.categoria_id = categoria_id
+            producto.categoria = categoria
             producto.unidad_medida = unidad_medida
             producto.precio_unitario = precio_unitario
             producto.stock_minimo = stock_minimo
@@ -2857,8 +2657,8 @@ def editar_producto_inventario(id):
             return redirect(url_for('editar_producto_inventario', id=id))
     
     # GET: Mostrar formulario de edición
-    categorias = CategoriaInventario.query.filter_by(activa=True).order_by(CategoriaInventario.nombre).all()
-    return render_template('editar_producto_inventario.html', producto=producto, categorias=categorias)
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    return render_template('editar_producto_inventario.html', producto=producto, categorias=categorias_fijas)
 
 @app.route('/inventarios/productos/eliminar/<int:id>', methods=['POST'])
 @login_required
@@ -2968,16 +2768,11 @@ def importar_inventarios():
                     wb = load_workbook(tmp_file.name)
                     ws = wb.active
                     
-                    # Obtener ID de categoría
-                    with db.engine.connect() as conn:
-                        result = conn.execute(text("""
-                            SELECT id FROM categoria_inventario WHERE nombre = :nombre
-                        """), {'nombre': tipo_inventario})
-                        categoria_row = result.fetchone()
-                        if categoria_row is None:
-                            flash(f'Error: La categoría "{tipo_inventario}" no existe', 'error')
-                            return redirect(url_for('importar_inventarios'))
-                        categoria_id = categoria_row[0]
+                    # Validar categoría
+                    categorias_validas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+                    if tipo_inventario not in categorias_validas:
+                        flash(f'Error: La categoría "{tipo_inventario}" no es válida. Use: {", ".join(categorias_validas)}', 'error')
+                        return redirect(url_for('importar_inventarios'))
                         
                         productos_importados = 0
                         productos_duplicados = 0
@@ -3031,17 +2826,17 @@ def importar_inventarios():
                                 
                                 conn.execute(text("""
                                     INSERT INTO producto (
-                                        codigo, nombre, descripcion, categoria_id, unidad_medida,
+                                        codigo, nombre, descripcion, categoria, unidad_medida,
                                         precio_unitario, stock_actual, proveedor, activo, created_at
                                     ) VALUES (
-                                        :codigo, :nombre, :descripcion, :categoria_id, :unidad_medida,
+                                        :codigo, :nombre, :descripcion, :categoria, :unidad_medida,
                                         :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
                                     )
                                 """), {
                                     'codigo': codigo,
                                     'nombre': producto,
                                     'descripcion': descripcion,
-                                    'categoria_id': categoria_id,
+                                    'categoria': tipo_inventario,
                                     'unidad_medida': 'UNIDAD',
                                     'precio_unitario': valor_und,
                                     'stock_actual': int(saldo),
@@ -3080,7 +2875,8 @@ def importar_inventarios():
             return redirect(url_for('importar_inventarios'))
     
     # GET: Mostrar formulario de importación
-    return render_template('importar_inventarios.html')
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    return render_template('importar_inventarios.html', categorias=categorias_fijas)
 
 @app.route('/inventarios/movimientos/nuevo', methods=['GET', 'POST'])
 @login_required
