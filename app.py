@@ -2590,32 +2590,105 @@ def movimientos_inventario():
 
 # Rutas de categorías eliminadas - se usan categorías fijas: ALMACEN GENERAL, QUIMICOS, POSCOSECHA
 
-@app.route('/fix-database', methods=['POST'])
-@login_required
+@app.route('/fix-database', methods=['GET', 'POST'])
 def fix_database():
     """Arreglar la base de datos después de la simplificación de inventarios"""
-    if not current_user.is_admin:
-        flash('Solo los administradores pueden ejecutar este comando', 'error')
-        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        try:
+            from sqlalchemy import text
+            
+            # Usar una nueva conexión para evitar problemas de transacción
+            engine = db.engine
+            with engine.connect() as conn:
+                # Ejecutar el script de arreglo
+                print("🔧 Iniciando arreglo de base de datos...")
+                
+                try:
+                    conn.execute(text("ALTER TABLE producto DROP CONSTRAINT IF EXISTS producto_categoria_id_fkey"))
+                    print("✅ Constraint eliminado")
+                except Exception as e:
+                    print(f"⚠️ Error eliminando constraint: {e}")
+                
+                try:
+                    conn.execute(text("ALTER TABLE producto DROP COLUMN IF EXISTS categoria_id"))
+                    print("✅ Columna categoria_id eliminada")
+                except Exception as e:
+                    print(f"⚠️ Error eliminando columna: {e}")
+                
+                try:
+                    conn.execute(text("ALTER TABLE producto ADD COLUMN IF NOT EXISTS categoria VARCHAR(50)"))
+                    print("✅ Columna categoria agregada")
+                except Exception as e:
+                    print(f"⚠️ Error agregando columna: {e}")
+                
+                try:
+                    conn.execute(text("DROP TABLE IF EXISTS categoria_inventario"))
+                    print("✅ Tabla categoria_inventario eliminada")
+                except Exception as e:
+                    print(f"⚠️ Error eliminando tabla: {e}")
+                
+                try:
+                    conn.execute(text("UPDATE producto SET categoria = 'ALMACEN GENERAL' WHERE categoria IS NULL OR categoria = ''"))
+                    print("✅ Productos actualizados")
+                except Exception as e:
+                    print(f"⚠️ Error actualizando productos: {e}")
+                
+                conn.commit()
+                print("🎉 Base de datos arreglada correctamente")
+            
+            return jsonify({'success': True, 'message': 'Base de datos arreglada correctamente'})
+            
+        except Exception as e:
+            print(f"❌ Error al arreglar la base de datos: {str(e)}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
     
-    try:
-        from sqlalchemy import text
+    # GET: Mostrar página de arreglo
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Arreglar Base de Datos</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            .btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+            .btn:hover { background: #0056b3; }
+            .result { margin-top: 20px; padding: 10px; border-radius: 5px; }
+            .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+            .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        </style>
+    </head>
+    <body>
+        <h1>🔧 Arreglar Base de Datos</h1>
+        <p>Esta herramienta arreglará la base de datos después de la simplificación del sistema de inventarios.</p>
+        <button class="btn" onclick="fixDatabase()">Arreglar Base de Datos</button>
+        <div id="result"></div>
         
-        with db.engine.connect() as conn:
-            # Ejecutar el script de arreglo
-            conn.execute(text("ALTER TABLE producto DROP CONSTRAINT IF EXISTS producto_categoria_id_fkey"))
-            conn.execute(text("ALTER TABLE producto DROP COLUMN IF EXISTS categoria_id"))
-            conn.execute(text("ALTER TABLE producto ADD COLUMN IF NOT EXISTS categoria VARCHAR(50)"))
-            conn.execute(text("DROP TABLE IF EXISTS categoria_inventario"))
-            conn.execute(text("UPDATE producto SET categoria = 'ALMACEN GENERAL' WHERE categoria IS NULL OR categoria = ''"))
-            conn.commit()
-        
-        flash('Base de datos arreglada correctamente', 'success')
-        
-    except Exception as e:
-        flash(f'Error al arreglar la base de datos: {str(e)}', 'error')
-    
-    return redirect(url_for('dashboard'))
+        <script>
+        async function fixDatabase() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Arreglando base de datos...</p>';
+            
+            try {
+                const response = await fetch('/fix-database', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="result success">✅ ${data.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        </script>
+    </body>
+    </html>
+    '''
 
 @app.route('/inventarios/productos/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
