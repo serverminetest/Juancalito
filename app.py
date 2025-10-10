@@ -2590,6 +2590,33 @@ def movimientos_inventario():
 
 # Rutas de categorías eliminadas - se usan categorías fijas: ALMACEN GENERAL, QUIMICOS, POSCOSECHA
 
+@app.route('/fix-database', methods=['POST'])
+@login_required
+def fix_database():
+    """Arreglar la base de datos después de la simplificación de inventarios"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden ejecutar este comando', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        from sqlalchemy import text
+        
+        with db.engine.connect() as conn:
+            # Ejecutar el script de arreglo
+            conn.execute(text("ALTER TABLE producto DROP CONSTRAINT IF EXISTS producto_categoria_id_fkey"))
+            conn.execute(text("ALTER TABLE producto DROP COLUMN IF EXISTS categoria_id"))
+            conn.execute(text("ALTER TABLE producto ADD COLUMN IF NOT EXISTS categoria VARCHAR(50)"))
+            conn.execute(text("DROP TABLE IF EXISTS categoria_inventario"))
+            conn.execute(text("UPDATE producto SET categoria = 'ALMACEN GENERAL' WHERE categoria IS NULL OR categoria = ''"))
+            conn.commit()
+        
+        flash('Base de datos arreglada correctamente', 'success')
+        
+    except Exception as e:
+        flash(f'Error al arreglar la base de datos: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
+
 @app.route('/inventarios/productos/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_producto_inventario(id):
