@@ -73,7 +73,7 @@
         <div class="col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body text-center">
-                    <h4>{{ productos | selectattr('stock_actual', 'le', selectattr('stock_minimo', 'default', 0)) | list | length }}</h4>
+                    <h4>{% set stock_bajo = [] %}{% for p in productos %}{% if p.stock_actual <= p.stock_minimo %}{% set _ = stock_bajo.append(p) %}{% endif %}{% endfor %}{{ stock_bajo|length }}</h4>
                     <small>Stock bajo</small>
                 </div>
             </div>
