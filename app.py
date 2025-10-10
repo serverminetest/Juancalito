@@ -2437,7 +2437,7 @@ def init_db():
 @login_required
 def inventarios():
     """Página principal del sistema de inventarios"""
-    categorias = CategoriaInventario.query.filter_by(activa=True).all()
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
     productos = Producto.query.filter_by(activo=True).all()
     
     # Estadísticas rápidas
@@ -2446,7 +2446,7 @@ def inventarios():
     valor_total_inventario = sum(p.stock_actual * p.precio_unitario for p in productos)
     
     return render_template('inventarios.html', 
-                         categorias=categorias,
+                         categorias=categorias_fijas,
                          productos=productos,
                          total_productos=total_productos,
                          productos_bajo_stock=productos_bajo_stock,
@@ -2474,11 +2474,11 @@ def productos_inventario():
         )
     
     productos = query.order_by(Producto.nombre).all()
-    categorias = CategoriaInventario.query.filter_by(activa=True).all()
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
     
     return render_template('productos_inventario.html', 
                          productos=productos, 
-                         categorias=categorias,
+                         categorias=categorias_fijas,
                          categoria_actual=categoria_id,
                          busqueda_actual=busqueda)
 
