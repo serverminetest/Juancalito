@@ -2876,7 +2876,9 @@ def importar_inventarios():
                     if tipo_inventario not in categorias_validas:
                         flash(f'Error: La categoría "{tipo_inventario}" no es válida. Use: {", ".join(categorias_validas)}', 'error')
                         return redirect(url_for('importar_inventarios'))
-                        
+                    
+                    # Conectar a la base de datos
+                    with db.engine.connect() as conn:
                         productos_importados = 0
                         productos_duplicados = 0
                         errores = []
