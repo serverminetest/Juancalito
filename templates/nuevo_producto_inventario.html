@@ -45,11 +45,11 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="categoria_id" class="form-label">Categoría *</label>
-                                    <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                    <label for="categoria" class="form-label">Categoría *</label>
+                                    <select class="form-select" id="categoria" name="categoria" required>
                                         <option value="">Seleccionar categoría</option>
                                         {% for categoria in categorias %}
-                                        <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                                        <option value="{{ categoria }}" {% if categoria == categoria_predefinida %}selected{% endif %}>{{ categoria }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -193,14 +193,12 @@
                     <ul class="list-unstyled">
                         {% for categoria in categorias %}
                         <li class="mb-1">
-                            <span class="badge bg-secondary">{{ categoria.nombre }}</span>
+                            <span class="badge bg-secondary">{{ categoria }}</span>
                         </li>
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <p class="text-muted">No hay categorías creadas. 
-                        <a href="{{ url_for('nueva_categoria_inventario') }}">Crear primera categoría</a>
-                    </p>
+                    <p class="text-muted">No hay categorías disponibles.</p>
                     {% endif %}
                 </div>
             </div>

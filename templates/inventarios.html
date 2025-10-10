@@ -145,7 +145,7 @@
                                     <tr class="table-warning">
                                         <td><strong>{{ producto.codigo }}</strong></td>
                                         <td>{{ producto.nombre }}</td>
-                                        <td>{{ producto.categoria.nombre }}</td>
+                                        <td>{{ producto.categoria }}</td>
                                         <td><span class="badge bg-danger">{{ producto.stock_actual }}</span></td>
                                         <td>{{ producto.stock_minimo }}</td>
                                         <td>{{ producto.unidad_medida }}</td>
@@ -167,53 +167,82 @@
     </div>
     {% endif %}
 
-    <!-- Categorías -->
-    <div class="row">
+    <!-- Productos por Categoría -->
+    {% for categoria in categorias %}
+    <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-tags"></i> Categorías de Inventario</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-tags"></i> {{ categoria }}</h5>
+                    <a href="{{ url_for('productos_inventario', categoria=categoria) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye"></i> Ver Todos
+                    </a>
                 </div>
                 <div class="card-body">
-                    {% if categorias %}
-                    <div class="row">
-                        {% for categoria in categorias %}
-                        <div class="col-md-4 mb-3">
-                            <div class="card border-primary">
-                                <div class="card-body">
-                                    <h6 class="card-title">{{ categoria.nombre }}</h6>
-                                    {% if categoria.descripcion %}
-                                    <p class="card-text text-muted">{{ categoria.descripcion }}</p>
-                                    {% endif %}
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">
-                                            {{ categoria.productos|length }} productos
-                                        </small>
-                                        <a href="{{ url_for('productos_inventario', categoria_id=categoria.id) }}" 
-                                           class="btn btn-sm btn-outline-primary">
-                                            Ver Productos
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    {% set productos_categoria = productos | selectattr('categoria', 'equalto', categoria) | list %}
+                    {% if productos_categoria %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Unidad</th>
+                                    <th>Precio</th>
+                                    <th>Ubicación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for producto in productos_categoria %}
+                                <tr {% if producto.stock_actual <= producto.stock_minimo %}class="table-warning"{% endif %}>
+                                    <td><strong>{{ producto.codigo }}</strong></td>
+                                    <td>{{ producto.nombre }}</td>
+                                    <td>
+                                        {% if producto.stock_actual <= producto.stock_minimo %}
+                                        <span class="badge bg-danger">{{ producto.stock_actual }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">{{ producto.stock_actual }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ producto.stock_minimo }}</td>
+                                    <td>{{ producto.unidad_medida }}</td>
+                                    <td>${{ "{:,.0f}".format(producto.precio_unitario) }}</td>
+                                    <td>{{ producto.ubicacion or '-' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('nuevo_movimiento_inventario') }}?producto_id={{ producto.id }}" 
+                                               class="btn btn-sm btn-primary" title="Nuevo Movimiento">
+                                                <i class="fas fa-exchange-alt"></i>
+                                            </a>
+                                            <a href="{{ url_for('editar_producto_inventario', id=producto.id) }}" 
+                                               class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                     {% else %}
                     <div class="text-center py-4">
-                        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">Categorías del Sistema</h5>
-                        <p class="text-muted">Sistema simplificado con categorías fijas</p>
-                        <div class="d-flex flex-wrap justify-content-center gap-2">
-                            {% for categoria in categorias %}
-                            <span class="badge bg-secondary">{{ categoria }}</span>
-                            {% endfor %}
-                        </div>
+                        <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No hay productos en esta categoría</h6>
+                        <p class="text-muted">Agrega el primer producto para comenzar</p>
+                        <a href="{{ url_for('nuevo_producto_inventario') }}?categoria={{ categoria }}" 
+                           class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Agregar Producto
+                        </a>
                     </div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
+    {% endfor %}
 </div>
 {% endblock %}

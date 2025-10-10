@@ -2456,13 +2456,13 @@ def inventarios():
 @login_required
 def productos_inventario():
     """Lista de productos del inventario"""
-    categoria_id = request.args.get('categoria_id', type=int)
+    categoria = request.args.get('categoria', '')
     busqueda = request.args.get('busqueda', '').strip()
     
     query = Producto.query.filter_by(activo=True)
     
-    if categoria_id:
-        query = query.filter_by(categoria_id=categoria_id)
+    if categoria:
+        query = query.filter_by(categoria=categoria)
     
     if busqueda:
         query = query.filter(
@@ -2479,7 +2479,7 @@ def productos_inventario():
     return render_template('productos_inventario.html', 
                          productos=productos, 
                          categorias=categorias_fijas,
-                         categoria_actual=categoria_id,
+                         categoria_actual=categoria,
                          busqueda_actual=busqueda)
 
 @app.route('/inventarios/productos/nuevo', methods=['GET', 'POST'])
@@ -2544,7 +2544,10 @@ def nuevo_producto_inventario():
             return redirect(url_for('nuevo_producto_inventario'))
     
     categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
-    return render_template('nuevo_producto_inventario.html', categorias=categorias_fijas)
+    categoria_predefinida = request.args.get('categoria', '')
+    return render_template('nuevo_producto_inventario.html', 
+                         categorias=categorias_fijas,
+                         categoria_predefinida=categoria_predefinida)
 
 @app.route('/inventarios/movimientos')
 @login_required

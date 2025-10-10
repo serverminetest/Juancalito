@@ -22,12 +22,12 @@
         <div class="card-body">
             <form method="GET" class="row g-3">
                 <div class="col-md-4">
-                    <label for="categoria_id" class="form-label">Categoría</label>
-                    <select name="categoria_id" id="categoria_id" class="form-select">
+                    <label for="categoria" class="form-label">Categoría</label>
+                    <select name="categoria" id="categoria" class="form-select">
                         <option value="">Todas las categorías</option>
                         {% for categoria in categorias %}
-                        <option value="{{ categoria.id }}" {% if categoria_actual == categoria.id %}selected{% endif %}>
-                            {{ categoria.nombre }}
+                        <option value="{{ categoria }}" {% if categoria_actual == categoria %}selected{% endif %}>
+                            {{ categoria }}
                         </option>
                         {% endfor %}
                     </select>
@@ -81,7 +81,7 @@
                                     <strong>{{ producto.nombre }}</strong>
                                     <small class="text-muted d-md-none">{{ producto.codigo }}</small>
                                     <small class="text-muted d-lg-none">
-                                        <span class="badge bg-secondary">{{ producto.categoria.nombre }}</span>
+                                        <span class="badge bg-secondary">{{ producto.categoria }}</span>
                                     </small>
                                     {% if producto.descripcion %}
                                     <small class="text-muted">{{ producto.descripcion[:50] }}{% if producto.descripcion|length > 50 %}...{% endif %}</small>
@@ -89,7 +89,7 @@
                                 </div>
                             </td>
                             <td class="d-none d-lg-table-cell">
-                                <span class="badge bg-secondary">{{ producto.categoria.nombre }}</span>
+                                <span class="badge bg-secondary">{{ producto.categoria }}</span>
                             </td>
                             <td class="d-none d-md-table-cell">
                                 {% if producto.stock_actual <= producto.stock_minimo %}
