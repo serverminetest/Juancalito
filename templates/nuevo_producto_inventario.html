@@ -265,41 +265,33 @@
 </div>
 
 <script>
-// Vista previa en tiempo real
+// Vista previa simplificada - sin eventos que interfieran con el formulario
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('productoForm');
     const preview = document.querySelector('.card:last-child .card-body');
     
-    function updatePreview() {
-        const codigo = document.getElementById('codigo').value;
-        const nombre = document.getElementById('nombre').value;
-        const categoria = document.getElementById('categoria').value;
-        const stock = document.getElementById('stock_actual').value;
-        const precio = document.getElementById('precio_unitario').value;
-        
-        if (codigo || nombre) {
-            preview.innerHTML = `
-                <div class="border rounded p-3">
-                    <h6 class="text-primary">${codigo || 'Código'}</h6>
-                    <h5 class="mb-2">${nombre || 'Nombre del producto'}</h5>
-                    ${categoria ? `<span class="badge bg-secondary mb-2">${categoria}</span><br>` : ''}
-                    ${stock ? `<small class="text-muted">Stock: ${stock}</small><br>` : ''}
-                    ${precio ? `<small class="text-success">Precio: $${precio}</small>` : ''}
-                </div>
-            `;
-        }
+    // Solo actualizar cuando el usuario haga clic en el botón de guardar
+    const form = document.getElementById('productoForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const codigo = document.getElementById('codigo').value;
+            const nombre = document.getElementById('nombre').value;
+            const categoria = document.getElementById('categoria').value;
+            const stock = document.getElementById('stock_actual').value;
+            const precio = document.getElementById('precio_unitario').value;
+            
+            if (codigo || nombre) {
+                preview.innerHTML = `
+                    <div class="border rounded p-3 bg-light">
+                        <h6 class="text-primary">${codigo || 'Código'}</h6>
+                        <h5 class="mb-2">${nombre || 'Nombre del producto'}</h5>
+                        ${categoria ? `<span class="badge bg-secondary mb-2">${categoria}</span><br>` : ''}
+                        ${stock ? `<small class="text-muted">Stock: ${stock}</small><br>` : ''}
+                        ${precio ? `<small class="text-success">Precio: $${precio}</small>` : ''}
+                    </div>
+                `;
+            }
+        });
     }
-    
-    // Actualizar vista previa cuando cambien los campos (solo 'change' para evitar interferencias)
-    ['codigo', 'nombre', 'categoria', 'stock_actual', 'precio_unitario'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('change', updatePreview);
-        }
-    });
-    
-    // Actualizar vista previa al cargar la página
-    updatePreview();
 });
 </script>
 {% endblock %}
