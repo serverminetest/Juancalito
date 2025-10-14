@@ -264,43 +264,5 @@
     </div>
 </div>
 
-<script>
-// Vista previa simplificada - solo mostrar información, sin interferir con el formulario
-document.addEventListener('DOMContentLoaded', function() {
-    const preview = document.querySelector('.card:last-child .card-body');
-    
-    // Actualizar vista previa solo cuando el usuario termine de escribir (sin bloquear el formulario)
-    const inputs = ['codigo', 'nombre', 'categoria', 'stock_actual', 'precio_unitario'];
-    
-    inputs.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            // Usar setTimeout para actualizar después de que el usuario termine de escribir
-            let timeout;
-            element.addEventListener('keyup', function() {
-                clearTimeout(timeout);
-                timeout = setTimeout(function() {
-                    const codigo = document.getElementById('codigo').value;
-                    const nombre = document.getElementById('nombre').value;
-                    const categoria = document.getElementById('categoria').value;
-                    const stock = document.getElementById('stock_actual').value;
-                    const precio = document.getElementById('precio_unitario').value;
-                    
-                    if (codigo || nombre) {
-                        preview.innerHTML = `
-                            <div class="border rounded p-3 bg-light">
-                                <h6 class="text-primary">${codigo || 'Código'}</h6>
-                                <h5 class="mb-2">${nombre || 'Nombre del producto'}</h5>
-                                ${categoria ? `<span class="badge bg-secondary mb-2">${categoria}</span><br>` : ''}
-                                ${stock ? `<small class="text-muted">Stock: ${stock}</small><br>` : ''}
-                                ${precio ? `<small class="text-success">Precio: $${precio}</small>` : ''}
-                            </div>
-                        `;
-                    }
-                }, 500); // Esperar 500ms después de que el usuario deje de escribir
-            });
-        }
-    });
-});
-</script>
+<!-- Sin scripts que interfieran con el formulario -->
 {% endblock %}
