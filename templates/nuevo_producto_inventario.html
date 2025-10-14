@@ -27,7 +27,7 @@
                     <h5 class="mb-0"><i class="fas fa-box"></i> Información del Producto</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" id="productoForm">
+                    <form method="POST" id="productoForm" novalidate>
                         <!-- Información Básica -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -290,14 +290,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Actualizar vista previa cuando cambien los campos (usando 'change' en lugar de 'input' para evitar interferencias)
+    // Actualizar vista previa cuando cambien los campos (solo 'change' para evitar interferencias)
     ['codigo', 'nombre', 'categoria', 'stock_actual', 'precio_unitario'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
             element.addEventListener('change', updatePreview);
-            element.addEventListener('blur', updatePreview);
         }
     });
+    
+    // Actualizar vista previa al cargar la página
+    updatePreview();
 });
 </script>
 {% endblock %}
