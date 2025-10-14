@@ -290,9 +290,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Actualizar vista previa cuando cambien los campos
+    // Actualizar vista previa cuando cambien los campos (usando 'change' en lugar de 'input' para evitar interferencias)
     ['codigo', 'nombre', 'categoria', 'stock_actual', 'precio_unitario'].forEach(id => {
-        document.getElementById(id).addEventListener('input', updatePreview);
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', updatePreview);
+            element.addEventListener('blur', updatePreview);
+        }
     });
 });
 </script>

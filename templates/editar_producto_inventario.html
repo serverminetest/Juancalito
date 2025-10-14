@@ -70,15 +70,15 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="categoria_id" class="form-label">
+                                            <label for="categoria" class="form-label">
                                                 <i class="fas fa-tags"></i> Categoría *
                                             </label>
-                                            <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                            <select class="form-select" id="categoria" name="categoria" required>
                                                 <option value="">Seleccione una categoría...</option>
-                                                {% for categoria in categorias %}
-                                                <option value="{{ categoria.id }}" 
-                                                        {% if producto.categoria_id == categoria.id %}selected{% endif %}>
-                                                    {{ categoria.nombre }}
+                                                {% for cat in categorias %}
+                                                <option value="{{ cat }}" 
+                                                        {% if producto.categoria == cat %}selected{% endif %}>
+                                                    {{ cat }}
                                                 </option>
                                                 {% endfor %}
                                             </select>
@@ -227,7 +227,7 @@
                             </div>
                             <div class="mb-3">
                                 <strong>Categoría:</strong> 
-                                <span class="badge bg-primary">{{ producto.categoria.nombre }}</span>
+                                <span class="badge bg-primary">{{ producto.categoria }}</span>
                             </div>
                             <div class="mb-3">
                                 <strong>Stock:</strong> 
