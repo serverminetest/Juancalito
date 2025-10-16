@@ -818,31 +818,51 @@ def logout():
 @login_required
 def dashboard():
     # Estadísticas principales
-    total_empleados = Empleado.query.filter_by(estado_empleado='Activo').count()
-    total_empleados_inactivos = Empleado.query.filter_by(estado_empleado='Inactivo').count()
+    try:
+        total_empleados = Empleado.query.filter_by(estado_empleado='Activo').count()
+        total_empleados_inactivos = Empleado.query.filter_by(estado_empleado='Inactivo').count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo estadísticas de empleados: {e}")
+        total_empleados = 0
+        total_empleados_inactivos = 0
     
     # Visitantes
-    total_visitantes_hoy = Visitante.query.filter(
-        Visitante.fecha_entrada >= datetime.now().date(),
-        Visitante.activo == True
-    ).count()
-    total_visitantes_mes = Visitante.query.filter(
-        Visitante.fecha_entrada >= date.today().replace(day=1),
-        Visitante.activo == True
-    ).count()
+    try:
+        total_visitantes_hoy = Visitante.query.filter(
+            Visitante.fecha_entrada >= datetime.now().date(),
+            Visitante.activo == True
+        ).count()
+        total_visitantes_mes = Visitante.query.filter(
+            Visitante.fecha_entrada >= date.today().replace(day=1),
+            Visitante.activo == True
+        ).count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo estadísticas de visitantes: {e}")
+        total_visitantes_hoy = 0
+        total_visitantes_mes = 0
     
     # Asistencias
-    asistencias_hoy = Asistencia.query.filter_by(fecha=date.today()).count()
-    asistencias_semana = Asistencia.query.filter(
-        Asistencia.fecha >= date.today() - timedelta(days=7)
-    ).count()
+    try:
+        asistencias_hoy = Asistencia.query.filter_by(fecha=date.today()).count()
+        asistencias_semana = Asistencia.query.filter(
+            Asistencia.fecha >= date.today() - timedelta(days=7)
+        ).count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo estadísticas de asistencias: {e}")
+        asistencias_hoy = 0
+        asistencias_semana = 0
     
     # Contratos
-    contratos_vencer = Contrato.query.filter(
-        Contrato.fecha_fin <= date.today() + timedelta(days=30),
-        Contrato.activo == True
-    ).count()
-    total_contratos_activos = Contrato.query.filter_by(activo=True).count()
+    try:
+        contratos_vencer = Contrato.query.filter(
+            Contrato.fecha_fin <= date.today() + timedelta(days=30),
+            Contrato.activo == True
+        ).count()
+        total_contratos_activos = Contrato.query.filter_by(activo=True).count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo estadísticas de contratos: {e}")
+        contratos_vencer = 0
+        total_contratos_activos = 0
     
     # Inventarios (si existen)
     try:
@@ -856,14 +876,22 @@ def dashboard():
         productos_stock_bajo = 0
     
     # Contratos generados
-    contratos_generados_hoy = ContratoGenerado.query.filter(
-        ContratoGenerado.fecha_generacion >= datetime.now().date()
-    ).count()
+    try:
+        contratos_generados_hoy = ContratoGenerado.query.filter(
+            ContratoGenerado.fecha_generacion >= datetime.now().date()
+        ).count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo contratos generados: {e}")
+        contratos_generados_hoy = 0
     
     # Empleados recientes (últimos 30 días)
-    empleados_recientes = Empleado.query.filter(
-        Empleado.fecha_ingreso >= date.today() - timedelta(days=30)
-    ).count()
+    try:
+        empleados_recientes = Empleado.query.filter(
+            Empleado.fecha_ingreso >= date.today() - timedelta(days=30)
+        ).count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo empleados recientes: {e}")
+        empleados_recientes = 0
     
     return render_template('dashboard.html', 
                          total_empleados=total_empleados,
