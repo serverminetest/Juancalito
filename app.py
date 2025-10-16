@@ -3032,43 +3032,43 @@ def importar_inventarios():
                                 prefijo = {'ALMACEN GENERAL': 'ALM', 'QUIMICOS': 'QUI', 'POSCOSECHA': 'POS'}
                                 codigo = f"{prefijo[tipo_inventario]}-{row-1:04d}"
                                 
-                                        # Verificar si ya existe en el mismo período y categoría
-                                        result = conn.execute(text("""
-                                            SELECT id FROM producto WHERE codigo = :codigo AND categoria = :categoria AND periodo = :periodo
-                                        """), {
-                                            'codigo': codigo,
-                                            'categoria': tipo_inventario,
-                                            'periodo': periodo_importacion
-                                        })
-                                        
-                                        if result.fetchone():
-                                            productos_duplicados += 1
-                                            continue
-                                        
-                                        # Insertar producto
-                                        descripcion = f'Importado desde Excel - {tipo_inventario} - {periodo_importacion}'
-                                        if tipo_inventario == 'QUIMICOS' and clase:
-                                            descripcion += f' - Clase: {clase}'
-                                        
-                                        conn.execute(text("""
-                                            INSERT INTO producto (
-                                                codigo, nombre, descripcion, categoria, periodo, unidad_medida,
-                                                precio_unitario, stock_actual, proveedor, activo, created_at
-                                            ) VALUES (
-                                                :codigo, :nombre, :descripcion, :categoria, :periodo, :unidad_medida,
-                                                :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
-                                            )
-                                        """), {
-                                            'codigo': codigo,
-                                            'nombre': producto,
-                                            'descripcion': descripcion,
-                                            'categoria': tipo_inventario,
-                                            'periodo': periodo_importacion,
-                                            'unidad_medida': 'UNIDAD',
-                                            'precio_unitario': valor_und,
-                                            'stock_actual': int(saldo),
-                                            'proveedor': proveedor
-                                        })
+                                # Verificar si ya existe en el mismo período y categoría
+                                result = conn.execute(text("""
+                                    SELECT id FROM producto WHERE codigo = :codigo AND categoria = :categoria AND periodo = :periodo
+                                """), {
+                                    'codigo': codigo,
+                                    'categoria': tipo_inventario,
+                                    'periodo': periodo_importacion
+                                })
+                                
+                                if result.fetchone():
+                                    productos_duplicados += 1
+                                    continue
+                                
+                                # Insertar producto
+                                descripcion = f'Importado desde Excel - {tipo_inventario} - {periodo_importacion}'
+                                if tipo_inventario == 'QUIMICOS' and clase:
+                                    descripcion += f' - Clase: {clase}'
+                                
+                                conn.execute(text("""
+                                    INSERT INTO producto (
+                                        codigo, nombre, descripcion, categoria, periodo, unidad_medida,
+                                        precio_unitario, stock_actual, proveedor, activo, created_at
+                                    ) VALUES (
+                                        :codigo, :nombre, :descripcion, :categoria, :periodo, :unidad_medida,
+                                        :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
+                                    )
+                                """), {
+                                    'codigo': codigo,
+                                    'nombre': producto,
+                                    'descripcion': descripcion,
+                                    'categoria': tipo_inventario,
+                                    'periodo': periodo_importacion,
+                                    'unidad_medida': 'UNIDAD',
+                                    'precio_unitario': valor_und,
+                                    'stock_actual': int(saldo),
+                                    'proveedor': proveedor
+                                })
                                 
                                 productos_importados += 1
                                 
