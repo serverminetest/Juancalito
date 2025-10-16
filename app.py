@@ -34,6 +34,20 @@ def colombia_now():
     """Devuelve la fecha y hora actual en zona horaria de Colombia"""
     return datetime.now(COLOMBIA_TZ)
 
+def get_periodo_actual():
+    """Devuelve el período actual en formato YYYY-MM"""
+    return datetime.now().strftime('%Y-%m')
+
+def get_periodo_desde_params():
+    """Obtiene el período desde los parámetros de la URL, por defecto el actual"""
+    periodo = request.args.get('periodo', get_periodo_actual())
+    # Validar formato YYYY-MM
+    try:
+        datetime.strptime(periodo, '%Y-%m')
+        return periodo
+    except ValueError:
+        return get_periodo_actual()
+
 def to_colombia_time(dt):
     """Convierte una fecha/hora a zona horaria de Colombia"""
     if dt is None:
@@ -596,10 +610,11 @@ class ContratoGenerado(db.Model):
 # Modelos para Sistema de Inventarios
 class Producto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(50), nullable=False, unique=True)
+    codigo = db.Column(db.String(50), nullable=False)
     nombre = db.Column(db.String(200), nullable=False)
     descripcion = db.Column(db.Text)
     categoria = db.Column(db.String(50), nullable=False)  # ALMACEN GENERAL, QUIMICOS, POSCOSECHA
+    periodo = db.Column(db.String(7), nullable=False)  # Formato: 2025-09 (año-mes)
     unidad_medida = db.Column(db.String(20), nullable=False)  # kg, litros, unidades, etc.
     precio_unitario = db.Column(db.Numeric(10, 2), default=0)
     stock_minimo = db.Column(db.Integer, default=0)
@@ -612,12 +627,16 @@ class Producto(db.Model):
     created_at = db.Column(db.DateTime, default=colombia_now)
     updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
     
+    # Índice único para código + categoría + período (permite mismo código en diferentes meses/categorías)
+    __table_args__ = (db.UniqueConstraint('codigo', 'categoria', 'periodo', name='_producto_codigo_categoria_periodo_uc'),)
+    
     # Relación con movimientos
     movimientos = db.relationship('MovimientoInventario', backref='producto', lazy=True)
 
 class MovimientoInventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    periodo = db.Column(db.String(7), nullable=False)  # Formato: 2025-09 (año-mes)
     tipo_movimiento = db.Column(db.String(20), nullable=False)  # ENTRADA, SALIDA
     cantidad = db.Column(db.Integer, nullable=False)
     precio_unitario = db.Column(db.Numeric(10, 2))
@@ -2437,17 +2456,43 @@ def init_db():
 @login_required
 def inventarios():
     """Página principal del sistema de inventarios"""
-    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
-    productos = Producto.query.filter_by(activo=True).all()
+    # Obtener período actual o desde parámetros
+    periodo_actual = get_periodo_desde_params()
     
-    # Estadísticas rápidas
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    
+    # Obtener productos del período actual
+    productos = Producto.query.filter_by(activo=True, periodo=periodo_actual).all()
+    
+    # Estadísticas rápidas por categoría
+    stats_por_categoria = {}
+    for categoria in categorias_fijas:
+        productos_cat = [p for p in productos if p.categoria == categoria]
+        total_productos_cat = len(productos_cat)
+        productos_bajo_stock_cat = len([p for p in productos_cat if p.stock_actual <= p.stock_minimo])
+        valor_total_cat = sum(p.stock_actual * p.precio_unitario for p in productos_cat)
+        
+        stats_por_categoria[categoria] = {
+            'total_productos': total_productos_cat,
+            'productos_bajo_stock': productos_bajo_stock_cat,
+            'valor_total': valor_total_cat
+        }
+    
+    # Estadísticas generales
     total_productos = len(productos)
     productos_bajo_stock = len([p for p in productos if p.stock_actual <= p.stock_minimo])
     valor_total_inventario = sum(p.stock_actual * p.precio_unitario for p in productos)
     
+    # Obtener períodos disponibles para el selector
+    periodos_disponibles = db.session.query(Producto.periodo).distinct().order_by(Producto.periodo.desc()).all()
+    periodos_disponibles = [p[0] for p in periodos_disponibles]
+    
     return render_template('inventarios.html', 
                          categorias=categorias_fijas,
                          productos=productos,
+                         periodo_actual=periodo_actual,
+                         periodos_disponibles=periodos_disponibles,
+                         stats_por_categoria=stats_por_categoria,
                          total_productos=total_productos,
                          productos_bajo_stock=productos_bajo_stock,
                          valor_total_inventario=valor_total_inventario)
@@ -2486,6 +2531,9 @@ def productos_inventario():
 @login_required
 def nuevo_producto_inventario():
     """Crear nuevo producto"""
+    # Obtener período actual o desde parámetros
+    periodo_actual = get_periodo_desde_params()
+    
     if request.method == 'POST':
         try:
             codigo = request.form['codigo'].strip()
@@ -2504,13 +2552,18 @@ def nuevo_producto_inventario():
             # Validaciones
             if not codigo or not nombre or not categoria or not unidad_medida:
                 flash('Los campos código, nombre, categoría y unidad de medida son obligatorios', 'error')
-                return redirect(url_for('nuevo_producto_inventario'))
+                return redirect(url_for('nuevo_producto_inventario', periodo=periodo_actual))
             
-            # Verificar si el código ya existe
-            producto_existente = Producto.query.filter_by(codigo=codigo).first()
+            # Verificar si el código ya existe en la misma categoría y período
+            producto_existente = Producto.query.filter_by(
+                codigo=codigo, 
+                categoria=categoria, 
+                periodo=periodo_actual
+            ).first()
+            
             if producto_existente:
-                flash('Ya existe un producto con ese código', 'error')
-                return redirect(url_for('nuevo_producto_inventario'))
+                flash(f'Ya existe un producto con el código "{codigo}" en {categoria} para el período {periodo_actual}', 'error')
+                return redirect(url_for('nuevo_producto_inventario', periodo=periodo_actual))
             
             # Convertir fecha de vencimiento
             fecha_venc = None
@@ -2522,6 +2575,7 @@ def nuevo_producto_inventario():
                 nombre=nombre,
                 descripcion=descripcion,
                 categoria=categoria,
+                periodo=periodo_actual,
                 unidad_medida=unidad_medida,
                 precio_unitario=precio_unitario,
                 stock_minimo=stock_minimo,
@@ -2535,19 +2589,20 @@ def nuevo_producto_inventario():
             db.session.add(nuevo_producto)
             db.session.commit()
             
-            flash(f'Producto "{nombre}" creado exitosamente', 'success')
-            return redirect(url_for('productos_inventario'))
+            flash(f'Producto "{nombre}" creado exitosamente para {periodo_actual}', 'success')
+            return redirect(url_for('productos_inventario', periodo=periodo_actual))
             
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear el producto: {str(e)}', 'error')
-            return redirect(url_for('nuevo_producto_inventario'))
+            return redirect(url_for('nuevo_producto_inventario', periodo=periodo_actual))
     
     categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
     categoria_predefinida = request.args.get('categoria', '')
     return render_template('nuevo_producto_inventario.html', 
                          categorias=categorias_fijas,
-                         categoria_predefinida=categoria_predefinida)
+                         categoria_predefinida=categoria_predefinida,
+                         periodo_actual=periodo_actual)
 
 @app.route('/inventarios/movimientos')
 @login_required
@@ -2833,6 +2888,59 @@ def importar_inventarios():
     if not current_user.is_admin:
         flash('Solo los administradores pueden importar inventarios', 'error')
         return redirect(url_for('inventarios'))
+
+@app.route('/migrate-inventory-monthly')
+@login_required
+def migrate_inventory_monthly():
+    """Migrar inventarios existentes al sistema mensual"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden migrar inventarios', 'error')
+        return redirect(url_for('inventarios'))
+    
+    try:
+        # Agregar columna periodo si no existe
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE producto ADD COLUMN IF NOT EXISTS periodo VARCHAR(7)"))
+                conn.execute(text("ALTER TABLE movimiento_inventario ADD COLUMN IF NOT EXISTS periodo VARCHAR(7)"))
+                conn.commit()
+                print("✅ Columnas periodo agregadas")
+            except Exception as e:
+                print(f"⚠️ Error agregando columnas: {e}")
+        
+        # Obtener productos sin período
+        productos_sin_periodo = Producto.query.filter_by(periodo=None).all()
+        
+        if not productos_sin_periodo:
+            flash('No hay productos para migrar', 'info')
+            return redirect(url_for('inventarios'))
+        
+        # Asignar período actual a productos existentes
+        periodo_actual = get_periodo_actual()
+        productos_migrados = 0
+        
+        for producto in productos_sin_periodo:
+            producto.periodo = periodo_actual
+            productos_migrados += 1
+        
+        db.session.commit()
+        
+        flash(f'{productos_migrados} productos migrados al período {periodo_actual}', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error durante la migración: {str(e)}', 'error')
+    
+    return redirect(url_for('inventarios'))
+
+@app.route('/inventarios/importar', methods=['GET', 'POST'])
+@login_required
+def importar_inventarios():
+    """Importar inventarios desde archivos Excel"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden importar inventarios', 'error')
+        return redirect(url_for('inventarios'))
     
     if request.method == 'POST':
         try:
@@ -2851,10 +2959,19 @@ def importar_inventarios():
                 flash('Solo se permiten archivos Excel (.xlsx, .xls)', 'error')
                 return redirect(url_for('importar_inventarios'))
             
-            # Obtener tipo de inventario
+            # Obtener tipo de inventario y período
             tipo_inventario = request.form.get('tipo_inventario')
+            periodo_importacion = request.form.get('periodo', get_periodo_actual())
+            
             if not tipo_inventario:
                 flash('Debe seleccionar el tipo de inventario', 'error')
+                return redirect(url_for('importar_inventarios'))
+            
+            # Validar formato del período
+            try:
+                datetime.strptime(periodo_importacion, '%Y-%m')
+            except ValueError:
+                flash('Formato de período inválido. Use YYYY-MM', 'error')
                 return redirect(url_for('importar_inventarios'))
             
             # Guardar archivo temporalmente
@@ -2915,38 +3032,43 @@ def importar_inventarios():
                                 prefijo = {'ALMACEN GENERAL': 'ALM', 'QUIMICOS': 'QUI', 'POSCOSECHA': 'POS'}
                                 codigo = f"{prefijo[tipo_inventario]}-{row-1:04d}"
                                 
-                                # Verificar si ya existe
-                                result = conn.execute(text("""
-                                    SELECT id FROM producto WHERE codigo = :codigo
-                                """), {'codigo': codigo})
-                                
-                                if result.fetchone():
-                                    productos_duplicados += 1
-                                    continue
-                                
-                                # Insertar producto
-                                descripcion = f'Importado desde Excel - {tipo_inventario}'
-                                if tipo_inventario == 'QUIMICOS' and clase:
-                                    descripcion += f' - Clase: {clase}'
-                                
-                                conn.execute(text("""
-                                    INSERT INTO producto (
-                                        codigo, nombre, descripcion, categoria, unidad_medida,
-                                        precio_unitario, stock_actual, proveedor, activo, created_at
-                                    ) VALUES (
-                                        :codigo, :nombre, :descripcion, :categoria, :unidad_medida,
-                                        :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
-                                    )
-                                """), {
-                                    'codigo': codigo,
-                                    'nombre': producto,
-                                    'descripcion': descripcion,
-                                    'categoria': tipo_inventario,
-                                    'unidad_medida': 'UNIDAD',
-                                    'precio_unitario': valor_und,
-                                    'stock_actual': int(saldo),
-                                    'proveedor': proveedor
-                                })
+                                        # Verificar si ya existe en el mismo período y categoría
+                                        result = conn.execute(text("""
+                                            SELECT id FROM producto WHERE codigo = :codigo AND categoria = :categoria AND periodo = :periodo
+                                        """), {
+                                            'codigo': codigo,
+                                            'categoria': tipo_inventario,
+                                            'periodo': periodo_importacion
+                                        })
+                                        
+                                        if result.fetchone():
+                                            productos_duplicados += 1
+                                            continue
+                                        
+                                        # Insertar producto
+                                        descripcion = f'Importado desde Excel - {tipo_inventario} - {periodo_importacion}'
+                                        if tipo_inventario == 'QUIMICOS' and clase:
+                                            descripcion += f' - Clase: {clase}'
+                                        
+                                        conn.execute(text("""
+                                            INSERT INTO producto (
+                                                codigo, nombre, descripcion, categoria, periodo, unidad_medida,
+                                                precio_unitario, stock_actual, proveedor, activo, created_at
+                                            ) VALUES (
+                                                :codigo, :nombre, :descripcion, :categoria, :periodo, :unidad_medida,
+                                                :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
+                                            )
+                                        """), {
+                                            'codigo': codigo,
+                                            'nombre': producto,
+                                            'descripcion': descripcion,
+                                            'categoria': tipo_inventario,
+                                            'periodo': periodo_importacion,
+                                            'unidad_medida': 'UNIDAD',
+                                            'precio_unitario': valor_und,
+                                            'stock_actual': int(saldo),
+                                            'proveedor': proveedor
+                                        })
                                 
                                 productos_importados += 1
                                 
@@ -2979,9 +3101,12 @@ def importar_inventarios():
             flash(f'Error durante la importación: {str(e)}', 'error')
             return redirect(url_for('importar_inventarios'))
     
-    # GET: Mostrar formulario de importación
-    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
-    return render_template('importar_inventarios.html', categorias=categorias_fijas)
+            # GET: Mostrar formulario de importación
+            categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+            periodo_actual = get_periodo_actual()
+            return render_template('importar_inventarios.html', 
+                                 categorias=categorias_fijas,
+                                 periodo_actual=periodo_actual)
 
 @app.route('/inventarios/movimientos/nuevo', methods=['GET', 'POST'])
 @login_required
