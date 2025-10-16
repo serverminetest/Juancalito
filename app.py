@@ -2946,24 +2946,29 @@ def migrate_inventory_monthly():
             except Exception as e:
                 print(f"⚠️ Error agregando columnas: {e}")
         
-        # Obtener productos sin período
-        productos_sin_periodo = Producto.query.filter_by(periodo=None).all()
-        
-        if not productos_sin_periodo:
-            flash('No hay productos para migrar', 'info')
-            return redirect(url_for('inventarios'))
-        
-        # Asignar período actual a productos existentes
-        periodo_actual = get_periodo_actual()
-        productos_migrados = 0
-        
-        for producto in productos_sin_periodo:
-            producto.periodo = periodo_actual
-            productos_migrados += 1
-        
-        db.session.commit()
-        
-        flash(f'{productos_migrados} productos migrados al período {periodo_actual}', 'success')
+        # Obtener productos sin período (después de agregar la columna)
+        try:
+            productos_sin_periodo = Producto.query.filter_by(periodo=None).all()
+            
+            if not productos_sin_periodo:
+                flash('No hay productos para migrar', 'info')
+                return redirect(url_for('inventarios'))
+            
+            # Asignar período actual a productos existentes
+            periodo_actual = get_periodo_actual()
+            productos_migrados = 0
+            
+            for producto in productos_sin_periodo:
+                producto.periodo = periodo_actual
+                productos_migrados += 1
+            
+            db.session.commit()
+            
+            flash(f'{productos_migrados} productos migrados al período {periodo_actual}', 'success')
+            
+        except Exception as e:
+            print(f"⚠️ Error migrando productos: {e}")
+            flash(f'Columnas agregadas, pero error migrando productos: {str(e)}', 'warning')
         
     except Exception as e:
         db.session.rollback()
