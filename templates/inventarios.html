@@ -44,9 +44,12 @@
                             <button class="btn btn-outline-primary" onclick="cambiarPeriodo()">
                                 <i class="fas fa-search"></i> Cambiar
                             </button>
-                            <a href="{{ url_for('migrate_inventory_monthly') }}" class="btn btn-outline-warning" title="Migrar productos existentes">
-                                <i class="fas fa-sync"></i> Migrar
-                            </a>
+                                <a href="{{ url_for('copiar_inventario_mes_anterior') }}" class="btn btn-outline-info" title="Copiar inventario del mes anterior">
+                                    <i class="fas fa-copy"></i> Copiar Mes Anterior
+                                </a>
+                                <a href="{{ url_for('migrate_inventory_monthly') }}" class="btn btn-outline-warning" title="Migrar productos existentes">
+                                    <i class="fas fa-sync"></i> Migrar
+                                </a>
                         </div>
                     </div>
                 </div>

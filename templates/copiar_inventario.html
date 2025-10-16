@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Copiar Inventario del Mes Anterior{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-copy"></i> Copiar Inventario del Mes Anterior</h2>
+                <a href="{{ url_for('inventarios') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Inventarios
+                </a>
+            </div>
+
+            {% if productos_actuales > 0 %}
+            <div class="alert alert-warning" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> ¡Atención!</h4>
+                <p>Ya existen <strong>{{ productos_actuales }}</strong> productos en el período actual <strong>{{ periodo_actual }}</strong>.</p>
+                <p>No se pueden copiar productos cuando ya existen productos en el mes de destino.</p>
+                <hr>
+                <p class="mb-0">Si deseas copiar productos, primero elimina los productos existentes del período actual.</p>
+            </div>
+            {% elif productos_anteriores == 0 %}
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Sin productos para copiar</h4>
+                <p>No hay productos en el período <strong>{{ periodo_anterior }}</strong> para copiar.</p>
+                <p>Primero necesitas crear productos en el mes anterior o importarlos desde Excel.</p>
+            </div>
+            {% else %}
+            <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-check-circle"></i> Listo para copiar</h4>
+                <p>Se encontraron <strong>{{ productos_anteriores }}</strong> productos en el período <strong>{{ periodo_anterior }}</strong>.</p>
+                <p>Estos productos se copiarán al período actual <strong>{{ periodo_actual }}</strong> con stock inicial en 0.</p>
+            </div>
+            {% endif %}
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-calendar-minus"></i> Período Origen</h5>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="text-primary">{{ periodo_anterior }}</h3>
+                            <p class="mb-0">
+                                <strong>Productos disponibles:</strong> 
+                                <span class="badge bg-info">{{ productos_anteriores }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-calendar-plus"></i> Período Destino</h5>
+                        </div>
+                        <div class="card-body">
+                            <h3 class="text-success">{{ periodo_actual }}</h3>
+                            <p class="mb-0">
+                                <strong>Productos actuales:</strong> 
+                                <span class="badge bg-secondary">{{ productos_actuales }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if productos_actuales == 0 and productos_anteriores > 0 %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Información sobre la copia</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-check text-success"></i> Se copiarán:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-arrow-right text-muted"></i> Código del producto</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Nombre y descripción</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Categoría</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Unidad de medida</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Precio unitario</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Stock mínimo</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Ubicación y proveedor</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-times text-danger"></i> Se reiniciará:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-arrow-right text-muted"></i> <strong>Stock actual → 0</strong></li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> Fecha de creación</li>
+                                <li><i class="fas fa-arrow-right text-muted"></i> ID del producto</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <form method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-success btn-lg" 
+                            onclick="return confirm('¿Estás seguro de que quieres copiar {{ productos_anteriores }} productos del período {{ periodo_anterior }} al período {{ periodo_actual }}?')">
+                        <i class="fas fa-copy"></i> Copiar {{ productos_anteriores }} Productos
+                    </button>
+                </form>
+                <a href="{{ url_for('inventarios') }}" class="btn btn-outline-secondary btn-lg ms-2">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

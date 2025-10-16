@@ -2926,6 +2926,99 @@ def desactivar_producto_inventario(id):
     
     return redirect(url_for('productos_inventario'))
 
+@app.route('/inventarios/copiar-mes-anterior', methods=['GET', 'POST'])
+@login_required
+def copiar_inventario_mes_anterior():
+    """Copiar inventario del mes anterior al mes actual"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden copiar inventarios', 'error')
+        return redirect(url_for('inventarios'))
+    
+    if request.method == 'POST':
+        try:
+            # Obtener mes anterior
+            periodo_actual = get_periodo_actual()
+            año_actual = int(periodo_actual.split('-')[0])
+            mes_actual = int(periodo_actual.split('-')[1])
+            
+            # Calcular mes anterior
+            if mes_actual == 1:
+                mes_anterior = 12
+                año_anterior = año_actual - 1
+            else:
+                mes_anterior = mes_actual - 1
+                año_anterior = año_actual
+            
+            periodo_anterior = f"{año_anterior:04d}-{mes_anterior:02d}"
+            
+            # Verificar si ya existen productos en el mes actual
+            productos_actuales = Producto.query.filter_by(periodo=periodo_actual).count()
+            if productos_actuales > 0:
+                flash(f'Ya existen {productos_actuales} productos en el período {periodo_actual}. No se pueden copiar.', 'warning')
+                return redirect(url_for('inventarios'))
+            
+            # Obtener productos del mes anterior
+            productos_anteriores = Producto.query.filter_by(periodo=periodo_anterior, activo=True).all()
+            
+            if not productos_anteriores:
+                flash(f'No hay productos en el período {periodo_anterior} para copiar', 'warning')
+                return redirect(url_for('inventarios'))
+            
+            # Copiar productos al mes actual
+            productos_copiados = 0
+            for producto in productos_anteriores:
+                nuevo_producto = Producto(
+                    codigo=producto.codigo,
+                    nombre=producto.nombre,
+                    descripcion=producto.descripcion,
+                    categoria=producto.categoria,
+                    periodo=periodo_actual,
+                    unidad_medida=producto.unidad_medida,
+                    precio_unitario=producto.precio_unitario,
+                    stock_minimo=producto.stock_minimo,
+                    stock_actual=0,  # Stock inicial en 0 para el nuevo mes
+                    ubicacion=producto.ubicacion,
+                    proveedor=producto.proveedor,
+                    activo=True
+                )
+                db.session.add(nuevo_producto)
+                productos_copiados += 1
+            
+            db.session.commit()
+            
+            flash(f'✅ {productos_copiados} productos copiados desde {periodo_anterior} a {periodo_actual}. Stock inicializado en 0.', 'success')
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error copiando inventario: {str(e)}', 'error')
+        
+        return redirect(url_for('inventarios'))
+    
+    # GET: Mostrar página de confirmación
+    periodo_actual = get_periodo_actual()
+    año_actual = int(periodo_actual.split('-')[0])
+    mes_actual = int(periodo_actual.split('-')[1])
+    
+    # Calcular mes anterior
+    if mes_actual == 1:
+        mes_anterior = 12
+        año_anterior = año_actual - 1
+    else:
+        mes_anterior = mes_actual - 1
+        año_anterior = año_actual
+    
+    periodo_anterior = f"{año_anterior:04d}-{mes_anterior:02d}"
+    
+    # Verificar si ya existen productos en el mes actual
+    productos_actuales = Producto.query.filter_by(periodo=periodo_actual).count()
+    productos_anteriores = Producto.query.filter_by(periodo=periodo_anterior, activo=True).count()
+    
+    return render_template('copiar_inventario.html',
+                         periodo_actual=periodo_actual,
+                         periodo_anterior=periodo_anterior,
+                         productos_actuales=productos_actuales,
+                         productos_anteriores=productos_anteriores)
+
 @app.route('/migrate-inventory-monthly')
 @login_required
 def migrate_inventory_monthly():
