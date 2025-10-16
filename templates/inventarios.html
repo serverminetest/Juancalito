@@ -44,6 +44,9 @@
                             <button class="btn btn-outline-primary" onclick="cambiarPeriodo()">
                                 <i class="fas fa-search"></i> Cambiar
                             </button>
+                                <a href="{{ url_for('reportes_inventarios') }}" class="btn btn-outline-success" title="Ver reportes mensuales">
+                                    <i class="fas fa-chart-bar"></i> Reportes
+                                </a>
                                 <a href="{{ url_for('copiar_inventario_mes_anterior') }}" class="btn btn-outline-info" title="Copiar inventario del mes anterior">
                                     <i class="fas fa-copy"></i> Copiar Mes Anterior
                                 </a>

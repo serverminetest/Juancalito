@@ -3019,6 +3019,67 @@ def copiar_inventario_mes_anterior():
                          productos_actuales=productos_actuales,
                          productos_anteriores=productos_anteriores)
 
+@app.route('/inventarios/reportes')
+@login_required
+def reportes_inventarios():
+    """Generar reportes mensuales de inventarios"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden generar reportes', 'error')
+        return redirect(url_for('inventarios'))
+    
+    # Obtener período desde parámetros o usar el actual
+    periodo = request.args.get('periodo', get_periodo_actual())
+    
+    # Validar formato del período
+    try:
+        datetime.strptime(periodo, '%Y-%m')
+    except ValueError:
+        periodo = get_periodo_actual()
+    
+    # Obtener productos del período
+    productos = Producto.query.filter_by(periodo=periodo, activo=True).all()
+    
+    # Estadísticas por categoría
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    stats_por_categoria = {}
+    total_valor = 0
+    total_productos = 0
+    productos_bajo_stock = 0
+    
+    for categoria in categorias_fijas:
+        productos_cat = [p for p in productos if p.categoria == categoria]
+        cantidad_productos = len(productos_cat)
+        cantidad_bajo_stock = len([p for p in productos_cat if p.stock_actual <= p.stock_minimo])
+        valor_categoria = sum(p.stock_actual * p.precio_unitario for p in productos_cat)
+        
+        stats_por_categoria[categoria] = {
+            'productos': productos_cat,
+            'total_productos': cantidad_productos,
+            'productos_bajo_stock': cantidad_bajo_stock,
+            'valor_total': valor_categoria,
+            'stock_total': sum(p.stock_actual for p in productos_cat)
+        }
+        
+        total_valor += valor_categoria
+        total_productos += cantidad_productos
+        productos_bajo_stock += cantidad_bajo_stock
+    
+    # Obtener períodos disponibles para el selector
+    try:
+        periodos_disponibles = db.session.query(Producto.periodo).distinct().order_by(Producto.periodo.desc()).all()
+        periodos_disponibles = [p[0] for p in periodos_disponibles if p[0] is not None]
+    except Exception as e:
+        print(f"⚠️ Error obteniendo períodos: {e}")
+        periodos_disponibles = [periodo]
+    
+    return render_template('reportes_inventarios.html',
+                         periodo=periodo,
+                         periodos_disponibles=periodos_disponibles,
+                         stats_por_categoria=stats_por_categoria,
+                         total_productos=total_productos,
+                         total_valor=total_valor,
+                         productos_bajo_stock=productos_bajo_stock)
+
 @app.route('/migrate-inventory-monthly')
 @login_required
 def migrate_inventory_monthly():
