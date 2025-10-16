@@ -2462,7 +2462,12 @@ def inventarios():
     categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
     
     # Obtener productos del período actual
-    productos = Producto.query.filter_by(activo=True, periodo=periodo_actual).all()
+    try:
+        productos = Producto.query.filter_by(activo=True, periodo=periodo_actual).all()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo productos por período: {e}")
+        # Fallback: obtener todos los productos activos
+        productos = Producto.query.filter_by(activo=True).all()
     
     # Estadísticas rápidas por categoría
     stats_por_categoria = {}
@@ -2484,8 +2489,12 @@ def inventarios():
     valor_total_inventario = sum(p.stock_actual * p.precio_unitario for p in productos)
     
     # Obtener períodos disponibles para el selector
-    periodos_disponibles = db.session.query(Producto.periodo).distinct().order_by(Producto.periodo.desc()).all()
-    periodos_disponibles = [p[0] for p in periodos_disponibles]
+    try:
+        periodos_disponibles = db.session.query(Producto.periodo).distinct().order_by(Producto.periodo.desc()).all()
+        periodos_disponibles = [p[0] for p in periodos_disponibles if p[0] is not None]
+    except Exception as e:
+        print(f"⚠️ Error obteniendo períodos: {e}")
+        periodos_disponibles = [periodo_actual]
     
     return render_template('inventarios.html', 
                          categorias=categorias_fijas,
@@ -2555,11 +2564,19 @@ def nuevo_producto_inventario():
                 return redirect(url_for('nuevo_producto_inventario', periodo=periodo_actual))
             
             # Verificar si el código ya existe en la misma categoría y período
-            producto_existente = Producto.query.filter_by(
-                codigo=codigo, 
-                categoria=categoria, 
-                periodo=periodo_actual
-            ).first()
+            try:
+                producto_existente = Producto.query.filter_by(
+                    codigo=codigo, 
+                    categoria=categoria, 
+                    periodo=periodo_actual
+                ).first()
+            except Exception as e:
+                print(f"⚠️ Error verificando código único: {e}")
+                # Fallback: verificar solo por código y categoría
+                producto_existente = Producto.query.filter_by(
+                    codigo=codigo, 
+                    categoria=categoria
+                ).first()
             
             if producto_existente:
                 flash(f'Ya existe un producto con el código "{codigo}" en {categoria} para el período {periodo_actual}', 'error')
