@@ -2881,14 +2881,6 @@ def desactivar_producto_inventario(id):
     
     return redirect(url_for('productos_inventario'))
 
-@app.route('/inventarios/importar', methods=['GET', 'POST'])
-@login_required
-def importar_inventarios():
-    """Importar inventarios desde archivos Excel"""
-    if not current_user.is_admin:
-        flash('Solo los administradores pueden importar inventarios', 'error')
-        return redirect(url_for('inventarios'))
-
 @app.route('/migrate-inventory-monthly')
 @login_required
 def migrate_inventory_monthly():
