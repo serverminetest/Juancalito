@@ -722,7 +722,7 @@ def generar_token_diario():
     """Genera un token único para el día actual que persiste 24 horas"""
     fecha_actual = date.today().strftime('%Y-%m-%d')
     # Usar una clave secreta fija para que el token sea consistente durante el día
-    clave_secreta = "juancalito_sas_2024"
+    clave_secreta = "flores_juncalito_sas_2024"
     token_base = f"{clave_secreta}_{fecha_actual}"
     return hashlib.sha256(token_base.encode()).hexdigest()[:32]
 
@@ -735,7 +735,7 @@ def generar_token_diario_visitantes():
     """Genera un token único para visitantes del día actual que persiste 24 horas"""
     fecha_actual = date.today().strftime('%Y-%m-%d')
     # Usar una clave secreta diferente para visitantes
-    clave_secreta = "juancalito_visitantes_2024"
+    clave_secreta = "flores_juncalito_visitantes_2024"
     token_base = f"{clave_secreta}_{fecha_actual}"
     return hashlib.sha256(token_base.encode()).hexdigest()[:32]
 
@@ -2452,17 +2452,17 @@ def init_db():
             
             # Crear usuario administrador por defecto
             print("👤 Verificando usuario administrador...")
-            admin_user = User.query.filter_by(email='admin@juancalito.com').first()
+            admin_user = User.query.filter_by(email='admin@floresjuncalito.com').first()
             if not admin_user:
                 admin_user = User(
-                    email='admin@juancalito.com',
+                    email='admin@floresjuncalito.com',
                     username='Administrador',
                     password_hash=generate_password_hash('nueva_contraseña_2024'),
                     is_admin=True
                 )
                 db.session.add(admin_user)
                 db.session.commit()
-                print("✅ Usuario administrador creado: admin@juancalito.com / nueva_contraseña_2024")
+                print("✅ Usuario administrador creado: admin@floresjuncalito.com / nueva_contraseña_2024")
             else:
                 print("✅ Usuario administrador ya existe")
             

@@ -1,6 +1,6 @@
-# Juancalito SAS - Sistema de Gestión
+# Flores Juncalito SAS - Sistema de Gestión
 
-Sistema completo de gestión de empleados, contratos, asistencia y visitantes para Juancalito SAS.
+Sistema completo de gestión de empleados, contratos, asistencia y visitantes para Flores Juncalito SAS.
 
 ## 🚀 Características
 
@@ -23,8 +23,8 @@ Sistema completo de gestión de empleados, contratos, asistencia y visitantes pa
 
 1. **Clonar el repositorio**:
 ```bash
-git clone https://github.com/serverminetest/Juancalito.git
-cd Juancalito
+git clone https://github.com/serverminetest/FloresJuncalito.git
+cd FloresJuncalito
 ```
 
 2. **Instalar dependencias**:
@@ -39,7 +39,7 @@ python app.py
 
 4. **Acceder a la aplicación**:
 - URL: http://localhost:5000
-- Usuario: `admin@juancalito.com`
+- Usuario: `admin@floresjuncalito.com`
 - Contraseña: `nueva_contraseña_2024`
 
 ## 🌐 Despliegue en Producción
@@ -94,4 +94,4 @@ Edita el archivo `templates/base.html` para cambiar la paleta de colores.
 
 ## 📄 Licencia
 
-Este proyecto es privado para Juancalito SAS.
+Este proyecto es privado para Flores Juncalito SAS.
