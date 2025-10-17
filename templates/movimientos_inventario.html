@@ -17,48 +17,175 @@
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="card mb-4">
+    <!-- Búsqueda Rápida -->
+    <div class="card mb-3">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-3">
-                    <label for="producto_id" class="form-label">Producto</label>
-                    <select name="producto_id" id="producto_id" class="form-select">
-                        <option value="">Todos los productos</option>
-                        {% for producto in productos %}
-                        <option value="{{ producto.id }}" {% if producto_actual == producto.id %}selected{% endif %}>
-                            {{ producto.codigo }} - {{ producto.nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="tipo_movimiento" class="form-label">Tipo</label>
-                    <select name="tipo_movimiento" id="tipo_movimiento" class="form-select">
-                        <option value="">Todos</option>
-                        <option value="ENTRADA" {% if tipo_actual == 'ENTRADA' %}selected{% endif %}>Entrada</option>
-                        <option value="SALIDA" {% if tipo_actual == 'SALIDA' %}selected{% endif %}>Salida</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="fecha_desde" class="form-label">Desde</label>
-                    <input type="date" name="fecha_desde" id="fecha_desde" class="form-control" value="{{ fecha_desde_actual }}">
-                </div>
-                <div class="col-md-2">
-                    <label for="fecha_hasta" class="form-label">Hasta</label>
-                    <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" value="{{ fecha_hasta_actual }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Filtrar
-                        </button>
-                    </div>
+            <form method="GET" id="form-busqueda">
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="busqueda" id="busqueda" class="form-control" 
+                           placeholder="Buscar por producto, responsable, motivo, referencia..." 
+                           value="{{ busqueda_actual }}" autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusqueda()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosAvanzados">
+                        <i class="fas fa-filter"></i> Filtros
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+
+    <!-- Filtros Avanzados (Colapsable) -->
+    <div class="collapse" id="filtrosAvanzados">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-sliders-h"></i> Filtros Avanzados</h6>
+            </div>
+            <div class="card-body">
+                <form method="GET" id="form-filtros" class="row g-3">
+                    <!-- Buscar (hidden) -->
+                    <input type="hidden" name="busqueda" value="{{ busqueda_actual }}">
+                    
+                    <!-- Producto específico -->
+                    <div class="col-md-3">
+                        <label for="producto_id" class="form-label"><i class="fas fa-box"></i> Producto</label>
+                        <select name="producto_id" id="producto_id" class="form-select">
+                            <option value="">Todos los productos</option>
+                            {% for producto in productos %}
+                            <option value="{{ producto.id }}" {% if producto_actual == producto.id %}selected{% endif %}>
+                                {{ producto.codigo }} - {{ producto.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Tipo de movimiento -->
+                    <div class="col-md-2">
+                        <label for="tipo_movimiento" class="form-label"><i class="fas fa-exchange-alt"></i> Tipo</label>
+                        <select name="tipo_movimiento" id="tipo_movimiento" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="ENTRADA" {% if tipo_actual == 'ENTRADA' %}selected{% endif %}>
+                                <i class="fas fa-arrow-down"></i> Entrada
+                            </option>
+                            <option value="SALIDA" {% if tipo_actual == 'SALIDA' %}selected{% endif %}>
+                                <i class="fas fa-arrow-up"></i> Salida
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div class="col-md-2">
+                        <label for="categoria" class="form-label"><i class="fas fa-tags"></i> Categoría</label>
+                        <select name="categoria" id="categoria" class="form-select">
+                            <option value="">Todas</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat }}" {% if categoria_actual == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Período -->
+                    <div class="col-md-2">
+                        <label for="periodo" class="form-label"><i class="fas fa-calendar"></i> Período</label>
+                        <select name="periodo" id="periodo" class="form-select">
+                            <option value="">Todos</option>
+                            {% for p in periodos_disponibles %}
+                            <option value="{{ p }}" {% if periodo_actual == p %}selected{% endif %}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Responsable -->
+                    <div class="col-md-3">
+                        <label for="responsable" class="form-label"><i class="fas fa-user"></i> Responsable</label>
+                        <select name="responsable" id="responsable" class="form-select">
+                            <option value="">Todos</option>
+                            {% for resp in responsables %}
+                            <option value="{{ resp }}" {% if responsable_actual == resp %}selected{% endif %}>{{ resp }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Fecha desde -->
+                    <div class="col-md-2">
+                        <label for="fecha_desde" class="form-label"><i class="fas fa-calendar-alt"></i> Desde</label>
+                        <input type="date" name="fecha_desde" id="fecha_desde" class="form-control" value="{{ fecha_desde_actual }}">
+                    </div>
+
+                    <!-- Fecha hasta -->
+                    <div class="col-md-2">
+                        <label for="fecha_hasta" class="form-label"><i class="fas fa-calendar-check"></i> Hasta</label>
+                        <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" value="{{ fecha_hasta_actual }}">
+                    </div>
+
+                    <!-- Ordenar por -->
+                    <div class="col-md-3">
+                        <label for="orden" class="form-label"><i class="fas fa-sort"></i> Ordenar por</label>
+                        <select name="orden" id="orden" class="form-select">
+                            <option value="fecha_desc" {% if orden_actual == 'fecha_desc' %}selected{% endif %}>Fecha (más reciente)</option>
+                            <option value="fecha_asc" {% if orden_actual == 'fecha_asc' %}selected{% endif %}>Fecha (más antiguo)</option>
+                            <option value="cantidad_desc" {% if orden_actual == 'cantidad_desc' %}selected{% endif %}>Cantidad (mayor)</option>
+                            <option value="cantidad_asc" {% if orden_actual == 'cantidad_asc' %}selected{% endif %}>Cantidad (menor)</option>
+                            <option value="producto" {% if orden_actual == 'producto' %}selected{% endif %}>Por producto</option>
+                        </select>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="col-md-5 d-flex gap-2 align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Aplicar Filtros
+                        </button>
+                        <a href="{{ url_for('movimientos_inventario') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo"></i> Limpiar Todo
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    {% if movimientos %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4>{{ movimientos|length }}</h4>
+                    <small>Total Movimientos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4>{{ total_entradas }}</h4>
+                    <small>Total Entradas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h4>{{ total_salidas }}</h4>
+                    <small>Total Salidas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h4>${{ "{:,.0f}".format(valor_total_movimientos) }}</h4>
+                    <small>Valor Total</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Tabla de Movimientos -->
     <div class="card">
@@ -197,4 +324,20 @@
         </div>
     </div>
 </div>
+
+<script>
+function limpiarBusqueda() {
+    document.getElementById('busqueda').value = '';
+    document.getElementById('form-busqueda').submit();
+}
+
+// Atajos de teclado
+document.addEventListener('keydown', function(e) {
+    // Ctrl+F para enfocar búsqueda
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('busqueda').focus();
+    }
+});
+</script>
 {% endblock %}

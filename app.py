@@ -2746,20 +2746,52 @@ def nuevo_producto_inventario():
 @app.route('/inventarios/movimientos')
 @login_required
 def movimientos_inventario():
-    """Historial de movimientos de inventario"""
+    """Historial de movimientos de inventario con búsqueda avanzada"""
+    # Parámetros de búsqueda y filtros
     producto_id = request.args.get('producto_id', type=int)
+    busqueda = request.args.get('busqueda', '').strip()
     tipo_movimiento = request.args.get('tipo_movimiento', '')
+    categoria = request.args.get('categoria', '')
+    periodo = request.args.get('periodo', '')
+    responsable = request.args.get('responsable', '').strip()
     fecha_desde = request.args.get('fecha_desde', '')
     fecha_hasta = request.args.get('fecha_hasta', '')
+    orden = request.args.get('orden', 'fecha_desc')
     
-    query = MovimientoInventario.query
+    query = MovimientoInventario.query.join(Producto)
     
+    # Filtro por producto específico
     if producto_id:
-        query = query.filter_by(producto_id=producto_id)
+        query = query.filter(MovimientoInventario.producto_id == producto_id)
     
+    # Búsqueda por código o nombre de producto, responsable, motivo, referencia
+    if busqueda:
+        search_filter = db.or_(
+            Producto.codigo.ilike(f'%{busqueda}%'),
+            Producto.nombre.ilike(f'%{busqueda}%'),
+            MovimientoInventario.responsable.ilike(f'%{busqueda}%'),
+            MovimientoInventario.motivo.ilike(f'%{busqueda}%'),
+            MovimientoInventario.referencia.ilike(f'%{busqueda}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Filtro por tipo de movimiento
     if tipo_movimiento:
-        query = query.filter_by(tipo_movimiento=tipo_movimiento)
+        query = query.filter(MovimientoInventario.tipo_movimiento == tipo_movimiento)
     
+    # Filtro por categoría del producto
+    if categoria:
+        query = query.filter(Producto.categoria == categoria)
+    
+    # Filtro por período
+    if periodo:
+        query = query.filter(MovimientoInventario.periodo == periodo)
+    
+    # Filtro por responsable
+    if responsable:
+        query = query.filter(MovimientoInventario.responsable.ilike(f'%{responsable}%'))
+    
+    # Filtro por rango de fechas
     if fecha_desde:
         try:
             fecha_desde_obj = datetime.strptime(fecha_desde, '%Y-%m-%d')
@@ -2770,20 +2802,65 @@ def movimientos_inventario():
     if fecha_hasta:
         try:
             fecha_hasta_obj = datetime.strptime(fecha_hasta, '%Y-%m-%d')
-            query = query.filter(MovimientoInventario.fecha_movimiento <= fecha_hasta_obj)
+            # Agregar 1 día para incluir todo el día final
+            fecha_hasta_obj = fecha_hasta_obj + timedelta(days=1)
+            query = query.filter(MovimientoInventario.fecha_movimiento < fecha_hasta_obj)
         except ValueError:
             pass
     
-    movimientos = query.order_by(MovimientoInventario.fecha_movimiento.desc()).all()
-    productos = Producto.query.filter_by(activo=True).all()
+    # Ordenamiento
+    if orden == 'fecha_desc':
+        query = query.order_by(MovimientoInventario.fecha_movimiento.desc())
+    elif orden == 'fecha_asc':
+        query = query.order_by(MovimientoInventario.fecha_movimiento.asc())
+    elif orden == 'cantidad_desc':
+        query = query.order_by(MovimientoInventario.cantidad.desc())
+    elif orden == 'cantidad_asc':
+        query = query.order_by(MovimientoInventario.cantidad.asc())
+    elif orden == 'producto':
+        query = query.order_by(Producto.nombre, MovimientoInventario.fecha_movimiento.desc())
+    
+    movimientos = query.all()
+    productos = Producto.query.filter_by(activo=True).order_by(Producto.nombre).all()
+    
+    # Obtener categorías y períodos disponibles
+    categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    try:
+        periodos_disponibles = db.session.query(MovimientoInventario.periodo).distinct().order_by(MovimientoInventario.periodo.desc()).all()
+        periodos_disponibles = [p[0] for p in periodos_disponibles if p[0] is not None]
+    except:
+        periodos_disponibles = []
+    
+    # Obtener responsables únicos
+    try:
+        responsables = db.session.query(MovimientoInventario.responsable).distinct().filter(MovimientoInventario.responsable.isnot(None)).all()
+        responsables = sorted([r[0] for r in responsables if r[0] and r[0].strip()])
+    except:
+        responsables = []
+    
+    # Calcular estadísticas
+    total_entradas = sum(m.cantidad for m in movimientos if m.tipo_movimiento == 'ENTRADA')
+    total_salidas = sum(m.cantidad for m in movimientos if m.tipo_movimiento == 'SALIDA')
+    valor_total_movimientos = sum(m.total or 0 for m in movimientos)
     
     return render_template('movimientos_inventario.html',
                          movimientos=movimientos,
                          productos=productos,
+                         categorias=categorias_fijas,
+                         periodos_disponibles=periodos_disponibles,
+                         responsables=responsables,
                          producto_actual=producto_id,
+                         busqueda_actual=busqueda,
                          tipo_actual=tipo_movimiento,
+                         categoria_actual=categoria,
+                         periodo_actual=periodo,
+                         responsable_actual=responsable,
                          fecha_desde_actual=fecha_desde,
-                         fecha_hasta_actual=fecha_hasta)
+                         fecha_hasta_actual=fecha_hasta,
+                         orden_actual=orden,
+                         total_entradas=total_entradas,
+                         total_salidas=total_salidas,
+                         valor_total_movimientos=valor_total_movimientos)
 
 # Rutas de categorías eliminadas - se usan categorías fijas: ALMACEN GENERAL, QUIMICOS, POSCOSECHA
 
