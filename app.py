@@ -2537,32 +2537,126 @@ def inventarios():
 @app.route('/inventarios/productos')
 @login_required
 def productos_inventario():
-    """Lista de productos del inventario"""
+    """Lista de productos del inventario con búsqueda avanzada"""
     categoria = request.args.get('categoria', '')
     busqueda = request.args.get('busqueda', '').strip()
+    periodo = request.args.get('periodo', '')
+    orden = request.args.get('orden', 'nombre')
+    stock_bajo = request.args.get('stock_bajo', '')
+    precio_min = request.args.get('precio_min', '').strip()
+    precio_max = request.args.get('precio_max', '').strip()
     
     query = Producto.query.filter_by(activo=True)
     
+    # Filtro por categoría
     if categoria:
         query = query.filter_by(categoria=categoria)
     
-    if busqueda:
-        query = query.filter(
-            db.or_(
-                Producto.nombre.contains(busqueda),
-                Producto.codigo.contains(busqueda),
-                Producto.descripcion.contains(busqueda)
-            )
-        )
+    # Filtro por período
+    if periodo:
+        query = query.filter_by(periodo=periodo)
     
-    productos = query.order_by(Producto.nombre).all()
+    # Búsqueda mejorada (código, nombre, descripción, proveedor, ubicación)
+    if busqueda:
+        search_filter = db.or_(
+            Producto.nombre.contains(busqueda),
+            Producto.codigo.contains(busqueda),
+            Producto.descripcion.contains(busqueda),
+            Producto.proveedor.contains(busqueda),
+            Producto.ubicacion.contains(busqueda)
+        )
+        query = query.filter(search_filter)
+    
+    # Filtro de stock bajo
+    if stock_bajo:
+        query = query.filter(Producto.stock_actual <= Producto.stock_minimo)
+    
+    # Filtro por rango de precio
+    if precio_min:
+        try:
+            query = query.filter(Producto.precio_unitario >= float(precio_min))
+        except ValueError:
+            pass
+    
+    if precio_max:
+        try:
+            query = query.filter(Producto.precio_unitario <= float(precio_max))
+        except ValueError:
+            pass
+    
+    # Ordenamiento
+    if orden == 'nombre':
+        query = query.order_by(Producto.nombre)
+    elif orden == 'codigo':
+        query = query.order_by(Producto.codigo)
+    elif orden == 'stock_asc':
+        query = query.order_by(Producto.stock_actual)
+    elif orden == 'stock_desc':
+        query = query.order_by(Producto.stock_actual.desc())
+    elif orden == 'precio_asc':
+        query = query.order_by(Producto.precio_unitario)
+    elif orden == 'precio_desc':
+        query = query.order_by(Producto.precio_unitario.desc())
+    elif orden == 'categoria':
+        query = query.order_by(Producto.categoria, Producto.nombre)
+    
+    productos = query.all()
     categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+    
+    # Obtener períodos disponibles
+    try:
+        periodos_disponibles = db.session.query(Producto.periodo).distinct().order_by(Producto.periodo.desc()).all()
+        periodos_disponibles = [p[0] for p in periodos_disponibles if p[0] is not None]
+    except:
+        periodos_disponibles = []
     
     return render_template('productos_inventario.html', 
                          productos=productos, 
                          categorias=categorias_fijas,
                          categoria_actual=categoria,
-                         busqueda_actual=busqueda)
+                         busqueda_actual=busqueda,
+                         periodo_actual=periodo,
+                         periodos_disponibles=periodos_disponibles,
+                         orden_actual=orden,
+                         stock_bajo_activo=stock_bajo,
+                         precio_min_actual=precio_min,
+                         precio_max_actual=precio_max)
+
+@app.route('/api/buscar-productos')
+@login_required
+def api_buscar_productos():
+    """API para búsqueda rápida de productos"""
+    q = request.args.get('q', '').strip()
+    limit = request.args.get('limit', 10, type=int)
+    
+    if not q or len(q) < 2:
+        return jsonify([])
+    
+    # Buscar en código, nombre y proveedor
+    productos = Producto.query.filter(
+        Producto.activo == True,
+        db.or_(
+            Producto.codigo.ilike(f'%{q}%'),
+            Producto.nombre.ilike(f'%{q}%'),
+            Producto.proveedor.ilike(f'%{q}%')
+        )
+    ).limit(limit).all()
+    
+    resultados = []
+    for p in productos:
+        resultados.append({
+            'id': p.id,
+            'codigo': p.codigo,
+            'nombre': p.nombre,
+            'categoria': p.categoria,
+            'stock_actual': p.stock_actual,
+            'unidad_medida': p.unidad_medida,
+            'precio_unitario': float(p.precio_unitario),
+            'proveedor': p.proveedor or '',
+            'periodo': p.periodo
+        })
+    
+    return jsonify(resultados)
 
 @app.route('/inventarios/productos/nuevo', methods=['GET', 'POST'])
 @login_required

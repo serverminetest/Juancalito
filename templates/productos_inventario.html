@@ -24,38 +24,107 @@
         </div>
     </div>
 
-    <!-- Filtros y Búsqueda -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-filter"></i> Filtros y Búsqueda</h5>
-        </div>
+    <!-- Búsqueda Rápida -->
+    <div class="card mb-3">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label for="categoria" class="form-label">Categoría</label>
-                    <select name="categoria" id="categoria" class="form-select">
-                        <option value="">Todas las categorías</option>
-                        {% for categoria in categorias %}
-                        <option value="{{ categoria }}" {% if categoria_actual == categoria %}selected{% endif %}>
-                            {{ categoria }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label for="busqueda" class="form-label">Buscar</label>
-                    <input type="text" name="busqueda" id="busqueda" class="form-control" 
-                           placeholder="Código, nombre o descripción..." value="{{ busqueda_actual }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Buscar
-                        </button>
+            <div class="input-group input-group-lg">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" id="busqueda-rapida" class="form-control" 
+                       placeholder="Buscar por código, nombre, proveedor, ubicación..." 
+                       value="{{ busqueda_actual }}" autocomplete="off">
+                <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusqueda()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosAvanzados">
+                    <i class="fas fa-filter"></i> Filtros Avanzados
+                </button>
+            </div>
+            <div id="resultados-sugerencias" class="list-group mt-2" style="display: none; position: absolute; z-index: 1000; width: calc(100% - 2rem);"></div>
+        </div>
+    </div>
+
+    <!-- Filtros Avanzados (Colapsable) -->
+    <div class="collapse" id="filtrosAvanzados">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-sliders-h"></i> Filtros Avanzados</h6>
+            </div>
+            <div class="card-body">
+                <form method="GET" id="form-filtros" class="row g-3">
+                    <!-- Búsqueda (hidden para mantener valor) -->
+                    <input type="hidden" name="busqueda" id="busqueda-hidden" value="{{ busqueda_actual }}">
+                    
+                    <!-- Categoría -->
+                    <div class="col-md-3">
+                        <label for="categoria" class="form-label"><i class="fas fa-tags"></i> Categoría</label>
+                        <select name="categoria" id="categoria" class="form-select">
+                            <option value="">Todas</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria }}" {% if categoria_actual == categoria %}selected{% endif %}>
+                                {{ categoria }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
-                </div>
-            </form>
+
+                    <!-- Período -->
+                    <div class="col-md-3">
+                        <label for="periodo" class="form-label"><i class="fas fa-calendar"></i> Período</label>
+                        <select name="periodo" id="periodo" class="form-select">
+                            <option value="">Todos los períodos</option>
+                            {% for p in periodos_disponibles %}
+                            <option value="{{ p }}" {% if periodo_actual == p %}selected{% endif %}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Ordenar por -->
+                    <div class="col-md-3">
+                        <label for="orden" class="form-label"><i class="fas fa-sort"></i> Ordenar por</label>
+                        <select name="orden" id="orden" class="form-select">
+                            <option value="nombre" {% if orden_actual == 'nombre' %}selected{% endif %}>Nombre A-Z</option>
+                            <option value="codigo" {% if orden_actual == 'codigo' %}selected{% endif %}>Código</option>
+                            <option value="categoria" {% if orden_actual == 'categoria' %}selected{% endif %}>Categoría</option>
+                            <option value="stock_desc" {% if orden_actual == 'stock_desc' %}selected{% endif %}>Stock Mayor-Menor</option>
+                            <option value="stock_asc" {% if orden_actual == 'stock_asc' %}selected{% endif %}>Stock Menor-Mayor</option>
+                            <option value="precio_desc" {% if orden_actual == 'precio_desc' %}selected{% endif %}>Precio Mayor-Menor</option>
+                            <option value="precio_asc" {% if orden_actual == 'precio_asc' %}selected{% endif %}>Precio Menor-Mayor</option>
+                        </select>
+                    </div>
+
+                    <!-- Filtro rápido -->
+                    <div class="col-md-3">
+                        <label for="stock_bajo" class="form-label"><i class="fas fa-exclamation-triangle"></i> Filtro Rápido</label>
+                        <select name="stock_bajo" id="stock_bajo" class="form-select">
+                            <option value="">Todos los productos</option>
+                            <option value="1" {% if stock_bajo_activo %}selected{% endif %}>Solo Stock Bajo</option>
+                        </select>
+                    </div>
+
+                    <!-- Rango de precio -->
+                    <div class="col-md-3">
+                        <label for="precio_min" class="form-label"><i class="fas fa-dollar-sign"></i> Precio Mínimo</label>
+                        <input type="number" name="precio_min" id="precio_min" class="form-control" 
+                               placeholder="$0" value="{{ precio_min_actual }}" step="0.01">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="precio_max" class="form-label"><i class="fas fa-dollar-sign"></i> Precio Máximo</label>
+                        <input type="number" name="precio_max" id="precio_max" class="form-control" 
+                               placeholder="$999999" value="{{ precio_max_actual }}" step="0.01">
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="col-md-6 d-flex gap-2 align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Aplicar Filtros
+                        </button>
+                        <a href="{{ url_for('productos_inventario') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo"></i> Limpiar Todo
+                        </a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -228,4 +297,141 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+// Búsqueda rápida con autocompletado
+let timeoutBusqueda;
+const inputBusqueda = document.getElementById('busqueda-rapida');
+const resultadosSugerencias = document.getElementById('resultados-sugerencias');
+const inputBusquedaHidden = document.getElementById('busqueda-hidden');
+
+inputBusqueda.addEventListener('input', function() {
+    clearTimeout(timeoutBusqueda);
+    const query = this.value.trim();
+    
+    // Actualizar campo hidden
+    if (inputBusquedaHidden) {
+        inputBusquedaHidden.value = query;
+    }
+    
+    if (query.length < 2) {
+        resultadosSugerencias.style.display = 'none';
+        resultadosSugerencias.innerHTML = '';
+        return;
+    }
+    
+    // Esperar 300ms antes de buscar
+    timeoutBusqueda = setTimeout(() => {
+        fetch(`/api/buscar-productos?q=${encodeURIComponent(query)}&limit=8`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) {
+                    resultadosSugerencias.style.display = 'none';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach(producto => {
+                    const stockClass = producto.stock_actual <= 0 ? 'danger' : 
+                                      producto.stock_actual <= 10 ? 'warning' : 'success';
+                    
+                    html += `
+                        <a href="/inventarios/productos/editar/${producto.id}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <span class="badge bg-secondary">${producto.codigo}</span>
+                                        ${producto.nombre}
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-tag"></i> ${producto.categoria}
+                                        ${producto.proveedor ? ' | <i class="fas fa-truck"></i> ' + producto.proveedor : ''}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-${stockClass}">${producto.stock_actual} ${producto.unidad_medida}</span>
+                                    <br>
+                                    <small class="text-muted">$${producto.precio_unitario.toFixed(2)}</small>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+                
+                resultadosSugerencias.innerHTML = html;
+                resultadosSugerencias.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error en búsqueda:', error);
+            });
+    }, 300);
+});
+
+// Cerrar sugerencias al hacer clic fuera
+document.addEventListener('click', function(e) {
+    if (!inputBusqueda.contains(e.target) && !resultadosSugerencias.contains(e.target)) {
+        resultadosSugerencias.style.display = 'none';
+    }
+});
+
+// Búsqueda con Enter
+inputBusqueda.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        buscarProductos();
+    }
+});
+
+function buscarProductos() {
+    const query = inputBusqueda.value.trim();
+    if (query) {
+        window.location.href = `{{ url_for('productos_inventario') }}?busqueda=${encodeURIComponent(query)}`;
+    }
+}
+
+function limpiarBusqueda() {
+    inputBusqueda.value = '';
+    if (inputBusquedaHidden) {
+        inputBusquedaHidden.value = '';
+    }
+    resultadosSugerencias.style.display = 'none';
+    resultadosSugerencias.innerHTML = '';
+}
+
+// Auto-submit en filtros avanzados cuando se cambia algo
+const formFiltros = document.getElementById('form-filtros');
+if (formFiltros) {
+    const selectores = formFiltros.querySelectorAll('select:not(#stock_bajo)');
+    selectores.forEach(select => {
+        select.addEventListener('change', () => {
+            // Dar tiempo para ver el cambio
+            setTimeout(() => formFiltros.submit(), 100);
+        });
+    });
+}
+</script>
+
+<style>
+#resultados-sugerencias {
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#resultados-sugerencias .list-group-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+#resultados-sugerencias .list-group-item:hover {
+    border-left-color: #0d6efd;
+    transform: translateX(3px);
+}
+
+@media print {
+    #busqueda-rapida, #filtrosAvanzados, .btn {
+        display: none !important;
+    }
+}
+</style>
 {% endblock %}
