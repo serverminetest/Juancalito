@@ -2666,6 +2666,26 @@ def productos_inventario():
     except:
         periodos_disponibles = []
     
+    # Calcular estadísticas de los productos filtrados
+    total_productos = len(productos)
+    total_stock = sum(p.stock_actual for p in productos)
+    
+    # Calcular valor total excluyendo precios anormales (> $10M)
+    valor_total = sum(
+        p.stock_actual * p.precio_unitario 
+        for p in productos 
+        if p.precio_unitario and p.precio_unitario < 10000000
+    )
+    
+    # Productos con stock bajo
+    productos_stock_bajo = sum(1 for p in productos if p.stock_actual <= p.stock_minimo and p.stock_minimo > 0)
+    
+    # Identificar productos con precios anormales en los resultados
+    productos_precio_anormal = [
+        p for p in productos 
+        if p.precio_unitario and p.precio_unitario >= 10000000
+    ]
+    
     return render_template('productos_inventario.html', 
                          productos=productos, 
                          categorias=categorias_fijas,
@@ -2676,7 +2696,12 @@ def productos_inventario():
                          orden_actual=orden,
                          stock_bajo_activo=stock_bajo,
                          precio_min_actual=precio_min,
-                         precio_max_actual=precio_max)
+                         precio_max_actual=precio_max,
+                         total_productos=total_productos,
+                         total_stock=total_stock,
+                         valor_total=valor_total,
+                         productos_stock_bajo=productos_stock_bajo,
+                         productos_precio_anormal=productos_precio_anormal)
 
 @app.route('/api/buscar-productos')
 @login_required

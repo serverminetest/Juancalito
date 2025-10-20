@@ -134,7 +134,7 @@
         <div class="col-md-3">
             <div class="card bg-info text-white">
                 <div class="card-body text-center">
-                    <h4>{{ productos|length }}</h4>
+                    <h4>{{ total_productos }}</h4>
                     <small>Productos encontrados</small>
                 </div>
             </div>
@@ -142,7 +142,7 @@
         <div class="col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body text-center">
-                    <h4>{% set stock_bajo = [] %}{% for p in productos %}{% if p.stock_actual <= p.stock_minimo %}{% set _ = stock_bajo.append(p) %}{% endif %}{% endfor %}{{ stock_bajo|length }}</h4>
+                    <h4>{{ productos_stock_bajo }}</h4>
                     <small>Stock bajo</small>
                 </div>
             </div>
@@ -150,7 +150,7 @@
         <div class="col-md-3">
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
-                    <h4>{{ productos | sum(attribute='stock_actual') }}</h4>
+                    <h4>{{ "{:,}".format(total_stock) }}</h4>
                     <small>Total unidades</small>
                 </div>
             </div>
@@ -158,12 +158,24 @@
         <div class="col-md-3">
             <div class="card bg-primary text-white">
                 <div class="card-body text-center">
-                    <h4>${{ "{:,.0f}".format(productos | sum(attribute='precio_unitario') * productos | sum(attribute='stock_actual')) }}</h4>
-                    <small>Valor total</small>
+                    <h4>${{ "{:,.0f}".format(valor_total) }}</h4>
+                    <small>Valor total{% if productos_precio_anormal %} <i class="fas fa-exclamation-triangle" title="Excluyendo {{ productos_precio_anormal|length }} productos con precios anormales"></i>{% endif %}</small>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Alerta de productos con precios anormales -->
+    {% if productos_precio_anormal %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i> <strong>Atención:</strong> 
+        {{ productos_precio_anormal|length }} producto(s) con precios anormales (> $10,000,000) fueron excluidos del valor total.
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('diagnostico_precios', periodo=periodo_actual or '2025-10') }}" class="alert-link">Ver detalles y corregir</a>
+        {% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
     {% endif %}
 
     <!-- Lista de Productos -->
