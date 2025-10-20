@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Kardex - {{ producto.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-clipboard-list"></i> Kardex del Producto</h2>
+            <p class="text-muted mb-0">Historial detallado con saldo running</p>
+        </div>
+        <div>
+            <a href="{{ url_for('productos_inventario', categoria=producto.categoria) }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+    </div>
+
+    <!-- Información del Producto -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-box"></i> Información del Producto</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Código:</strong> {{ producto.codigo }}<br>
+                    <strong>Nombre:</strong> {{ producto.nombre }}<br>
+                    <strong>Categoría:</strong> <span class="badge bg-info">{{ producto.categoria }}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Unidad:</strong> {{ producto.unidad_medida }}<br>
+                    <strong>Precio Unit.:</strong> ${{ "{:,.0f}".format(producto.precio_unitario) }}<br>
+                    <strong>Stock Mínimo:</strong> {{ producto.stock_minimo }}
+                </div>
+                <div class="col-md-3">
+                    <strong>Ubicación:</strong> {{ producto.ubicacion or 'N/A' }}<br>
+                    <strong>Proveedor:</strong> {{ producto.proveedor or 'N/A' }}<br>
+                    <strong>Período:</strong> <span class="badge bg-secondary">{{ producto.periodo }}</span>
+                </div>
+                <div class="col-md-3">
+                    <strong>Saldo Inicial:</strong> <span class="badge bg-success">{{ producto.saldo_inicial }}</span><br>
+                    <strong>Stock Actual:</strong> 
+                    <span class="badge {% if producto.verificar_stock_bajo() %}bg-danger{% else %}bg-success{% endif %}">
+                        {{ producto.stock_actual }}
+                    </span><br>
+                    {% if producto.mes_cerrado %}
+                    <span class="badge bg-warning text-dark mt-1"><i class="fas fa-lock"></i> Mes Cerrado</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ producto.saldo_inicial }}</h3>
+                    <small>Saldo Inicial</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white text-center">
+                <div class="card-body">
+                    <h3>{{ total_entradas }}</h3>
+                    <small>Total Entradas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white text-center">
+                <div class="card-body">
+                    <h3>{{ total_salidas }}</h3>
+                    <small>Total Salidas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark text-white text-center">
+                <div class="card-body">
+                    <h3>{{ saldo_final }}</h3>
+                    <small>Saldo Final</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fórmula -->
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-calculator"></i> <strong>Fórmula:</strong> 
+        Saldo Final = Saldo Inicial ({{ producto.saldo_inicial }}) + Entradas ({{ total_entradas }}) - Salidas ({{ total_salidas }}) = <strong>{{ saldo_final }}</strong>
+    </div>
+
+    <!-- Tabla Kardex -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-list-alt"></i> Detalle de Movimientos ({{ kardex|length }} registros)</h5>
+        </div>
+        <div class="card-body">
+            {% if kardex %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="tabla-kardex">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Entrada</th>
+                            <th class="text-end">Salida</th>
+                            <th class="text-end">Saldo</th>
+                            <th>Motivo</th>
+                            <th>Referencia</th>
+                            <th>Responsable</th>
+                            <th>Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Fila de Saldo Inicial -->
+                        <tr class="table-secondary">
+                            <td colspan="4"><strong>SALDO INICIAL DEL PERÍODO</strong></td>
+                            <td class="text-end"><strong>{{ producto.saldo_inicial }}</strong></td>
+                            <td colspan="4">-</td>
+                        </tr>
+                        
+                        <!-- Movimientos -->
+                        {% for mov in kardex %}
+                        <tr>
+                            <td>{{ mov.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                {% if mov.tipo == 'ENTRADA' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-arrow-down"></i> ENTRADA
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-arrow-up"></i> SALIDA
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if mov.tipo == 'ENTRADA' %}{{ mov.cantidad }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if mov.tipo == 'SALIDA' %}{{ mov.cantidad }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-end">
+                                <strong 
+                                    {% if mov.saldo < producto.stock_minimo %}
+                                    class="text-danger"
+                                    {% endif %}
+                                >
+                                    {{ mov.saldo }}
+                                </strong>
+                            </td>
+                            <td>{{ mov.motivo or '-' }}</td>
+                            <td>{{ mov.referencia or '-' }}</td>
+                            <td>{{ mov.responsable or '-' }}</td>
+                            <td><small>{{ mov.usuario }}</small></td>
+                        </tr>
+                        {% endfor %}
+                        
+                        <!-- Fila de Saldo Final -->
+                        <tr class="table-primary">
+                            <td colspan="4"><strong>SALDO FINAL DEL PERÍODO</strong></td>
+                            <td class="text-end"><strong>{{ saldo_final }}</strong></td>
+                            <td colspan="4">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay movimientos registrados para este producto.
+                <br>
+                <strong>Saldo Inicial:</strong> {{ producto.saldo_inicial }} | 
+                <strong>Saldo Final:</strong> {{ saldo_final }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .sidebar, nav {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+    
+    .table {
+        font-size: 10px;
+    }
+    
+    .badge {
+        border: 1px solid #000;
+    }
+}
+</style>
+{% endblock %}
+

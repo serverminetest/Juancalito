@@ -618,12 +618,14 @@ class Producto(db.Model):
     unidad_medida = db.Column(db.String(20), nullable=False)  # kg, litros, unidades, etc.
     precio_unitario = db.Column(db.Numeric(10, 2), default=0)
     stock_minimo = db.Column(db.Integer, default=0)
+    saldo_inicial = db.Column(db.Integer, default=0)  # Saldo al inicio del período
     stock_actual = db.Column(db.Integer, default=0)
     ubicacion = db.Column(db.String(100))  # Estante, sección, etc.
     proveedor = db.Column(db.String(200))
     fecha_vencimiento = db.Column(db.Date)
     lote = db.Column(db.String(50))
     activo = db.Column(db.Boolean, default=True)
+    mes_cerrado = db.Column(db.Boolean, default=False)  # Si el mes está cerrado, no se puede editar
     created_at = db.Column(db.DateTime, default=colombia_now)
     updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
     
@@ -632,6 +634,27 @@ class Producto(db.Model):
     
     # Relación con movimientos
     movimientos = db.relationship('MovimientoInventario', backref='producto', lazy=True)
+    
+    def calcular_entradas(self):
+        """Calcula el total de entradas del período"""
+        return sum(m.cantidad for m in self.movimientos if m.tipo_movimiento == 'ENTRADA')
+    
+    def calcular_salidas(self):
+        """Calcula el total de salidas del período"""
+        return sum(m.cantidad for m in self.movimientos if m.tipo_movimiento == 'SALIDA')
+    
+    def calcular_saldo_final(self):
+        """Calcula el saldo final: Saldo Inicial + Entradas - Salidas"""
+        return self.saldo_inicial + self.calcular_entradas() - self.calcular_salidas()
+    
+    def recalcular_stock(self):
+        """Recalcula y actualiza el stock_actual basado en saldo inicial y movimientos"""
+        self.stock_actual = self.calcular_saldo_final()
+        return self.stock_actual
+    
+    def verificar_stock_bajo(self):
+        """Verifica si el stock está por debajo del mínimo"""
+        return self.stock_actual < self.stock_minimo if self.stock_minimo > 0 else False
 
 class MovimientoInventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2970,6 +2993,11 @@ def editar_producto_inventario(id):
     """Editar producto de inventario"""
     producto = Producto.query.get_or_404(id)
     
+    # Verificar si el mes está cerrado (solo admins pueden editar meses cerrados)
+    if hasattr(producto, 'mes_cerrado') and producto.mes_cerrado and not current_user.is_admin:
+        flash('❌ No se puede editar este producto. El período está cerrado. Contacte al administrador.', 'error')
+        return redirect(url_for('productos_inventario', categoria=producto.categoria))
+    
     if request.method == 'POST':
         try:
             codigo = request.form['codigo'].strip().upper()
@@ -2979,7 +3007,7 @@ def editar_producto_inventario(id):
             unidad_medida = request.form['unidad_medida']
             precio_unitario = float(request.form.get('precio_unitario', 0))
             stock_minimo = int(request.form.get('stock_minimo', 0))
-            stock_actual = int(request.form.get('stock_actual', 0))
+            saldo_inicial = int(request.form.get('saldo_inicial', 0))
             ubicacion = request.form.get('ubicacion', '').strip()
             proveedor = request.form.get('proveedor', '').strip()
             fecha_vencimiento = request.form.get('fecha_vencimiento')
@@ -3009,7 +3037,7 @@ def editar_producto_inventario(id):
             producto.unidad_medida = unidad_medida
             producto.precio_unitario = precio_unitario
             producto.stock_minimo = stock_minimo
-            producto.stock_actual = stock_actual
+            producto.saldo_inicial = saldo_inicial
             producto.ubicacion = ubicacion
             producto.proveedor = proveedor
             producto.lote = lote
@@ -3020,9 +3048,12 @@ def editar_producto_inventario(id):
             else:
                 producto.fecha_vencimiento = None
             
+            # Recalcular stock basado en movimientos
+            producto.recalcular_stock()
+            
             db.session.commit()
             
-            flash(f'Producto "{nombre}" actualizado exitosamente', 'success')
+            flash(f'Producto "{nombre}" actualizado exitosamente. Stock recalculado: {producto.stock_actual}', 'success')
             return redirect(url_for('productos_inventario'))
             
         except Exception as e:
@@ -3138,6 +3169,9 @@ def copiar_inventario_mes_anterior():
             # Copiar productos al mes actual
             productos_copiados = 0
             for producto in productos_anteriores:
+                # El saldo final del mes anterior se convierte en saldo inicial del nuevo mes
+                saldo_final_anterior = producto.calcular_saldo_final()
+                
                 nuevo_producto = Producto(
                     codigo=producto.codigo,
                     nombre=producto.nombre,
@@ -3147,17 +3181,23 @@ def copiar_inventario_mes_anterior():
                     unidad_medida=producto.unidad_medida,
                     precio_unitario=producto.precio_unitario,
                     stock_minimo=producto.stock_minimo,
-                    stock_actual=0,  # Stock inicial en 0 para el nuevo mes
+                    saldo_inicial=saldo_final_anterior,  # ✅ Saldo final del mes anterior
+                    stock_actual=saldo_final_anterior,   # ✅ Stock actual = saldo inicial (sin movimientos aún)
                     ubicacion=producto.ubicacion,
                     proveedor=producto.proveedor,
-                    activo=True
+                    activo=True,
+                    mes_cerrado=False  # El nuevo mes está abierto
                 )
                 db.session.add(nuevo_producto)
                 productos_copiados += 1
             
+            # Cerrar el mes anterior para evitar modificaciones
+            for producto in productos_anteriores:
+                producto.mes_cerrado = True
+            
             db.session.commit()
             
-            flash(f'✅ {productos_copiados} productos copiados desde {periodo_anterior} a {periodo_actual}. Stock inicializado en 0.', 'success')
+            flash(f'✅ {productos_copiados} productos copiados desde {periodo_anterior} a {periodo_actual}. Saldos iniciales configurados automáticamente. Mes {periodo_anterior} cerrado.', 'success')
             
         except Exception as e:
             db.session.rollback()
@@ -3527,16 +3567,22 @@ def nuevo_movimiento_inventario():
                 created_by=current_user.id
             )
             
-            # Actualizar stock del producto
-            if tipo_movimiento == 'ENTRADA':
-                producto.stock_actual += cantidad
-            else:  # SALIDA
-                producto.stock_actual -= cantidad
-            
+            # Actualizar stock del producto automáticamente
             db.session.add(nuevo_movimiento)
+            db.session.flush()  # Asegura que el movimiento esté en la sesión
+            
+            # Recalcular stock basado en saldo inicial + entradas - salidas
+            stock_anterior = producto.stock_actual
+            producto.recalcular_stock()
+            
             db.session.commit()
             
-            flash(f'Movimiento registrado exitosamente. Stock actual: {producto.stock_actual}', 'success')
+            # Verificar si stock está bajo
+            if producto.verificar_stock_bajo():
+                flash(f'⚠️ Movimiento registrado. Stock actual: {producto.stock_actual} (⚠️ STOCK BAJO - Mínimo: {producto.stock_minimo})', 'warning')
+            else:
+                flash(f'✓ Movimiento registrado exitosamente. Stock actualizado: {stock_anterior} → {producto.stock_actual}', 'success')
+            
             return redirect(url_for('movimientos_inventario'))
             
         except Exception as e:
@@ -3546,6 +3592,51 @@ def nuevo_movimiento_inventario():
     
     productos = Producto.query.filter_by(activo=True).all()
     return render_template('nuevo_movimiento_inventario.html', productos=productos)
+
+@app.route('/inventarios/productos/<int:id>/kardex')
+@login_required
+def kardex_producto(id):
+    """Ver kardex detallado de un producto (historial con saldo running)"""
+    producto = Producto.query.get_or_404(id)
+    
+    # Obtener todos los movimientos ordenados por fecha
+    movimientos = MovimientoInventario.query.filter_by(producto_id=id).order_by(MovimientoInventario.fecha_movimiento.asc()).all()
+    
+    # Calcular saldo running para cada movimiento
+    kardex = []
+    saldo_running = producto.saldo_inicial
+    
+    for mov in movimientos:
+        if mov.tipo_movimiento == 'ENTRADA':
+            saldo_running += mov.cantidad
+        else:  # SALIDA
+            saldo_running -= mov.cantidad
+        
+        kardex.append({
+            'fecha': mov.fecha_movimiento,
+            'tipo': mov.tipo_movimiento,
+            'cantidad': mov.cantidad,
+            'precio_unitario': mov.precio_unitario,
+            'total': mov.total,
+            'motivo': mov.motivo,
+            'referencia': mov.referencia,
+            'responsable': mov.responsable,
+            'observaciones': mov.observaciones,
+            'saldo': saldo_running,
+            'usuario': mov.usuario.username if mov.usuario else 'N/A'
+        })
+    
+    # Calcular totales
+    total_entradas = producto.calcular_entradas()
+    total_salidas = producto.calcular_salidas()
+    saldo_final = producto.calcular_saldo_final()
+    
+    return render_template('kardex_producto.html',
+                         producto=producto,
+                         kardex=kardex,
+                         total_entradas=total_entradas,
+                         total_salidas=total_salidas,
+                         saldo_final=saldo_final)
 
 # ===== RUTAS PARA SISTEMA DE NOTIFICACIONES =====
 
