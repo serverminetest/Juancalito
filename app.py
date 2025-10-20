@@ -3291,6 +3291,178 @@ def reportes_inventarios():
                          total_valor=total_valor,
                          productos_bajo_stock=productos_bajo_stock)
 
+@app.route('/inventarios/procedimientos/cerrar-mes/<periodo>', methods=['POST'])
+@login_required
+def cerrar_mes_procedimiento(periodo):
+    """Cerrar mes usando procedimiento almacenado"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden cerrar meses', 'error')
+        return redirect(url_for('inventarios'))
+    
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT * FROM cerrar_mes_inventario(:periodo)"), 
+                                   {'periodo': periodo})
+        resultado = result.fetchone()
+        
+        if resultado:
+            flash(resultado[2], 'success')  # mensaje
+        else:
+            flash(f'Mes {periodo} cerrado exitosamente', 'success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cerrar mes: {str(e)}', 'error')
+    
+    return redirect(url_for('inventarios'))
+
+@app.route('/inventarios/procedimientos/abrir-mes/<periodo>', methods=['POST'])
+@login_required
+def abrir_mes_procedimiento(periodo):
+    """Abrir nuevo mes usando procedimiento almacenado"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden abrir nuevos meses', 'error')
+        return redirect(url_for('inventarios'))
+    
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT * FROM abrir_nuevo_mes_inventario(:periodo)"), 
+                                   {'periodo': periodo})
+        resultado = result.fetchone()
+        
+        if resultado:
+            flash(resultado[3], 'success' if '✅' in resultado[3] else 'error')  # mensaje
+        else:
+            flash(f'Mes {periodo} abierto exitosamente', 'success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al abrir mes: {str(e)}', 'error')
+    
+    return redirect(url_for('inventarios'))
+
+@app.route('/inventarios/procedimientos/recalcular-stocks/<periodo>')
+@login_required
+def recalcular_stocks_procedimiento(periodo):
+    """Recalcular stocks usando procedimiento almacenado"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden recalcular stocks', 'error')
+        return redirect(url_for('inventarios'))
+    
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT * FROM recalcular_stocks(:periodo)"), 
+                                   {'periodo': periodo})
+        resultado = result.fetchone()
+        
+        if resultado:
+            flash(resultado[2], 'success')  # mensaje
+        else:
+            flash(f'Stocks del período {periodo} recalculados', 'success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al recalcular stocks: {str(e)}', 'error')
+    
+    return redirect(url_for('productos_inventario'))
+
+@app.route('/inventarios/procedimientos/reporte-stock-bajo/<periodo>')
+@login_required
+def reporte_stock_bajo_procedimiento(periodo):
+    """Ver reporte de stock bajo usando procedimiento almacenado"""
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT * FROM reporte_stock_bajo(:periodo)"), 
+                                   {'periodo': periodo})
+        productos_bajo = result.fetchall()
+        
+        # Convertir a lista de diccionarios
+        productos = []
+        for p in productos_bajo:
+            productos.append({
+                'codigo': p[0],
+                'nombre': p[1],
+                'categoria': p[2],
+                'stock_actual': p[3],
+                'stock_minimo': p[4],
+                'diferencia': p[5],
+                'proveedor': p[6]
+            })
+        
+        return render_template('reporte_stock_bajo.html', 
+                             productos=productos,
+                             periodo=periodo)
+    except Exception as e:
+        flash(f'Error al generar reporte: {str(e)}', 'error')
+        return redirect(url_for('inventarios'))
+
+@app.route('/inventarios/procedimientos/estadisticas/<periodo>')
+@login_required
+def estadisticas_mes_procedimiento(periodo):
+    """Ver estadísticas del mes usando procedimiento almacenado"""
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT * FROM estadisticas_mes(:periodo)"), 
+                                   {'periodo': periodo})
+        stats = result.fetchone()
+        
+        if stats:
+            estadisticas = {
+                'total_productos': stats[0],
+                'productos_activos': stats[1],
+                'productos_stock_bajo': stats[2],
+                'total_entradas': stats[3],
+                'total_salidas': stats[4],
+                'valor_total_inventario': float(stats[5]),
+                'mes_cerrado': stats[6]
+            }
+        else:
+            estadisticas = None
+        
+        return render_template('estadisticas_mes.html',
+                             estadisticas=estadisticas,
+                             periodo=periodo)
+    except Exception as e:
+        flash(f'Error al obtener estadísticas: {str(e)}', 'error')
+        return redirect(url_for('inventarios'))
+
+@app.route('/inventarios/procedimientos/auditoria/<periodo>')
+@login_required
+def auditoria_movimientos_procedimiento(periodo):
+    """Ver auditoría de movimientos usando procedimiento almacenado"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden ver auditorías', 'error')
+        return redirect(url_for('inventarios'))
+    
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT * FROM auditoria_movimientos(:periodo)"), 
+                                   {'periodo': periodo})
+        movimientos = result.fetchall()
+        
+        # Convertir a lista de diccionarios
+        auditoria = []
+        for m in movimientos:
+            auditoria.append({
+                'movimiento_id': m[0],
+                'producto_codigo': m[1],
+                'producto_nombre': m[2],
+                'tipo_movimiento': m[3],
+                'cantidad': m[4],
+                'fecha_movimiento': m[5],
+                'problema': m[6]
+            })
+        
+        return render_template('auditoria_movimientos.html',
+                             auditoria=auditoria,
+                             periodo=periodo)
+    except Exception as e:
+        flash(f'Error al generar auditoría: {str(e)}', 'error')
+        return redirect(url_for('inventarios'))
+
 @app.route('/migrate-inventory-monthly')
 @login_required
 def migrate_inventory_monthly():
