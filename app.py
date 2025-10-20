@@ -2526,18 +2526,49 @@ def inventarios():
         productos_cat = [p for p in productos if p.categoria == categoria]
         total_productos_cat = len(productos_cat)
         productos_bajo_stock_cat = len([p for p in productos_cat if p.stock_actual <= p.stock_minimo])
-        valor_total_cat = sum(p.stock_actual * p.precio_unitario for p in productos_cat)
+        
+        # Calcular valor excluyendo precios anormales (> $10M, probablemente errores)
+        valor_total_cat = sum(
+            p.stock_actual * p.precio_unitario 
+            for p in productos_cat 
+            if p.precio_unitario and p.precio_unitario < 10000000
+        )
+        
+        # Contar productos con precios anormales
+        productos_precio_anormal = len([
+            p for p in productos_cat 
+            if p.precio_unitario and p.precio_unitario >= 10000000
+        ])
         
         stats_por_categoria[categoria] = {
             'total_productos': total_productos_cat,
             'productos_bajo_stock': productos_bajo_stock_cat,
-            'valor_total': valor_total_cat
+            'valor_total': valor_total_cat,
+            'productos_precio_anormal': productos_precio_anormal
         }
     
     # Estadísticas generales
     total_productos = len(productos)
     productos_bajo_stock = len([p for p in productos if p.stock_actual <= p.stock_minimo])
-    valor_total_inventario = sum(p.stock_actual * p.precio_unitario for p in productos)
+    
+    # Calcular valor total excluyendo precios anormales (> $10M)
+    valor_total_inventario = sum(
+        p.stock_actual * p.precio_unitario 
+        for p in productos 
+        if p.precio_unitario and p.precio_unitario < 10000000
+    )
+    
+    # Identificar productos con precios anormales
+    productos_precio_anormal = [
+        p for p in productos 
+        if p.precio_unitario and p.precio_unitario >= 10000000
+    ]
+    
+    # Valor que se está excluyendo (probablemente errores)
+    valor_excluido = sum(
+        p.stock_actual * p.precio_unitario 
+        for p in productos_precio_anormal
+    ) if productos_precio_anormal else 0
     
     # Obtener períodos disponibles para el selector
     try:
@@ -2555,7 +2586,9 @@ def inventarios():
                          stats_por_categoria=stats_por_categoria,
                          total_productos=total_productos,
                          productos_bajo_stock=productos_bajo_stock,
-                         valor_total_inventario=valor_total_inventario)
+                         valor_total_inventario=valor_total_inventario,
+                         productos_precio_anormal=productos_precio_anormal,
+                         valor_excluido=valor_excluido)
 
 @app.route('/inventarios/productos')
 @login_required
@@ -3462,6 +3495,82 @@ def auditoria_movimientos_procedimiento(periodo):
     except Exception as e:
         flash(f'Error al generar auditoría: {str(e)}', 'error')
         return redirect(url_for('inventarios'))
+
+@app.route('/inventarios/diagnostico-precios/<periodo>')
+@login_required
+def diagnostico_precios(periodo):
+    """Diagnóstico de productos con precios anormales"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden ver diagnósticos', 'error')
+        return redirect(url_for('inventarios'))
+    
+    # Productos con precios muy altos (probablemente errores)
+    productos_precio_alto = Producto.query.filter(
+        Producto.periodo == periodo,
+        Producto.precio_unitario >= 10000000  # > $10M
+    ).order_by(Producto.precio_unitario.desc()).all()
+    
+    # Productos con precios en 0
+    productos_sin_precio = Producto.query.filter(
+        Producto.periodo == periodo,
+        Producto.activo == True,
+        db.or_(Producto.precio_unitario == 0, Producto.precio_unitario == None)
+    ).order_by(Producto.stock_actual.desc()).all()
+    
+    # Productos con mayor valor en inventario
+    productos_mayor_valor = Producto.query.filter(
+        Producto.periodo == periodo,
+        Producto.activo == True,
+        Producto.precio_unitario < 10000000  # Excluir anormales
+    ).order_by((Producto.stock_actual * Producto.precio_unitario).desc()).limit(20).all()
+    
+    # Calcular valor total real vs valor con anormales
+    from sqlalchemy import text
+    result = db.session.execute(
+        text("""
+            SELECT 
+                SUM(CASE WHEN precio_unitario < 10000000 THEN stock_actual * precio_unitario ELSE 0 END) as valor_real,
+                SUM(CASE WHEN precio_unitario >= 10000000 THEN stock_actual * precio_unitario ELSE 0 END) as valor_anormal,
+                SUM(stock_actual * precio_unitario) as valor_total
+            FROM producto 
+            WHERE periodo = :periodo AND activo = TRUE
+        """),
+        {'periodo': periodo}
+    )
+    valores = result.fetchone()
+    
+    return render_template('diagnostico_precios.html',
+                         periodo=periodo,
+                         productos_precio_alto=productos_precio_alto,
+                         productos_sin_precio=productos_sin_precio,
+                         productos_mayor_valor=productos_mayor_valor,
+                         valor_real=float(valores[0]) if valores[0] else 0,
+                         valor_anormal=float(valores[1]) if valores[1] else 0,
+                         valor_total=float(valores[2]) if valores[2] else 0)
+
+@app.route('/inventarios/corregir-precio/<int:producto_id>', methods=['POST'])
+@login_required
+def corregir_precio_producto(producto_id):
+    """Corregir precio de un producto"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden corregir precios', 'error')
+        return redirect(url_for('inventarios'))
+    
+    try:
+        producto = Producto.query.get_or_404(producto_id)
+        nuevo_precio = float(request.form.get('nuevo_precio', 0))
+        
+        precio_anterior = producto.precio_unitario
+        producto.precio_unitario = nuevo_precio
+        
+        db.session.commit()
+        
+        flash(f'✅ Precio de "{producto.nombre}" actualizado: ${precio_anterior:,.0f} → ${nuevo_precio:,.0f}', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al corregir precio: {str(e)}', 'error')
+    
+    return redirect(request.referrer or url_for('inventarios'))
 
 @app.route('/migrate-inventory-monthly')
 @login_required
