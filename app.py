@@ -3509,9 +3509,13 @@ def nuevo_movimiento_inventario():
             # Calcular total
             total = cantidad * precio_unitario
             
+            # Obtener período del producto
+            periodo_movimiento = producto.periodo if hasattr(producto, 'periodo') and producto.periodo else get_periodo_actual()
+            
             # Crear movimiento
             nuevo_movimiento = MovimientoInventario(
                 producto_id=producto_id,
+                periodo=periodo_movimiento,
                 tipo_movimiento=tipo_movimiento,
                 cantidad=cantidad,
                 precio_unitario=precio_unitario,
