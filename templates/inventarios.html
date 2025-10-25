@@ -20,6 +20,9 @@
             <a href="{{ url_for('movimientos_inventario') }}" class="btn btn-info">
                 <i class="fas fa-history"></i> Historial
             </a>
+            <a href="{{ url_for('exportar_excel_inventario', periodo=periodo_actual) }}" class="btn btn-warning">
+                <i class="fas fa-file-excel"></i> Exportar Excel
+            </a>
         </div>
     </div>
 

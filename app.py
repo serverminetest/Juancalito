@@ -3597,6 +3597,208 @@ def corregir_precio_producto(producto_id):
     
     return redirect(request.referrer or url_for('inventarios'))
 
+@app.route('/inventarios/exportar-excel/<periodo>')
+@login_required
+def exportar_excel_inventario(periodo):
+    """Exportar inventario a Excel con fórmulas automáticas"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from flask import send_file
+        import io
+        import tempfile
+        import os
+        
+        # Obtener productos del período
+        productos = Producto.query.filter_by(periodo=periodo, activo=True).all()
+        
+        if not productos:
+            flash(f'No hay productos en el período {periodo}', 'warning')
+            return redirect(url_for('inventarios'))
+        
+        # Crear workbook
+        wb = Workbook()
+        wb.remove(wb.active)  # Eliminar hoja por defecto
+        
+        # Estilos
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        center_alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Agrupar productos por categoría
+        categorias = {}
+        for producto in productos:
+            if producto.categoria not in categorias:
+                categorias[producto.categoria] = []
+            categorias[producto.categoria].append(producto)
+        
+        # Crear hoja para cada categoría
+        for categoria, productos_cat in categorias.items():
+            ws = wb.create_sheet(title=categoria)
+            
+            # Título de la hoja
+            ws['A1'] = f'INVENTARIO {categoria} - PERÍODO {periodo}'
+            ws['A1'].font = Font(bold=True, size=16)
+            ws['A1'].alignment = center_alignment
+            ws.merge_cells('A1:J1')
+            
+            # Fecha de generación
+            ws['A2'] = f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
+            ws['A2'].font = Font(italic=True)
+            ws.merge_cells('A2:J2')
+            
+            # Encabezados
+            headers = ['CÓDIGO', 'NOMBRE', 'UNIDAD', 'SALDO INICIAL', 'ENTRADAS', 'SALIDAS', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL', 'PROVEEDOR']
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=4, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = center_alignment
+                cell.border = border
+            
+            # Datos de productos
+            for row, producto in enumerate(productos_cat, 5):
+                # Datos básicos
+                ws.cell(row=row, column=1, value=producto.codigo).border = border
+                ws.cell(row=row, column=2, value=producto.nombre).border = border
+                ws.cell(row=row, column=3, value=producto.unidad_medida).border = border
+                
+                # Saldo inicial (usar el campo saldo_inicial si existe, sino stock_actual)
+                saldo_inicial = getattr(producto, 'saldo_inicial', 0) or 0
+                ws.cell(row=row, column=4, value=saldo_inicial).border = border
+                
+                # Calcular entradas y salidas desde movimientos
+                entradas = sum(m.cantidad for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA')
+                salidas = sum(m.cantidad for m in producto.movimientos if m.tipo_movimiento == 'SALIDA')
+                
+                ws.cell(row=row, column=5, value=entradas).border = border
+                ws.cell(row=row, column=6, value=salidas).border = border
+                
+                # FÓRMULA: Saldo Real = Saldo Inicial + Entradas - Salidas
+                formula_cell = ws.cell(row=row, column=7)
+                formula_cell.value = f'=D{row}+E{row}-F{row}'
+                formula_cell.border = border
+                formula_cell.alignment = center_alignment
+                
+                # Precio unitario
+                precio = float(producto.precio_unitario) if producto.precio_unitario else 0
+                ws.cell(row=row, column=8, value=precio).border = border
+                
+                # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
+                valor_cell = ws.cell(row=row, column=9)
+                valor_cell.value = f'=G{row}*H{row}'
+                valor_cell.border = border
+                valor_cell.alignment = center_alignment
+                
+                # Proveedor
+                ws.cell(row=row, column=10, value=producto.proveedor or '').border = border
+            
+            # Fila de totales
+            total_row = len(productos_cat) + 6
+            ws.cell(row=total_row, column=1, value='TOTALES').font = Font(bold=True)
+            ws.cell(row=total_row, column=1).border = border
+            
+            # FÓRMULAS DE TOTALES
+            ws.cell(row=total_row, column=4, value=f'=SUM(D5:D{total_row-1})').border = border  # Total Saldo Inicial
+            ws.cell(row=total_row, column=5, value=f'=SUM(E5:E{total_row-1})').border = border  # Total Entradas
+            ws.cell(row=total_row, column=6, value=f'=SUM(F5:F{total_row-1})').border = border  # Total Salidas
+            ws.cell(row=total_row, column=7, value=f'=SUM(G5:G{total_row-1})').border = border  # Total Saldo Real
+            ws.cell(row=total_row, column=9, value=f'=SUM(I5:I{total_row-1})').border = border  # Total Valor
+            
+            # Aplicar formato a totales
+            for col in range(1, 11):
+                cell = ws.cell(row=total_row, column=col)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
+                cell.border = border
+            
+            # Ajustar ancho de columnas
+            column_widths = [12, 25, 10, 12, 10, 10, 12, 12, 15, 20]
+            for col, width in enumerate(column_widths, 1):
+                ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+        
+        # Crear hoja de resumen
+        ws_resumen = wb.create_sheet(title='RESUMEN GENERAL', index=0)
+        
+        # Título del resumen
+        ws_resumen['A1'] = f'RESUMEN GENERAL DE INVENTARIOS - PERÍODO {periodo}'
+        ws_resumen['A1'].font = Font(bold=True, size=16)
+        ws_resumen['A1'].alignment = center_alignment
+        ws_resumen.merge_cells('A1:G1')
+        
+        # Encabezados del resumen
+        resumen_headers = ['CATEGORÍA', 'TOTAL PRODUCTOS', 'TOTAL SALDO INICIAL', 'TOTAL ENTRADAS', 'TOTAL SALIDAS', 'TOTAL SALDO REAL', 'VALOR TOTAL']
+        for col, header in enumerate(resumen_headers, 1):
+            cell = ws_resumen.cell(row=3, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+        
+        # Calcular datos del resumen
+        resumen_data = []
+        for categoria, productos_cat in categorias.items():
+            total_productos = len(productos_cat)
+            total_saldo_inicial = sum(getattr(p, 'saldo_inicial', 0) or 0 for p in productos_cat)
+            total_entradas = sum(sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'ENTRADA') for p in productos_cat)
+            total_salidas = sum(sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'SALIDA') for p in productos_cat)
+            total_saldo_real = total_saldo_inicial + total_entradas - total_salidas
+            valor_total = sum((getattr(p, 'saldo_inicial', 0) or 0 + 
+                             sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'ENTRADA') - 
+                             sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'SALIDA')) * 
+                            (float(p.precio_unitario) if p.precio_unitario else 0) for p in productos_cat)
+            
+            resumen_data.append([categoria, total_productos, total_saldo_inicial, total_entradas, total_salidas, total_saldo_real, valor_total])
+        
+        # Escribir datos del resumen
+        for row, data in enumerate(resumen_data, 4):
+            for col, value in enumerate(data, 1):
+                cell = ws_resumen.cell(row=row, column=col, value=value)
+                cell.border = border
+                if col == 1:  # Categoría
+                    cell.font = Font(bold=True)
+        
+        # Totales del resumen
+        total_resumen_row = len(resumen_data) + 5
+        ws_resumen.cell(row=total_resumen_row, column=1, value='TOTAL GENERAL').font = Font(bold=True)
+        ws_resumen.cell(row=total_resumen_row, column=1).border = border
+        
+        # Fórmulas de totales en resumen
+        for col in range(2, 8):
+            formula_cell = ws_resumen.cell(row=total_resumen_row, column=col)
+            formula_cell.value = f'=SUM({ws_resumen.cell(row=4, column=col).column_letter}4:{ws_resumen.cell(row=total_resumen_row-1, column=col).column_letter}{total_resumen_row-1})'
+            formula_cell.border = border
+            formula_cell.font = Font(bold=True)
+            formula_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
+        
+        # Ajustar ancho de columnas en resumen
+        resumen_widths = [20, 15, 18, 15, 15, 18, 15]
+        for col, width in enumerate(resumen_widths, 1):
+            ws_resumen.column_dimensions[ws_resumen.cell(row=1, column=col).column_letter].width = width
+        
+        # Guardar en archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            wb.save(tmp_file.name)
+            tmp_file_path = tmp_file.name
+        
+        # Enviar archivo
+        return send_file(
+            tmp_file_path,
+            as_attachment=True,
+            download_name=f'Inventario_Automatico_{periodo}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        flash(f'Error al generar Excel: {str(e)}', 'error')
+        return redirect(url_for('inventarios'))
+
 @app.route('/migrate-inventory-monthly')
 @login_required
 def migrate_inventory_monthly():
