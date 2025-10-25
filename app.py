@@ -3721,7 +3721,8 @@ def exportar_excel_inventario(periodo):
             # Ajustar ancho de columnas
             column_widths = [12, 25, 10, 12, 10, 10, 12, 12, 15, 20]
             for col, width in enumerate(column_widths, 1):
-                ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+                from openpyxl.utils import get_column_letter
+                ws.column_dimensions[get_column_letter(col)].width = width
         
         # Crear hoja de resumen
         ws_resumen = wb.create_sheet(title='RESUMEN GENERAL', index=0)
@@ -3771,8 +3772,10 @@ def exportar_excel_inventario(periodo):
         
         # Fórmulas de totales en resumen
         for col in range(2, 8):
+            from openpyxl.utils import get_column_letter
             formula_cell = ws_resumen.cell(row=total_resumen_row, column=col)
-            formula_cell.value = f'=SUM({ws_resumen.cell(row=4, column=col).column_letter}4:{ws_resumen.cell(row=total_resumen_row-1, column=col).column_letter}{total_resumen_row-1})'
+            col_letter = get_column_letter(col)
+            formula_cell.value = f'=SUM({col_letter}4:{col_letter}{total_resumen_row-1})'
             formula_cell.border = border
             formula_cell.font = Font(bold=True)
             formula_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
@@ -3780,7 +3783,8 @@ def exportar_excel_inventario(periodo):
         # Ajustar ancho de columnas en resumen
         resumen_widths = [20, 15, 18, 15, 15, 18, 15]
         for col, width in enumerate(resumen_widths, 1):
-            ws_resumen.column_dimensions[ws_resumen.cell(row=1, column=col).column_letter].width = width
+            from openpyxl.utils import get_column_letter
+            ws_resumen.column_dimensions[get_column_letter(col)].width = width
         
         # Guardar en archivo temporal
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
