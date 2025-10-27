@@ -655,6 +655,10 @@ class Producto(db.Model):
     def verificar_stock_bajo(self):
         """Verifica si el stock está por debajo del mínimo"""
         return self.stock_actual < self.stock_minimo if self.stock_minimo > 0 else False
+    
+    def debe_tener_precio(self):
+        """Determina si el producto debe tener precio unitario según su categoría"""
+        return self.categoria in ['QUIMICOS', 'POSCOSECHA']
 
 class MovimientoInventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -673,6 +677,10 @@ class MovimientoInventario(db.Model):
     
     # Relación con usuario
     usuario = db.relationship('User', backref='movimientos_inventario')
+    
+    def debe_tener_precio(self):
+        """Determina si el movimiento debe tener precio unitario y total"""
+        return self.tipo_movimiento == 'ENTRADA'
 
 class Notificacion(db.Model):
     __tablename__ = 'notificacion'
@@ -3691,15 +3699,20 @@ def exportar_excel_inventario(periodo):
                 formula_cell.border = border
                 formula_cell.alignment = center_alignment
                 
-                # Precio unitario
-                precio = float(producto.precio_unitario) if producto.precio_unitario else 0
-                ws.cell(row=row, column=8, value=precio).border = border
-                
-                # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
-                valor_cell = ws.cell(row=row, column=9)
-                valor_cell.value = f'=G{row}*H{row}'
-                valor_cell.border = border
-                valor_cell.alignment = center_alignment
+                # Precio unitario (solo para productos que deben tener precio)
+                if producto.debe_tener_precio():
+                    precio = float(producto.precio_unitario) if producto.precio_unitario else 0
+                    ws.cell(row=row, column=8, value=precio).border = border
+                    
+                    # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
+                    valor_cell = ws.cell(row=row, column=9)
+                    valor_cell.value = f'=G{row}*H{row}'
+                    valor_cell.border = border
+                    valor_cell.alignment = center_alignment
+                else:
+                    # Para ALMACEN GENERAL, mostrar "-" en precio y valor
+                    ws.cell(row=row, column=8, value='-').border = border
+                    ws.cell(row=row, column=9, value='-').border = border
                 
                 # Proveedor
                 ws.cell(row=row, column=10, value=producto.proveedor or '').border = border
@@ -3763,8 +3776,14 @@ def exportar_excel_inventario(periodo):
                     tipo_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
                 
                 ws.cell(row=current_row, column=5, value=movimiento.cantidad).border = border
-                ws.cell(row=current_row, column=6, value=float(movimiento.precio_unitario) if movimiento.precio_unitario else 0).border = border
-                ws.cell(row=current_row, column=7, value=float(movimiento.total) if movimiento.total else 0).border = border
+                
+                # Precio unitario y total solo para entradas
+                if movimiento.debe_tener_precio():
+                    ws.cell(row=current_row, column=6, value=float(movimiento.precio_unitario) if movimiento.precio_unitario else 0).border = border
+                    ws.cell(row=current_row, column=7, value=float(movimiento.total) if movimiento.total else 0).border = border
+                else:
+                    ws.cell(row=current_row, column=6, value='-').border = border
+                    ws.cell(row=current_row, column=7, value='-').border = border
                 ws.cell(row=current_row, column=8, value=movimiento.motivo or '').border = border
                 ws.cell(row=current_row, column=9, value=movimiento.referencia or '').border = border
                 ws.cell(row=current_row, column=10, value=movimiento.responsable or '').border = border
@@ -4163,8 +4182,13 @@ def nuevo_movimiento_inventario():
                 flash(f'Stock insuficiente. Stock actual: {producto.stock_actual}', 'error')
                 return redirect(url_for('nuevo_movimiento_inventario'))
             
-            # Calcular total
-            total = cantidad * precio_unitario
+            # Calcular precio y total solo para entradas
+            if tipo_movimiento == 'ENTRADA':
+                precio_final = precio_unitario
+                total = cantidad * precio_unitario
+            else:
+                precio_final = 0
+                total = 0
             
             # Obtener período del producto
             periodo_movimiento = producto.periodo if hasattr(producto, 'periodo') and producto.periodo else get_periodo_actual()
@@ -4175,7 +4199,7 @@ def nuevo_movimiento_inventario():
                 periodo=periodo_movimiento,
                 tipo_movimiento=tipo_movimiento,
                 cantidad=cantidad,
-                precio_unitario=precio_unitario,
+                precio_unitario=precio_final,
                 total=total,
                 motivo=motivo,
                 referencia=referencia,

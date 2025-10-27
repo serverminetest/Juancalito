@@ -248,7 +248,11 @@
                                 <small class="text-muted">{{ producto.unidad_medida }}</small>
                             </td>
                             <td class="text-end">
+                                {% if producto.debe_tener_precio() %}
                                 <strong>${{ "{:,.0f}".format(producto.precio_unitario) }}</strong>
+                                {% else %}
+                                <small class="text-muted">-</small>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if producto.ubicacion %}

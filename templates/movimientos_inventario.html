@@ -236,9 +236,19 @@
                                 <strong>{{ movimiento.cantidad }}</strong><br>
                                 <small class="text-muted">{{ movimiento.producto.unidad_medida }}</small>
                             </td>
-                            <td>${{ "{:,.0f}".format(movimiento.precio_unitario) }}</td>
                             <td>
+                                {% if movimiento.debe_tener_precio() %}
+                                ${{ "{:,.0f}".format(movimiento.precio_unitario) }}
+                                {% else %}
+                                <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if movimiento.debe_tener_precio() %}
                                 <strong>${{ "{:,.0f}".format(movimiento.total) }}</strong>
+                                {% else %}
+                                <small class="text-muted">-</small>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if movimiento.motivo %}
