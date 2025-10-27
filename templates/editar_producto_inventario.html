@@ -104,14 +104,14 @@
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <div class="col-md-4" id="precio_container" {% if not producto.debe_tener_precio() %}style="display: none;"{% endif %}>
                                         <div class="mb-3">
                                             <label for="precio_unitario" class="form-label">
                                                 <i class="fas fa-dollar-sign"></i> Precio Unitario
                                             </label>
                                             <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
                                                    value="{{ producto.precio_unitario }}" step="0.01" min="0">
-                                            <div class="form-text">Precio por unidad en pesos.</div>
+                                            <div class="form-text">Solo para QUIMICOS y POSCOSECHA</div>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -235,7 +235,11 @@
                             </div>
                             <div class="mb-3">
                                 <strong>Precio:</strong> 
+                                {% if producto.debe_tener_precio() %}
                                 <span class="text-success">${{ "{:,.0f}".format(producto.precio_unitario) }}</span>
+                                {% else %}
+                                <span class="text-muted">No aplica</span>
+                                {% endif %}
                             </div>
                             <div class="mb-3">
                                 <strong>Creado:</strong> {{ producto.created_at.strftime('%d/%m/%Y %H:%M') }}

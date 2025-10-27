@@ -109,7 +109,7 @@
                                     <i class="fas fa-chart-line"></i> Stock y Precios
                                 </h6>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="precio_container" style="display: none;">
                                 <div class="mb-3">
                                     <label for="precio_unitario" class="form-label">Precio Unitario</label>
                                     <div class="input-group">
@@ -117,6 +117,7 @@
                                         <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
                                                step="0.01" min="0" value="0">
                                     </div>
+                                    <div class="form-text">Solo para QUIMICOS y POSCOSECHA</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -264,5 +265,27 @@
     </div>
 </div>
 
-<!-- Sin scripts que interfieran con el formulario -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoriaSelect = document.getElementById('categoria');
+    const precioContainer = document.getElementById('precio_container');
+    const precioInput = document.getElementById('precio_unitario');
+    
+    function togglePrecioField() {
+        const categoria = categoriaSelect.value;
+        if (categoria === 'QUIMICOS' || categoria === 'POSCOSECHA') {
+            precioContainer.style.display = 'block';
+        } else {
+            precioContainer.style.display = 'none';
+            precioInput.value = 0; // Limpiar precio para ALMACEN GENERAL
+        }
+    }
+    
+    // Mostrar/ocultar campo de precio según categoría
+    categoriaSelect.addEventListener('change', togglePrecioField);
+    
+    // Ejecutar al cargar la página
+    togglePrecioField();
+});
+</script>
 {% endblock %}

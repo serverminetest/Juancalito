@@ -120,7 +120,7 @@
                                     <div class="card-body">
                                         <h6 class="text-info mb-3"><i class="fas fa-calculator"></i> Resumen del Movimiento</h6>
                                         <div class="row">
-                                            <div class="col-md-4">
+                                            <div class="col-md-4" id="total_container">
                                                 <strong>Total:</strong> $<span id="total_movimiento">0.00</span>
                                             </div>
                                             <div class="col-md-4">
@@ -221,10 +221,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Mostrar/ocultar campo de precio según tipo de movimiento
         const precioContainer = document.getElementById('precio_container');
+        const totalContainer = document.getElementById('total_container');
+        
         if (tipoMovimiento === 'ENTRADA') {
             precioContainer.style.display = 'block';
+            totalContainer.style.display = 'block';
         } else {
             precioContainer.style.display = 'none';
+            totalContainer.style.display = 'none';
             precioInput.value = 0; // Limpiar precio para salidas
         }
 
