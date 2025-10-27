@@ -338,7 +338,7 @@ inputBusqueda.addEventListener('input', function() {
                                       producto.stock_actual <= 10 ? 'warning' : 'success';
                     
                     html += `
-                        <a href="/inventarios/productos/editar/${producto.id}" class="list-group-item list-group-item-action">
+                        <a href="/inventarios/movimientos/nuevo?producto_id=${producto.id}" class="list-group-item list-group-item-action">
                             <div class="d-flex w-100 justify-content-between">
                                 <div>
                                     <h6 class="mb-1">
@@ -353,7 +353,9 @@ inputBusqueda.addEventListener('input', function() {
                                 <div class="text-end">
                                     <span class="badge bg-${stockClass}">${producto.stock_actual} ${producto.unidad_medida}</span>
                                     <br>
-                                    <small class="text-muted">$${producto.precio_unitario.toFixed(2)}</small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-exchange-alt"></i> Registrar Movimiento
+                                    </small>
                                 </div>
                             </div>
                         </a>
