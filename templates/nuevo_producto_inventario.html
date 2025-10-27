@@ -37,9 +37,15 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="codigo" class="form-label">Código del Producto *</label>
-                                    <input type="text" class="form-control" id="codigo" name="codigo" required>
-                                    <div class="form-text">Código único para identificar el producto</div>
+                                    <label class="form-label">Código del Producto</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light" id="codigo-prefijo">-</span>
+                                        <input type="text" class="form-control" id="codigo-generado" readonly>
+                                        <span class="input-group-text bg-success text-white">
+                                            <i class="fas fa-magic"></i> Auto
+                                        </span>
+                                    </div>
+                                    <div class="form-text">Código generado automáticamente según la categoría</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -281,11 +287,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    function generarCodigo() {
+        const categoria = categoriaSelect.value;
+        if (categoria) {
+            // Mostrar prefijo
+            const prefijos = {
+                'ALMACEN GENERAL': 'ALM',
+                'QUIMICOS': 'QUI',
+                'POSCOSECHA': 'POS'
+            };
+            const prefijo = prefijos[categoria] || 'GEN';
+            document.getElementById('codigo-prefijo').textContent = prefijo;
+            
+            // Generar código completo (el número se generará en el servidor)
+            document.getElementById('codigo-generado').value = `${prefijo}-XXX`;
+        } else {
+            document.getElementById('codigo-prefijo').textContent = '-';
+            document.getElementById('codigo-generado').value = '';
+        }
+    }
+    
     // Mostrar/ocultar campo de precio según categoría
-    categoriaSelect.addEventListener('change', togglePrecioField);
+    categoriaSelect.addEventListener('change', function() {
+        togglePrecioField();
+        generarCodigo();
+    });
     
     // Ejecutar al cargar la página
     togglePrecioField();
+    generarCodigo();
 });
 </script>
 {% endblock %}

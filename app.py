@@ -665,6 +665,46 @@ class Producto(db.Model):
     def debe_tener_precio(self):
         """Determina si el producto debe tener precio unitario según su categoría"""
         return self.categoria in ['QUIMICOS', 'POSCOSECHA']
+    
+    @staticmethod
+    def generar_codigo_automatico(categoria, periodo=None):
+        """Genera un código automático basado en la categoría"""
+        if periodo is None:
+            periodo = get_periodo_actual()
+        
+        # Prefijos por categoría
+        prefijos = {
+            'ALMACEN GENERAL': 'ALM',
+            'QUIMICOS': 'QUI', 
+            'POSCOSECHA': 'POS'
+        }
+        
+        prefijo = prefijos.get(categoria, 'GEN')
+        
+        # Buscar el último código de esta categoría en el período
+        ultimo_producto = Producto.query.filter(
+            Producto.categoria == categoria,
+            Producto.periodo == periodo
+        ).order_by(Producto.id.desc()).first()
+        
+        if ultimo_producto and ultimo_producto.codigo:
+            # Extraer el número del último código
+            try:
+                # Buscar el patrón PREFIJO-NUMERO
+                import re
+                match = re.search(rf'^{prefijo}-(\d+)$', ultimo_producto.codigo)
+                if match:
+                    ultimo_numero = int(match.group(1))
+                    nuevo_numero = ultimo_numero + 1
+                else:
+                    nuevo_numero = 1
+            except:
+                nuevo_numero = 1
+        else:
+            nuevo_numero = 1
+        
+        # Formatear con ceros a la izquierda (3 dígitos)
+        return f"{prefijo}-{nuevo_numero:03d}"
 
 class MovimientoInventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2792,10 +2832,12 @@ def nuevo_producto_inventario():
     
     if request.method == 'POST':
         try:
-            codigo = request.form['codigo'].strip()
+            # Generar código automático basado en la categoría
+            categoria = request.form['categoria']
+            codigo = Producto.generar_codigo_automatico(categoria, periodo_actual)
+            
             nombre = request.form['nombre'].strip()
             descripcion = request.form.get('descripcion', '').strip()
-            categoria = request.form['categoria']
             unidad_medida = request.form['unidad_medida'].strip()
             precio_unitario = float(request.form.get('precio_unitario', 0))
             stock_minimo = int(request.form.get('stock_minimo', 0))
@@ -2806,8 +2848,8 @@ def nuevo_producto_inventario():
             lote = request.form.get('lote', '').strip()
             
             # Validaciones
-            if not codigo or not nombre or not categoria or not unidad_medida:
-                flash('Los campos código, nombre, categoría y unidad de medida son obligatorios', 'error')
+            if not nombre or not categoria or not unidad_medida:
+                flash('Los campos nombre, categoría y unidad de medida son obligatorios', 'error')
                 return redirect(url_for('nuevo_producto_inventario', periodo=periodo_actual))
             
             # Verificar si el código ya existe en la misma categoría y período
