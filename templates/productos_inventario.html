@@ -133,7 +133,7 @@
     <!-- Estadísticas de la Vista -->
     {% if productos %}
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card bg-info text-white">
                 <div class="card-body text-center">
                     <h4>{{ total_productos }}</h4>
@@ -141,7 +141,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card bg-warning text-white">
                 <div class="card-body text-center">
                     <h4>{{ productos_stock_bajo }}</h4>
@@ -149,19 +149,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
                     <h4>{{ "{:,}".format(total_stock) }}</h4>
                     <small>Total unidades</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h4>${{ "{:,.0f}".format(valor_total) }}</h4>
-                    <small>Valor total{% if productos_precio_anormal %} <i class="fas fa-exclamation-triangle" title="Excluyendo {{ productos_precio_anormal|length }} productos con precios anormales"></i>{% endif %}</small>
                 </div>
             </div>
         </div>
@@ -198,7 +190,6 @@
                             <th class="text-center">Stock</th>
                             <th class="text-center">Mínimo</th>
                             <th>Unidad</th>
-                            <th class="text-end">Precio</th>
                             <th>Ubicación</th>
                             <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
@@ -246,13 +237,6 @@
                             </td>
                             <td>
                                 <small class="text-muted">{{ producto.unidad_medida }}</small>
-                            </td>
-                            <td class="text-end">
-                                {% if producto.debe_tener_precio() %}
-                                <strong>${{ "{:,.0f}".format(producto.precio_unitario) }}</strong>
-                                {% else %}
-                                <small class="text-muted">-</small>
-                                {% endif %}
                             </td>
                             <td>
                                 {% if producto.ubicacion %}
