@@ -637,11 +637,11 @@ class Producto(db.Model):
     
     def calcular_entradas(self):
         """Calcula el total de entradas del período"""
-        return sum(m.cantidad for m in self.movimientos if m.tipo_movimiento == 'ENTRADA')
+        return sum(m.calcular_cantidad_total() for m in self.movimientos if m.tipo_movimiento == 'ENTRADA')
     
     def calcular_salidas(self):
         """Calcula el total de salidas del período"""
-        return sum(m.cantidad for m in self.movimientos if m.tipo_movimiento == 'SALIDA')
+        return sum(m.calcular_cantidad_total() for m in self.movimientos if m.tipo_movimiento == 'SALIDA')
     
     def calcular_saldo_final(self):
         """Calcula el saldo final: Saldo Inicial + Entradas - Salidas"""
