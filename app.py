@@ -647,6 +647,12 @@ class Producto(db.Model):
         """Calcula el saldo final: Saldo Inicial + Entradas - Salidas"""
         return self.saldo_inicial + self.calcular_entradas() - self.calcular_salidas()
     
+    def calcular_stock_desde_movimientos(self):
+        """Calcula el stock basado solo en movimientos, sin usar saldo_inicial"""
+        entradas = sum(m.calcular_cantidad_total() for m in self.movimientos if m.tipo_movimiento == 'ENTRADA')
+        salidas = sum(m.calcular_cantidad_total() for m in self.movimientos if m.tipo_movimiento == 'SALIDA')
+        return entradas - salidas
+    
     def recalcular_stock(self):
         """Recalcula y actualiza el stock_actual basado en saldo inicial y movimientos"""
         self.stock_actual = self.calcular_saldo_final()
@@ -4263,9 +4269,12 @@ def nuevo_movimiento_inventario():
             db.session.add(nuevo_movimiento)
             db.session.flush()  # Asegura que el movimiento esté en la sesión
             
-            # Recalcular stock basado en saldo inicial + entradas - salidas
+            # Actualizar stock basado en el movimiento
             stock_anterior = producto.stock_actual
-            producto.recalcular_stock()
+            if tipo_movimiento == 'ENTRADA':
+                producto.stock_actual += cantidad_total
+            elif tipo_movimiento == 'SALIDA':
+                producto.stock_actual -= cantidad_total
             
             db.session.commit()
             
