@@ -3103,6 +3103,7 @@ def editar_producto_inventario(id):
             unidad_medida = request.form['unidad_medida']
             precio_unitario = float(request.form.get('precio_unitario', 0))
             stock_minimo = int(request.form.get('stock_minimo', 0))
+            stock_actual = int(request.form.get('stock_actual', 0))
             saldo_inicial = int(request.form.get('saldo_inicial', 0))
             ubicacion = request.form.get('ubicacion', '').strip()
             proveedor = request.form.get('proveedor', '').strip()
@@ -3133,6 +3134,7 @@ def editar_producto_inventario(id):
             producto.unidad_medida = unidad_medida
             producto.precio_unitario = precio_unitario
             producto.stock_minimo = stock_minimo
+            producto.stock_actual = stock_actual
             producto.saldo_inicial = saldo_inicial
             producto.ubicacion = ubicacion
             producto.proveedor = proveedor
