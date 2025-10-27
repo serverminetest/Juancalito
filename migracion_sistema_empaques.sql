@@ -31,7 +31,7 @@ CHECK (tipo_ingreso IN ('EMPAQUE', 'INDIVIDUAL'));
 ALTER TABLE movimiento_inventario 
 ADD CONSTRAINT chk_empaques_requeridos 
 CHECK (
-    (tipo_ingreso = 'EMPAUE' AND cantidad_empaques IS NOT NULL AND contenido_por_empaque IS NOT NULL AND precio_por_empaque IS NOT NULL) OR
+    (tipo_ingreso = 'EMPAQUE' AND cantidad_empaques IS NOT NULL AND contenido_por_empaque IS NOT NULL AND precio_por_empaque IS NOT NULL) OR
     (tipo_ingreso = 'INDIVIDUAL' AND cantidad_empaques IS NULL AND contenido_por_empaque IS NULL AND precio_por_empaque IS NULL)
 );
 
@@ -85,7 +85,7 @@ CREATE OR REPLACE FUNCTION calcular_totales_movimiento(
     valor_total DECIMAL(15,2)
 ) AS $$
 BEGIN
-    IF p_tipo_ingreso = 'EMPAUE' THEN
+    IF p_tipo_ingreso = 'EMPAQUE' THEN
         RETURN QUERY SELECT 
             (p_cantidad_empaques * p_contenido_por_empaque)::INTEGER as cantidad_total,
             (p_cantidad_empaques * p_precio_por_empaque) as valor_total;
@@ -106,7 +106,7 @@ BEGIN
     -- Verificar que los totales calculados coincidan con los guardados
     SELECT COUNT(*) INTO inconsistencias
     FROM movimiento_inventario mi
-    WHERE mi.tipo_ingreso = 'EMPAUE' 
+    WHERE mi.tipo_ingreso = 'EMPAQUE' 
     AND mi.total != (mi.cantidad_empaques * mi.precio_por_empaque);
     
     IF inconsistencias > 0 THEN
@@ -128,4 +128,5 @@ BEGIN
     RAISE NOTICE 'Vista creada: vista_movimientos_detallados';
     RAISE NOTICE 'Función creada: calcular_totales_movimiento';
     RAISE NOTICE 'Procedimiento creado: validar_consistencia_empaques';
-END $$;
+END
+$$;

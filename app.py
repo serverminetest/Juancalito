@@ -690,13 +690,13 @@ class MovimientoInventario(db.Model):
     
     def calcular_cantidad_total(self):
         """Calcula la cantidad total en unidad base según el tipo de ingreso"""
-        if self.tipo_ingreso == 'EMPAUE' and self.cantidad_empaques and self.contenido_por_empaque:
+        if self.tipo_ingreso == 'EMPAQUE' and self.cantidad_empaques and self.contenido_por_empaque:
             return int(self.cantidad_empaques * self.contenido_por_empaque)
         return self.cantidad
     
     def calcular_valor_total(self):
         """Calcula el valor total según el tipo de ingreso"""
-        if self.tipo_ingreso == 'EMPAUE' and self.cantidad_empaques and self.precio_por_empaque:
+        if self.tipo_ingreso == 'EMPAQUE' and self.cantidad_empaques and self.precio_por_empaque:
             return float(self.cantidad_empaques * self.precio_por_empaque)
         elif self.precio_unitario:
             return float(self.cantidad * self.precio_unitario)
@@ -704,11 +704,11 @@ class MovimientoInventario(db.Model):
     
     def es_ingreso_por_empaques(self):
         """Verifica si es un ingreso por empaques"""
-        return self.tipo_ingreso == 'EMPAUE' and self.tipo_movimiento == 'ENTRADA'
+        return self.tipo_ingreso == 'EMPAQUE' and self.tipo_movimiento == 'ENTRADA'
     
     def obtener_descripcion_ingreso(self):
         """Retorna una descripción del tipo de ingreso"""
-        if self.tipo_ingreso == 'EMPAUE' and self.cantidad_empaques and self.contenido_por_empaque:
+        if self.tipo_ingreso == 'EMPAQUE' and self.cantidad_empaques and self.contenido_por_empaque:
             return f"{self.cantidad_empaques} empaques de {self.contenido_por_empaque} c/u"
         return f"{self.cantidad} unidades individuales"
 
@@ -4220,7 +4220,7 @@ def nuevo_movimiento_inventario():
             
             # Calcular precio y total según tipo de ingreso
             if tipo_movimiento == 'ENTRADA':
-                if tipo_ingreso == 'EMPAUE' and cantidad_empaques and contenido_por_empaque and precio_por_empaque:
+                if tipo_ingreso == 'EMPAQUE' and cantidad_empaques and contenido_por_empaque and precio_por_empaque:
                     # Ingreso por empaques
                     precio_final = precio_por_empaque / contenido_por_empaque  # Precio por unidad base
                     total = cantidad_empaques * precio_por_empaque
