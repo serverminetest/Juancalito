@@ -239,7 +239,21 @@
                                 <span class="badge bg-light text-dark">{{ producto.stock_minimo }}</span>
                             </td>
                             <td>
-                                <small class="text-muted">{{ producto.unidad_medida }}</small>
+                                <small class="text-muted">
+                                    {% if producto.unidad_medida.upper() in ['L', 'LITRO', 'LITROS'] %}
+                                        L
+                                    {% elif producto.unidad_medida.upper() in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS'] %}
+                                        KG
+                                    {% elif producto.unidad_medida.upper() in ['G', 'GRAMO', 'GRAMOS'] %}
+                                        G
+                                    {% elif producto.unidad_medida.upper() in ['ML', 'MILILITRO', 'MILILITROS'] %}
+                                        ML
+                                    {% elif producto.unidad_medida.upper() in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS'] %}
+                                        CC
+                                    {% else %}
+                                        {{ producto.unidad_medida }}
+                                    {% endif %}
+                                </small>
                             </td>
                             <td>
                                 {% if producto.ubicacion %}
@@ -355,7 +369,7 @@ inputBusqueda.addEventListener('input', function() {
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="text-end me-2">
-                                        <span class="badge bg-${stockClass}">${producto.stock_actual} ${producto.unidad_medida}</span>
+                                        <span class="badge bg-${stockClass}">${producto.stock_actual} ${estandarizarUnidad(producto.unidad_medida)}</span>
                                     </div>
                                     <div class="btn-group btn-group-sm">
                                         <a href="/inventarios/productos/editar/${producto.id}" 
@@ -445,6 +459,24 @@ if (formFiltros) {
             setTimeout(() => formFiltros.submit(), 100);
         });
     });
+}
+
+// Función para estandarizar unidades de medida
+function estandarizarUnidad(unidad) {
+    const unidadUpper = unidad.toUpperCase();
+    if (['L', 'LITRO', 'LITROS'].includes(unidadUpper)) {
+        return 'L';
+    } else if (['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS'].includes(unidadUpper)) {
+        return 'KG';
+    } else if (['G', 'GRAMO', 'GRAMOS'].includes(unidadUpper)) {
+        return 'G';
+    } else if (['ML', 'MILILITRO', 'MILILITROS'].includes(unidadUpper)) {
+        return 'ML';
+    } else if (['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS'].includes(unidadUpper)) {
+        return 'CC';
+    } else {
+        return unidad;
+    }
 }
 </script>
 

@@ -33,7 +33,20 @@
                     <strong>Categoría:</strong> <span class="badge bg-info">{{ producto.categoria }}</span>
                 </div>
                 <div class="col-md-3">
-                    <strong>Unidad:</strong> {{ producto.unidad_medida }}<br>
+                    <strong>Unidad:</strong> 
+                    {% if producto.unidad_medida.upper() in ['L', 'LITRO', 'LITROS'] %}
+                        L
+                    {% elif producto.unidad_medida.upper() in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS'] %}
+                        KG
+                    {% elif producto.unidad_medida.upper() in ['G', 'GRAMO', 'GRAMOS'] %}
+                        G
+                    {% elif producto.unidad_medida.upper() in ['ML', 'MILILITRO', 'MILILITROS'] %}
+                        ML
+                    {% elif producto.unidad_medida.upper() in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS'] %}
+                        CC
+                    {% else %}
+                        {{ producto.unidad_medida }}
+                    {% endif %}<br>
                     <strong>Precio Unit.:</strong> ${{ "{:,.0f}".format(producto.precio_unitario) }}<br>
                     <strong>Stock Mínimo:</strong> {{ producto.stock_minimo }}
                 </div>

@@ -229,7 +229,21 @@
                             </td>
                             <td>
                                 <strong>{{ movimiento.cantidad }}</strong><br>
-                                <small class="text-muted">{{ movimiento.producto.unidad_medida }}</small>
+                                <small class="text-muted">
+                                    {% if movimiento.producto.unidad_medida.upper() in ['L', 'LITRO', 'LITROS'] %}
+                                        L
+                                    {% elif movimiento.producto.unidad_medida.upper() in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS'] %}
+                                        KG
+                                    {% elif movimiento.producto.unidad_medida.upper() in ['G', 'GRAMO', 'GRAMOS'] %}
+                                        G
+                                    {% elif movimiento.producto.unidad_medida.upper() in ['ML', 'MILILITRO', 'MILILITROS'] %}
+                                        ML
+                                    {% elif movimiento.producto.unidad_medida.upper() in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS'] %}
+                                        CC
+                                    {% else %}
+                                        {{ movimiento.producto.unidad_medida }}
+                                    {% endif %}
+                                </small>
                             </td>
                             <td>
                                 {% if movimiento.debe_tener_precio() %}
