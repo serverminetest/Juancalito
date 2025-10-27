@@ -59,17 +59,17 @@ SELECT
     mi.fecha_movimiento,
     -- Cálculos automáticos
     CASE 
-        WHEN mi.tipo_ingreso = 'EMPAUE' THEN mi.cantidad_empaques * mi.contenido_por_empaque
+        WHEN mi.tipo_ingreso = 'EMPAQUE' THEN mi.cantidad_empaques * mi.contenido_por_empaque
         ELSE mi.cantidad
     END as cantidad_total_unidad_base,
     CASE 
-        WHEN mi.tipo_ingreso = 'EMPAUE' THEN mi.cantidad_empaques * mi.precio_por_empaque
+        WHEN mi.tipo_ingreso = 'EMPAQUE' THEN mi.cantidad_empaques * mi.precio_por_empaque
         ELSE mi.total
     END as valor_total_calculado,
-    u.nombre as usuario_creacion
+    u.username as usuario_creacion
 FROM movimiento_inventario mi
 JOIN producto p ON mi.producto_id = p.id
-LEFT JOIN usuario u ON mi.created_by = u.id
+LEFT JOIN "user" u ON mi.created_by = u.id
 ORDER BY mi.fecha_movimiento DESC;
 
 -- 7. Función para calcular totales por tipo de ingreso
