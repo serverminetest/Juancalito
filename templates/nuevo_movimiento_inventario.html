@@ -63,14 +63,68 @@
                                     <div class="form-text" id="stock_info">Selecciona un producto para ver el stock actual</div>
                                 </div>
 
-                                <div class="mb-3" id="precio_container" style="display: none;">
+                                <!-- Tipo de Ingreso -->
+                                <div class="mb-3" id="tipo_ingreso_container" style="display: none;">
+                                    <label class="form-label">Tipo de Ingreso</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="tipo_ingreso" id="tipo_individual" value="INDIVIDUAL" checked>
+                                                <label class="form-check-label" for="tipo_individual">
+                                                    <i class="fas fa-cube"></i> Por Unidades Individuales
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="tipo_ingreso" id="tipo_empaque" value="EMPAUE">
+                                                <label class="form-check-label" for="tipo_empaque">
+                                                    <i class="fas fa-boxes"></i> Por Empaques Completos
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Campos para Ingreso Individual -->
+                                <div class="mb-3" id="ingreso_individual_container" style="display: none;">
                                     <label for="precio_unitario" class="form-label">Precio Unitario</label>
                                     <div class="input-group">
                                         <span class="input-group-text">$</span>
                                         <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
                                                step="0.01" min="0" value="0">
                                     </div>
-                                    <div class="form-text">Solo se requiere para movimientos de entrada</div>
+                                    <div class="form-text">Precio por unidad individual</div>
+                                </div>
+
+                                <!-- Campos para Ingreso por Empaques -->
+                                <div class="mb-3" id="ingreso_empaque_container" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label for="cantidad_empaques" class="form-label">Cantidad de Empaques</label>
+                                            <input type="number" class="form-control" id="cantidad_empaques" name="cantidad_empaques" 
+                                                   min="1" value="1">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="contenido_por_empaque" class="form-label">Contenido por Empaque</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="contenido_por_empaque" name="contenido_por_empaque" 
+                                                       step="0.01" min="0.01" value="1">
+                                                <span class="input-group-text" id="unidad_empaque">-</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="precio_por_empaque" class="form-label">Precio por Empaque</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" id="precio_por_empaque" name="precio_por_empaque" 
+                                                       step="0.01" min="0" value="0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text">
+                                        <strong>Total calculado:</strong> <span id="total_empaques">0</span> unidades por <span id="valor_empaques">$0.00</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -209,6 +263,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalSpan = document.getElementById('total_movimiento');
     const stockDespuesSpan = document.getElementById('stock_despues');
     const estadoSpan = document.getElementById('estado_movimiento');
+    
+    // Elementos para sistema de empaques
+    const tipoIngresoContainer = document.getElementById('tipo_ingreso_container');
+    const ingresoIndividualContainer = document.getElementById('ingreso_individual_container');
+    const ingresoEmpaqueContainer = document.getElementById('ingreso_empaque_container');
+    const tipoIndividualRadio = document.getElementById('tipo_individual');
+    const tipoEmpaqueRadio = document.getElementById('tipo_empaque');
+    const cantidadEmpaquesInput = document.getElementById('cantidad_empaques');
+    const contenidoPorEmpaqueInput = document.getElementById('contenido_por_empaque');
+    const precioPorEmpaqueInput = document.getElementById('precio_por_empaque');
+    const unidadEmpaqueSpan = document.getElementById('unidad_empaque');
+    const totalEmpaquesSpan = document.getElementById('total_empaques');
+    const valorEmpaquesSpan = document.getElementById('valor_empaques');
 
     function actualizarInfo() {
         const productoOption = productoSelect.options[productoSelect.selectedIndex];
@@ -219,15 +286,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const precioUnitario = parseFloat(precioInput.value) || 0;
         const tipoMovimiento = tipoMovimientoSelect.value;
 
-        // Mostrar/ocultar campo de precio según tipo de movimiento
+        // Mostrar/ocultar campos según tipo de movimiento
         const precioContainer = document.getElementById('precio_container');
         const totalContainer = document.getElementById('total_container');
+        const tipoIngresoContainer = document.getElementById('tipo_ingreso_container');
         
         if (tipoMovimiento === 'ENTRADA') {
-            precioContainer.style.display = 'block';
+            tipoIngresoContainer.style.display = 'block';
             totalContainer.style.display = 'block';
+            actualizarTipoIngreso();
         } else {
-            precioContainer.style.display = 'none';
+            tipoIngresoContainer.style.display = 'none';
+            ingresoIndividualContainer.style.display = 'none';
+            ingresoEmpaqueContainer.style.display = 'none';
             totalContainer.style.display = 'none';
             precioInput.value = 0; // Limpiar precio para salidas
         }
@@ -242,17 +313,33 @@ document.addEventListener('DOMContentLoaded', function() {
             stockInfo.textContent = 'Selecciona un producto para ver el stock actual';
         }
 
-        // Calcular total
-        const total = cantidad * precioUnitario;
+        // Calcular total según tipo de ingreso
+        let total = 0;
+        let cantidadTotal = cantidad;
+        
+        if (tipoMovimiento === 'ENTRADA') {
+            if (tipoIndividualRadio && tipoIndividualRadio.checked) {
+                total = cantidad * precioUnitario;
+                cantidadTotal = cantidad;
+            } else if (tipoEmpaqueRadio && tipoEmpaqueRadio.checked) {
+                const cantidadEmpaques = parseInt(cantidadEmpaquesInput.value) || 0;
+                const contenidoPorEmpaque = parseFloat(contenidoPorEmpaqueInput.value) || 0;
+                const precioPorEmpaque = parseFloat(precioPorEmpaqueInput.value) || 0;
+                
+                total = cantidadEmpaques * precioPorEmpaque;
+                cantidadTotal = cantidadEmpaques * contenidoPorEmpaque;
+            }
+        }
+        
         totalSpan.textContent = total.toFixed(2);
 
         // Calcular stock después del movimiento
-        if (productoSelect.value && tipoMovimiento && cantidad) {
+        if (productoSelect.value && tipoMovimiento && cantidadTotal) {
             let stockDespues = stockActual;
             if (tipoMovimiento === 'ENTRADA') {
-                stockDespues = stockActual + cantidad;
+                stockDespues = stockActual + cantidadTotal;
             } else if (tipoMovimiento === 'SALIDA') {
-                stockDespues = stockActual - cantidad;
+                stockDespues = stockActual - cantidadTotal;
             }
             stockDespuesSpan.textContent = `${stockDespues} ${unidad}`;
 
@@ -279,11 +366,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function actualizarTipoIngreso() {
+        if (tipoIndividualRadio.checked) {
+            ingresoIndividualContainer.style.display = 'block';
+            ingresoEmpaqueContainer.style.display = 'none';
+        } else if (tipoEmpaqueRadio.checked) {
+            ingresoIndividualContainer.style.display = 'none';
+            ingresoEmpaqueContainer.style.display = 'block';
+        }
+        actualizarInfo();
+    }
+
+    function calcularEmpaques() {
+        const cantidadEmpaques = parseInt(cantidadEmpaquesInput.value) || 0;
+        const contenidoPorEmpaque = parseFloat(contenidoPorEmpaqueInput.value) || 0;
+        const precioPorEmpaque = parseFloat(precioPorEmpaqueInput.value) || 0;
+        
+        const totalUnidades = cantidadEmpaques * contenidoPorEmpaque;
+        const totalValor = cantidadEmpaques * precioPorEmpaque;
+        
+        totalEmpaquesSpan.textContent = totalUnidades;
+        valorEmpaquesSpan.textContent = `$${totalValor.toFixed(2)}`;
+        
+        // Actualizar el campo cantidad principal
+        cantidadInput.value = totalUnidades;
+        
+        actualizarInfo();
+    }
+
     // Event listeners
     productoSelect.addEventListener('change', actualizarInfo);
     tipoMovimientoSelect.addEventListener('change', actualizarInfo);
     cantidadInput.addEventListener('input', actualizarInfo);
     precioInput.addEventListener('input', actualizarInfo);
+    
+    // Event listeners para sistema de empaques
+    tipoIndividualRadio.addEventListener('change', actualizarTipoIngreso);
+    tipoEmpaqueRadio.addEventListener('change', actualizarTipoIngreso);
+    cantidadEmpaquesInput.addEventListener('input', calcularEmpaques);
+    contenidoPorEmpaqueInput.addEventListener('input', calcularEmpaques);
+    precioPorEmpaqueInput.addEventListener('input', calcularEmpaques);
 
     // Cargar producto desde URL si existe
     const urlParams = new URLSearchParams(window.location.search);

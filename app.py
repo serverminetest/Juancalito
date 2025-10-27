@@ -675,12 +675,42 @@ class MovimientoInventario(db.Model):
     fecha_movimiento = db.Column(db.DateTime, default=colombia_now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     
+    # Nuevos campos para sistema de empaques
+    tipo_ingreso = db.Column(db.String(20), default='INDIVIDUAL')  # EMPAQUE, INDIVIDUAL
+    cantidad_empaques = db.Column(db.Integer, nullable=True)
+    contenido_por_empaque = db.Column(db.Numeric(10, 2), nullable=True)
+    precio_por_empaque = db.Column(db.Numeric(15, 2), nullable=True)
+    
     # Relación con usuario
     usuario = db.relationship('User', backref='movimientos_inventario')
     
     def debe_tener_precio(self):
         """Determina si el movimiento debe tener precio unitario y total"""
         return self.tipo_movimiento == 'ENTRADA'
+    
+    def calcular_cantidad_total(self):
+        """Calcula la cantidad total en unidad base según el tipo de ingreso"""
+        if self.tipo_ingreso == 'EMPAUE' and self.cantidad_empaques and self.contenido_por_empaque:
+            return int(self.cantidad_empaques * self.contenido_por_empaque)
+        return self.cantidad
+    
+    def calcular_valor_total(self):
+        """Calcula el valor total según el tipo de ingreso"""
+        if self.tipo_ingreso == 'EMPAUE' and self.cantidad_empaques and self.precio_por_empaque:
+            return float(self.cantidad_empaques * self.precio_por_empaque)
+        elif self.precio_unitario:
+            return float(self.cantidad * self.precio_unitario)
+        return 0.0
+    
+    def es_ingreso_por_empaques(self):
+        """Verifica si es un ingreso por empaques"""
+        return self.tipo_ingreso == 'EMPAUE' and self.tipo_movimiento == 'ENTRADA'
+    
+    def obtener_descripcion_ingreso(self):
+        """Retorna una descripción del tipo de ingreso"""
+        if self.tipo_ingreso == 'EMPAUE' and self.cantidad_empaques and self.contenido_por_empaque:
+            return f"{self.cantidad_empaques} empaques de {self.contenido_por_empaque} c/u"
+        return f"{self.cantidad} unidades individuales"
 
 class Notificacion(db.Model):
     __tablename__ = 'notificacion'
@@ -4166,6 +4196,12 @@ def nuevo_movimiento_inventario():
             responsable = request.form.get('responsable', '').strip()
             observaciones = request.form.get('observaciones', '').strip()
             
+            # Campos para sistema de empaques
+            tipo_ingreso = request.form.get('tipo_ingreso', 'INDIVIDUAL')
+            cantidad_empaques = int(request.form.get('cantidad_empaques', 0)) if request.form.get('cantidad_empaques') else None
+            contenido_por_empaque = float(request.form.get('contenido_por_empaque', 0)) if request.form.get('contenido_por_empaque') else None
+            precio_por_empaque = float(request.form.get('precio_por_empaque', 0)) if request.form.get('precio_por_empaque') else None
+            
             # Validaciones
             if not producto_id or not tipo_movimiento or not cantidad:
                 flash('Los campos producto, tipo de movimiento y cantidad son obligatorios', 'error')
@@ -4182,10 +4218,18 @@ def nuevo_movimiento_inventario():
                 flash(f'Stock insuficiente. Stock actual: {producto.stock_actual}', 'error')
                 return redirect(url_for('nuevo_movimiento_inventario'))
             
-            # Calcular precio y total solo para entradas
+            # Calcular precio y total según tipo de ingreso
             if tipo_movimiento == 'ENTRADA':
-                precio_final = precio_unitario
-                total = cantidad * precio_unitario
+                if tipo_ingreso == 'EMPAUE' and cantidad_empaques and contenido_por_empaque and precio_por_empaque:
+                    # Ingreso por empaques
+                    precio_final = precio_por_empaque / contenido_por_empaque  # Precio por unidad base
+                    total = cantidad_empaques * precio_por_empaque
+                    # Actualizar cantidad a la cantidad total en unidad base
+                    cantidad = int(cantidad_empaques * contenido_por_empaque)
+                else:
+                    # Ingreso individual
+                    precio_final = precio_unitario
+                    total = cantidad * precio_unitario
             else:
                 precio_final = 0
                 total = 0
@@ -4203,6 +4247,10 @@ def nuevo_movimiento_inventario():
                 total=total,
                 motivo=motivo,
                 referencia=referencia,
+                tipo_ingreso=tipo_ingreso,
+                cantidad_empaques=cantidad_empaques,
+                contenido_por_empaque=contenido_por_empaque,
+                precio_por_empaque=precio_por_empaque,
                 responsable=responsable,
                 observaciones=observaciones,
                 created_by=current_user.id
