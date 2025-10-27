@@ -4321,9 +4321,9 @@ def nuevo_movimiento_inventario():
             # Actualizar stock basado en el movimiento
             stock_anterior = producto.stock_actual
             if tipo_movimiento == 'ENTRADA':
-                producto.stock_actual += cantidad_total
+                producto.stock_actual += cantidad
             elif tipo_movimiento == 'SALIDA':
-                producto.stock_actual -= cantidad_total
+                producto.stock_actual -= cantidad
             
             db.session.commit()
             
