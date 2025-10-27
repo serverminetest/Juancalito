@@ -338,9 +338,9 @@ inputBusqueda.addEventListener('input', function() {
                                       producto.stock_actual <= 10 ? 'warning' : 'success';
                     
                     html += `
-                        <a href="/inventarios/movimientos/nuevo?producto_id=${producto.id}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <div>
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div class="flex-grow-1">
                                     <h6 class="mb-1">
                                         <span class="badge bg-secondary">${producto.codigo}</span>
                                         ${producto.nombre}
@@ -350,15 +350,25 @@ inputBusqueda.addEventListener('input', function() {
                                         ${producto.proveedor ? ' | <i class="fas fa-truck"></i> ' + producto.proveedor : ''}
                                     </small>
                                 </div>
-                                <div class="text-end">
-                                    <span class="badge bg-${stockClass}">${producto.stock_actual} ${producto.unidad_medida}</span>
-                                    <br>
-                                    <small class="text-muted">
-                                        <i class="fas fa-exchange-alt"></i> Registrar Movimiento
-                                    </small>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="text-end me-2">
+                                        <span class="badge bg-${stockClass}">${producto.stock_actual} ${producto.unidad_medida}</span>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/inventarios/productos/editar/${producto.id}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           title="Editar Producto">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="/inventarios/movimientos/nuevo?producto_id=${producto.id}" 
+                                           class="btn btn-outline-success btn-sm" 
+                                           title="Registrar Movimiento">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
-                        </a>
+                        </div>
                     `;
                 });
                 
@@ -462,6 +472,18 @@ if (formFiltros) {
     border-left-color: #0d6efd;
     transform: translateX(3px);
     background-color: #f8f9fa;
+}
+
+/* Estilos para los botones en los resultados de búsqueda */
+#resultados-sugerencias .btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+}
+
+#resultados-sugerencias .btn-group-sm .btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* Asegurar que las tarjetas de estadísticas no interfieran */
