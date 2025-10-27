@@ -209,8 +209,8 @@
                         {% for movimiento in movimientos %}
                         <tr>
                             <td>
-                                <small>{{ movimiento.fecha_movimiento.strftime('%d/%m/%Y') }}</small><br>
-                                <small class="text-muted">{{ movimiento.fecha_movimiento.strftime('%H:%M') }}</small>
+                                <small>{{ (movimiento.fecha_movimiento | colombia_time).strftime('%d/%m/%Y') }}</small><br>
+                                <small class="text-muted">{{ (movimiento.fecha_movimiento | colombia_time).strftime('%H:%M') }}</small>
                             </td>
                             <td>
                                 <strong>{{ movimiento.producto.codigo }}</strong><br>

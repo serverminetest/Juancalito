@@ -144,7 +144,7 @@
                         <!-- Movimientos -->
                         {% for mov in kardex %}
                         <tr>
-                            <td>{{ mov.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>{{ (mov.fecha | colombia_time).strftime('%d/%m/%Y %H:%M') }}</td>
                             <td>
                                 {% if mov.tipo == 'ENTRADA' %}
                                 <span class="badge bg-success">
