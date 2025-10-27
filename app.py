@@ -4249,9 +4249,16 @@ def nuevo_movimiento_inventario():
             
             # Campos para sistema de empaques
             tipo_ingreso = request.form.get('tipo_ingreso', 'INDIVIDUAL')
-            cantidad_empaques = int(request.form.get('cantidad_empaques', 0)) if request.form.get('cantidad_empaques') else None
-            contenido_por_empaque = float(request.form.get('contenido_por_empaque', 0)) if request.form.get('contenido_por_empaque') else None
-            precio_por_empaque = float(request.form.get('precio_por_empaque', 0)) if request.form.get('precio_por_empaque') else None
+            
+            # Solo asignar valores de empaques si el tipo es EMPAQUE
+            if tipo_ingreso == 'EMPAQUE':
+                cantidad_empaques = int(request.form.get('cantidad_empaques', 0)) if request.form.get('cantidad_empaques') else None
+                contenido_por_empaque = float(request.form.get('contenido_por_empaque', 0)) if request.form.get('contenido_por_empaque') else None
+                precio_por_empaque = float(request.form.get('precio_por_empaque', 0)) if request.form.get('precio_por_empaque') else None
+            else:
+                cantidad_empaques = None
+                contenido_por_empaque = None
+                precio_por_empaque = None
             
             # Validaciones
             if not producto_id or not tipo_movimiento or not cantidad:
