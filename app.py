@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file  # pyright: ignore[reportMissingImports]
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -3993,34 +3993,58 @@ def importar_inventarios():
                         # Procesar filas según el tipo de inventario
                         for row in range(2, ws.max_row + 1):  # Saltar encabezado
                             try:
+                                # Función auxiliar para limpiar valores
+                                def limpiar_valor(celda):
+                                    valor = ws[celda].value
+                                    if valor is None:
+                                        return ''
+                                    return str(valor).strip()
+                                
+                                def limpiar_numero(celda, default=0):
+                                    valor = ws[celda].value
+                                    if valor is None:
+                                        return default
+                                    try:
+                                        # Convertir a string y limpiar
+                                        str_valor = str(valor).strip()
+                                        if not str_valor:
+                                            return default
+                                        # Reemplazar comas por puntos y convertir a float
+                                        return float(str_valor.replace(',', '.'))
+                                    except (ValueError, TypeError):
+                                        return default
+                                
                                 if tipo_inventario == 'ALMACEN GENERAL':
                                     # Estructura: PRODUCTO, SALDO, FECHA, N. FACTURA, PROVE, CANT, VALOR UND, VALOR TOTAL
-                                    producto = str(ws[f'B{row}'].value or '').strip().upper()
-                                    saldo = float(str(ws[f'C{row}'].value or '0').replace(',', '.'))
-                                    proveedor = str(ws[f'F{row}'].value or '').strip().upper()
-                                    valor_und = float(str(ws[f'H{row}'].value or '0').replace(',', '.'))
+                                    producto = limpiar_valor(f'B{row}').upper()
+                                    saldo = limpiar_numero(f'C{row}')
+                                    proveedor = limpiar_valor(f'F{row}').upper()
+                                    valor_und = limpiar_numero(f'H{row}')
                                     
                                 elif tipo_inventario == 'QUIMICOS':
                                     # Estructura: CLASE, PRODUCTO, SALDO REAL, FECHA, FACTURA, PROVE, CANT, VALOR C/U, TOTAL
-                                    clase = str(ws[f'B{row}'].value or '').strip().upper()
-                                    producto = str(ws[f'C{row}'].value or '').strip().upper()
-                                    saldo = float(str(ws[f'D{row}'].value or '0').replace(',', '.'))
-                                    proveedor = str(ws[f'G{row}'].value or '').strip().upper()
-                                    valor_und = float(str(ws[f'I{row}'].value or '0').replace(',', '.'))
+                                    clase = limpiar_valor(f'B{row}').upper()
+                                    producto = limpiar_valor(f'C{row}').upper()
+                                    saldo = limpiar_numero(f'D{row}')
+                                    proveedor = limpiar_valor(f'G{row}').upper()
+                                    valor_und = limpiar_numero(f'I{row}')
                                     
                                 elif tipo_inventario == 'POSCOSECHA':
                                     # Estructura: PRODUCTO, SALDO, FECHA, N. FACTURA, PROVE, CANT, VALOR UND, VALOR TOTAL
-                                    producto = str(ws[f'A{row}'].value or '').strip().upper()
-                                    saldo = float(str(ws[f'B{row}'].value or '0').replace(',', '.'))
-                                    proveedor = str(ws[f'E{row}'].value or '').strip().upper()
-                                    valor_und = float(str(ws[f'G{row}'].value or '0').replace(',', '.'))
+                                    producto = limpiar_valor(f'A{row}').upper()
+                                    saldo = limpiar_numero(f'B{row}')
+                                    proveedor = limpiar_valor(f'E{row}').upper()
+                                    valor_und = limpiar_numero(f'G{row}')
                                 
-                                if not producto or producto == "":
+                                # Validar que el producto no esté vacío
+                                if not producto or producto == "" or producto == "NONE":
                                     continue
                                 
-                                # Generar código único
+                                # Generar código único basado en el nombre del producto
                                 prefijo = {'ALMACEN GENERAL': 'ALM', 'QUIMICOS': 'QUI', 'POSCOSECHA': 'POS'}
-                                codigo = f"{prefijo[tipo_inventario]}-{row-1:04d}"
+                                # Crear código más legible usando las primeras letras del producto
+                                codigo_base = ''.join([c for c in producto if c.isalnum()])[:8]
+                                codigo = f"{prefijo[tipo_inventario]}-{codigo_base}-{row-1:03d}"
                                 
                                 # Verificar si ya existe en el mismo período y categoría
                                 result = conn.execute(text("""
@@ -4035,18 +4059,23 @@ def importar_inventarios():
                                     productos_duplicados += 1
                                     continue
                                 
-                                # Insertar producto
+                                # Insertar producto con manejo de errores mejorado
                                 descripcion = f'Importado desde Excel - {tipo_inventario} - {periodo_importacion}'
                                 if tipo_inventario == 'QUIMICOS' and clase:
                                     descripcion += f' - Clase: {clase}'
                                 
+                                # Asegurar que los valores no sean None
+                                precio_final = valor_und if valor_und > 0 else 0
+                                saldo_final = int(saldo) if saldo >= 0 else 0
+                                proveedor_final = proveedor if proveedor else 'SIN PROVEEDOR'
+                                
                                 conn.execute(text("""
                                     INSERT INTO producto (
                                         codigo, nombre, descripcion, categoria, periodo, unidad_medida,
-                                        precio_unitario, stock_actual, proveedor, activo, created_at
+                                        precio_unitario, stock_actual, saldo_inicial, proveedor, activo, created_at
                                     ) VALUES (
                                         :codigo, :nombre, :descripcion, :categoria, :periodo, :unidad_medida,
-                                        :precio_unitario, :stock_actual, :proveedor, true, CURRENT_TIMESTAMP
+                                        :precio_unitario, :stock_actual, :saldo_inicial, :proveedor, true, CURRENT_TIMESTAMP
                                     )
                                 """), {
                                     'codigo': codigo,
@@ -4055,9 +4084,10 @@ def importar_inventarios():
                                     'categoria': tipo_inventario,
                                     'periodo': periodo_importacion,
                                     'unidad_medida': 'UNIDAD',
-                                    'precio_unitario': valor_und,
-                                    'stock_actual': int(saldo),
-                                    'proveedor': proveedor
+                                    'precio_unitario': precio_final,
+                                    'stock_actual': saldo_final,
+                                    'saldo_inicial': saldo_final,
+                                    'proveedor': proveedor_final
                                 })
                                 
                                 productos_importados += 1
@@ -4083,7 +4113,10 @@ def importar_inventarios():
                 
                 finally:
                     # Limpiar archivo temporal
-                    os.unlink(tmp_file.name)
+                    try:
+                        os.unlink(tmp_file.name)
+                    except:
+                        pass  # Ignorar errores al eliminar archivo temporal
             
             return redirect(url_for('productos_inventario'))
             
@@ -4091,12 +4124,13 @@ def importar_inventarios():
             flash(f'Error durante la importación: {str(e)}', 'error')
             return redirect(url_for('importar_inventarios'))
     
-            # GET: Mostrar formulario de importación
-            categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
-            periodo_actual = get_periodo_actual()
-            return render_template('importar_inventarios.html', 
-                                 categorias=categorias_fijas,
-                                 periodo_actual=periodo_actual)
+    else:
+        # GET: Mostrar formulario de importación
+        categorias_fijas = ['ALMACEN GENERAL', 'QUIMICOS', 'POSCOSECHA']
+        periodo_actual = get_periodo_actual()
+        return render_template('importar_inventarios.html', 
+                             categorias=categorias_fijas,
+                             periodo_actual=periodo_actual)
 
 @app.route('/inventarios/movimientos/nuevo', methods=['GET', 'POST'])
 @login_required
