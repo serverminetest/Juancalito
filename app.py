@@ -3144,12 +3144,13 @@ def editar_producto_inventario(id):
             else:
                 producto.fecha_vencimiento = None
             
-            # Recalcular stock basado en movimientos
-            producto.recalcular_stock()
+            # Solo recalcular si no se está editando el stock manualmente
+            # El stock_actual ya fue actualizado con el valor del formulario
+            # producto.recalcular_stock()  # Comentado para permitir edición manual
             
             db.session.commit()
             
-            flash(f'Producto "{nombre}" actualizado exitosamente. Stock recalculado: {producto.stock_actual}', 'success')
+            flash(f'Producto "{nombre}" actualizado exitosamente. Stock: {producto.stock_actual}', 'success')
             return redirect(url_for('productos_inventario'))
             
         except Exception as e:
