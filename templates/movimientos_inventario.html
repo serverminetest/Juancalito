@@ -176,14 +176,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body text-center">
-                    <h4>${{ "{:,.0f}".format(valor_total_movimientos) }}</h4>
-                    <small>Valor Total</small>
-                </div>
-            </div>
-        </div>
     </div>
     {% endif %}
 
@@ -305,10 +297,6 @@
                                     <span class="badge bg-danger">
                                         {{ movimientos|selectattr('tipo_movimiento', 'equalto', 'SALIDA')|list|length }}
                                     </span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Valor Total:</strong> 
-                                    ${{ "{:,.0f}".format(movimientos|sum(attribute='total')) }}
                                 </div>
                             </div>
                         </div>
