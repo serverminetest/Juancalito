@@ -4241,7 +4241,13 @@ def nuevo_movimiento_inventario():
             producto_id = request.form['producto_id']
             tipo_movimiento = request.form['tipo_movimiento']
             cantidad = int(request.form['cantidad'])
-            precio_unitario = float(request.form.get('precio_unitario', 0))
+            # Manejar precio unitario con opción NA
+            precio_na = request.form.get('precio_na', '0')
+            if precio_na == '1':  # NA seleccionado
+                precio_unitario = 0
+            else:
+                precio_unitario = float(request.form.get('precio_unitario', 0))
+            
             motivo = request.form.get('motivo', '').strip()
             referencia = request.form.get('referencia', '').strip()
             responsable = request.form.get('responsable', '').strip()
@@ -4254,7 +4260,13 @@ def nuevo_movimiento_inventario():
             if tipo_ingreso == 'EMPAQUE':
                 cantidad_empaques = int(request.form.get('cantidad_empaques', 0)) if request.form.get('cantidad_empaques') else None
                 contenido_por_empaque = float(request.form.get('contenido_por_empaque', 0)) if request.form.get('contenido_por_empaque') else None
-                precio_por_empaque = float(request.form.get('precio_por_empaque', 0)) if request.form.get('precio_por_empaque') else None
+                
+                # Manejar precio por empaque con opción NA
+                precio_empaque_na = request.form.get('precio_empaque_na', '0')
+                if precio_empaque_na == '1':  # NA seleccionado
+                    precio_por_empaque = 0
+                else:
+                    precio_por_empaque = float(request.form.get('precio_por_empaque', 0))
             else:
                 cantidad_empaques = None
                 contenido_por_empaque = None

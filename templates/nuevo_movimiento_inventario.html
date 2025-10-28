@@ -99,8 +99,12 @@
                                         <span class="input-group-text">$</span>
                                         <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
                                                step="0.01" min="0" value="0">
+                                        <select class="form-select" id="precio_na" name="precio_na" style="max-width: 80px;">
+                                            <option value="0">Valor</option>
+                                            <option value="1">NA</option>
+                                        </select>
                                     </div>
-                                    <div class="form-text">Precio por unidad individual</div>
+                                    <div class="form-text">Precio por unidad individual o selecciona "NA" si no aplica</div>
                                 </div>
 
                                 <!-- Campos para Ingreso por Empaques -->
@@ -125,6 +129,10 @@
                                                 <span class="input-group-text">$</span>
                                                 <input type="number" class="form-control" id="precio_por_empaque" name="precio_por_empaque" 
                                                        step="0.01" min="0" value="0">
+                                                <select class="form-select" id="precio_empaque_na" name="precio_empaque_na" style="max-width: 80px;">
+                                                    <option value="0">Valor</option>
+                                                    <option value="1">NA</option>
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
@@ -264,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const tipoMovimientoSelect = document.getElementById('tipo_movimiento');
     const cantidadInput = document.getElementById('cantidad');
     const precioInput = document.getElementById('precio_unitario');
+    const precioNASelect = document.getElementById('precio_na');
     const unidadSpan = document.getElementById('unidad_medida');
     const stockInfo = document.getElementById('stock_info');
     const totalSpan = document.getElementById('total_movimiento');
@@ -279,6 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cantidadEmpaquesInput = document.getElementById('cantidad_empaques');
     const contenidoPorEmpaqueInput = document.getElementById('contenido_por_empaque');
     const precioPorEmpaqueInput = document.getElementById('precio_por_empaque');
+    const precioEmpaqueNASelect = document.getElementById('precio_empaque_na');
     const unidadEmpaqueSpan = document.getElementById('unidad_empaque');
     const totalEmpaquesSpan = document.getElementById('total_empaques');
     const valorEmpaquesSpan = document.getElementById('valor_empaques');
@@ -400,6 +410,32 @@ document.addEventListener('DOMContentLoaded', function() {
         actualizarInfo();
     }
 
+    // Función para manejar selector NA de precio unitario
+    function manejarPrecioNA() {
+        if (precioNASelect.value === '1') {
+            precioInput.value = '0';
+            precioInput.disabled = true;
+            precioInput.style.backgroundColor = '#f8f9fa';
+        } else {
+            precioInput.disabled = false;
+            precioInput.style.backgroundColor = '';
+        }
+        actualizarInfo();
+    }
+
+    // Función para manejar selector NA de precio por empaque
+    function manejarPrecioEmpaqueNA() {
+        if (precioEmpaqueNASelect.value === '1') {
+            precioPorEmpaqueInput.value = '0';
+            precioPorEmpaqueInput.disabled = true;
+            precioPorEmpaqueInput.style.backgroundColor = '#f8f9fa';
+        } else {
+            precioPorEmpaqueInput.disabled = false;
+            precioPorEmpaqueInput.style.backgroundColor = '';
+        }
+        calcularEmpaques();
+    }
+
     // Event listeners
     productoSelect.addEventListener('change', actualizarInfo);
     tipoMovimientoSelect.addEventListener('change', actualizarInfo);
@@ -412,6 +448,10 @@ document.addEventListener('DOMContentLoaded', function() {
     cantidadEmpaquesInput.addEventListener('input', calcularEmpaques);
     contenidoPorEmpaqueInput.addEventListener('input', calcularEmpaques);
     precioPorEmpaqueInput.addEventListener('input', calcularEmpaques);
+    
+    // Event listeners para selectores NA
+    precioNASelect.addEventListener('change', manejarPrecioNA);
+    precioEmpaqueNASelect.addEventListener('change', manejarPrecioEmpaqueNA);
 
     // Cargar producto desde URL si existe
     const urlParams = new URLSearchParams(window.location.search);
