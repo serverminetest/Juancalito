@@ -4355,6 +4355,47 @@ def nuevo_movimiento_inventario():
     productos = Producto.query.filter_by(activo=True).all()
     return render_template('nuevo_movimiento_inventario.html', productos=productos)
 
+@app.route('/inventarios/movimientos/eliminar/<int:id>', methods=['DELETE'])
+@login_required
+def eliminar_movimiento_inventario(id):
+    """Eliminar un movimiento de inventario y revertir el stock"""
+    try:
+        movimiento = MovimientoInventario.query.get_or_404(id)
+        producto = movimiento.producto
+        
+        # Guardar información para el mensaje
+        stock_anterior = producto.stock_actual
+        cantidad = movimiento.cantidad
+        tipo_movimiento = movimiento.tipo_movimiento
+        
+        # Revertir el stock
+        if tipo_movimiento == 'ENTRADA':
+            # Si era entrada, restar del stock
+            producto.stock_actual -= cantidad
+        elif tipo_movimiento == 'SALIDA':
+            # Si era salida, sumar al stock
+            producto.stock_actual += cantidad
+        
+        # Eliminar el movimiento
+        db.session.delete(movimiento)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Movimiento eliminado exitosamente',
+            'stock_anterior': stock_anterior,
+            'stock_actual': producto.stock_actual,
+            'cantidad_revertida': cantidad,
+            'tipo_movimiento': tipo_movimiento
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error al eliminar movimiento: {str(e)}'
+        }), 500
+
 @app.route('/inventarios/productos/<int:id>/kardex')
 @login_required
 def kardex_producto(id):

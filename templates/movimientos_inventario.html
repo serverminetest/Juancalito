@@ -203,6 +203,7 @@
                             <th>Referencia</th>
                             <th>Responsable</th>
                             <th>Usuario</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -287,6 +288,13 @@
                                     <small class="text-muted">Sistema</small>
                                 {% endif %}
                             </td>
+                            <td>
+                                <button class="btn btn-outline-danger btn-sm" 
+                                        onclick="eliminarMovimiento({{ movimiento.id }}, '{{ movimiento.producto.nombre }}', {{ movimiento.cantidad }}, '{{ movimiento.tipo_movimiento }}')"
+                                        title="Eliminar movimiento">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -344,6 +352,54 @@
 function limpiarBusqueda() {
     document.getElementById('busqueda').value = '';
     document.getElementById('form-busqueda').submit();
+}
+
+// Función para eliminar movimiento
+function eliminarMovimiento(movimientoId, productoNombre, cantidad, tipoMovimiento) {
+    const tipoTexto = tipoMovimiento === 'ENTRADA' ? 'entrada' : 'salida';
+    const accionTexto = tipoMovimiento === 'ENTRADA' ? 'restar' : 'sumar';
+    
+    if (confirm(`¿Estás seguro de eliminar esta ${tipoTexto}?\n\n` +
+                `Producto: ${productoNombre}\n` +
+                `Cantidad: ${cantidad}\n` +
+                `Tipo: ${tipoMovimiento}\n\n` +
+                `Esto ${accionTexto}á ${cantidad} unidades al stock actual.`)) {
+        
+        // Mostrar loading
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+        
+        // Enviar petición de eliminación
+        fetch(`/inventarios/movimientos/eliminar/${movimientoId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mostrar mensaje de éxito
+                alert(`✅ Movimiento eliminado exitosamente.\n\nStock corregido: ${data.stock_anterior} → ${data.stock_actual}`);
+                // Recargar la página para mostrar los cambios
+                window.location.reload();
+            } else {
+                alert(`❌ Error al eliminar movimiento: ${data.message}`);
+                // Restaurar botón
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Error de conexión al eliminar movimiento');
+            // Restaurar botón
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        });
+    }
 }
 
 // Atajos de teclado
