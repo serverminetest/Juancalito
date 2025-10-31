@@ -3985,22 +3985,12 @@ def exportar_excel_inventario(periodo):
                     cantidad_cell.border = border
                     cantidad_cell.alignment = center_alignment
                     
-                    # Proveedor (antes de Valor Unit) - leer del producto asociado al movimiento
+                    # Proveedor (antes de Valor Unit) - leer directamente del producto del loop principal
                     proveedor_cell = ws[f'{get_column_letter(start_col + 3)}{row}']
-                    # Usar el producto del movimiento (entrada.producto) que debería tener el proveedor
+                    # Usar el producto del loop principal que ya tenemos cargado
                     proveedor_valor = ''
-                    try:
-                        # Intentar obtener del producto del movimiento
-                        prod = entrada.producto
-                        if prod and prod.proveedor:
-                            proveedor_valor = str(prod.proveedor).strip()
-                        # Si no, usar el producto del loop principal
-                        elif producto.proveedor:
-                            proveedor_valor = str(producto.proveedor).strip()
-                    except:
-                        # Si hay error, intentar desde el producto del loop
-                        if producto.proveedor:
-                            proveedor_valor = str(producto.proveedor).strip()
+                    if producto.proveedor:
+                        proveedor_valor = str(producto.proveedor).strip()
                     proveedor_cell.value = proveedor_valor
                     proveedor_cell.border = border
                     
