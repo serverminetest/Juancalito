@@ -2925,7 +2925,9 @@ def movimientos_inventario():
     fecha_hasta = request.args.get('fecha_hasta', '')
     orden = request.args.get('orden', 'fecha_desc')
     
-    query = MovimientoInventario.query.join(Producto)
+    # Usar eager loading para cargar productos con todos sus datos
+    from sqlalchemy.orm import joinedload
+    query = MovimientoInventario.query.options(joinedload(MovimientoInventario.producto)).join(Producto)
     
     # Filtro por producto específico
     if producto_id:
@@ -3698,8 +3700,9 @@ def exportar_excel_inventario(periodo):
         import tempfile
         import os
         
-        # Obtener productos del período
-        productos = Producto.query.filter_by(periodo=periodo, activo=True).all()
+        # Obtener productos del período con eager loading de relaciones
+        from sqlalchemy.orm import joinedload
+        productos = Producto.query.options(joinedload(Producto.movimientos)).filter_by(periodo=periodo, activo=True).all()
         
         if not productos:
             flash(f'No hay productos en el período {periodo}', 'warning')
@@ -3961,22 +3964,43 @@ def exportar_excel_inventario(periodo):
                     factura_cell.value = entrada.referencia or ''
                     factura_cell.border = border
                     
-                    # Cantidad
+                    # Cantidad con unidad
+                    cantidad_total = entrada.calcular_cantidad_total()
+                    unidad_entrada = producto.unidad_medida.upper()
+                    if unidad_entrada in ['L', 'LITRO', 'LITROS']:
+                        unidad_display = 'L'
+                    elif unidad_entrada in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS']:
+                        unidad_display = 'KG'
+                    elif unidad_entrada in ['G', 'GRAMO', 'GRAMOS']:
+                        unidad_display = 'G'
+                    elif unidad_entrada in ['ML', 'MILILITRO', 'MILILITROS']:
+                        unidad_display = 'ML'
+                    elif unidad_entrada in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS']:
+                        unidad_display = 'CC'
+                    else:
+                        unidad_display = producto.unidad_medida
+                    
                     cantidad_cell = ws[f'{get_column_letter(start_col + 2)}{row}']
-                    cantidad_cell.value = entrada.calcular_cantidad_total()
+                    cantidad_cell.value = f'{cantidad_total} {unidad_display}'
                     cantidad_cell.border = border
                     cantidad_cell.alignment = center_alignment
                     
                     # Proveedor (antes de Valor Unit) - leer del producto asociado al movimiento
                     proveedor_cell = ws[f'{get_column_letter(start_col + 3)}{row}']
-                    # Usar el producto del movimiento para asegurar que tenemos el proveedor correcto
-                    producto_movimiento = entrada.producto
+                    # Usar el producto del movimiento (entrada.producto) que debería tener el proveedor
                     proveedor_valor = ''
-                    if producto_movimiento and producto_movimiento.proveedor:
-                        proveedor_valor = str(producto_movimiento.proveedor).strip()
-                    elif producto.proveedor:
-                        # Fallback al producto del loop
-                        proveedor_valor = str(producto.proveedor).strip()
+                    try:
+                        # Intentar obtener del producto del movimiento
+                        prod = entrada.producto
+                        if prod and prod.proveedor:
+                            proveedor_valor = str(prod.proveedor).strip()
+                        # Si no, usar el producto del loop principal
+                        elif producto.proveedor:
+                            proveedor_valor = str(producto.proveedor).strip()
+                    except:
+                        # Si hay error, intentar desde el producto del loop
+                        if producto.proveedor:
+                            proveedor_valor = str(producto.proveedor).strip()
                     proveedor_cell.value = proveedor_valor
                     proveedor_cell.border = border
                     
@@ -4026,13 +4050,14 @@ def exportar_excel_inventario(periodo):
                     fecha_cell.border = border
                     fecha_cell.alignment = center_alignment
                     
-                    # Cantidad
+                    # Cantidad (solo número)
+                    cantidad_total = salida.calcular_cantidad_total()
                     cantidad_cell = ws[f'{get_column_letter(start_col + 1)}{row}']
-                    cantidad_cell.value = salida.calcular_cantidad_total()
+                    cantidad_cell.value = cantidad_total
                     cantidad_cell.border = border
                     cantidad_cell.alignment = center_alignment
                     
-                    # Unidad
+                    # Unidad (en columna separada)
                     unidad_cell = ws[f'{get_column_letter(start_col + 2)}{row}']
                     unidad_cell.value = unidad_display
                     unidad_cell.border = border

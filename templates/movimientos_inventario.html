@@ -202,7 +202,7 @@
                             <th>Motivo</th>
                             <th>Referencia</th>
                             <th>Responsable</th>
-                            <th>Usuario</th>
+                            <th>Proveedor</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -282,10 +282,10 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if movimiento.usuario %}
-                                    <small>{{ movimiento.usuario.username }}</small>
+                                {% if movimiento.producto.proveedor %}
+                                    <small>{{ movimiento.producto.proveedor }}</small>
                                 {% else %}
-                                    <small class="text-muted">Sistema</small>
+                                    <small class="text-muted">-</small>
                                 {% endif %}
                             </td>
                             <td>
