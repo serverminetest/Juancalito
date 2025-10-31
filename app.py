@@ -3731,24 +3731,40 @@ def exportar_excel_inventario(periodo):
         for categoria, productos_cat in categorias.items():
             ws = wb.create_sheet(title=categoria)
             
+            # Calcular número máximo de movimientos para determinar cuántas columnas necesitamos
+            max_movimientos = 0
+            for producto in productos_cat:
+                movimientos_count = len(producto.movimientos)
+                if movimientos_count > max_movimientos:
+                    max_movimientos = movimientos_count
+            
+            # Calcular número total de columnas
+            headers_count = 6  # NOMBRE, UNIDAD, SALDO INICIAL, SALDO REAL, PRECIO UNIT., VALOR TOTAL
+            movimiento_cols_per_product = 3  # Fecha, Tipo, Cantidad
+            total_cols = headers_count + (max_movimientos * movimiento_cols_per_product)
+            
+            # Obtener letra de última columna
+            from openpyxl.utils import get_column_letter
+            last_col_letter = get_column_letter(total_cols)
+            
             # Título de la hoja
             ws['A1'] = f'INVENTARIO {categoria} - PERÍODO {periodo}'
             ws['A1'].font = Font(bold=True, size=16)
             ws['A1'].alignment = center_alignment
-            ws.merge_cells('A1:L1')
+            ws.merge_cells(f'A1:{last_col_letter}1')
             
             # Fecha de generación
             ws['A2'] = f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
             ws['A2'].font = Font(italic=True)
-            ws.merge_cells('A2:L2')
+            ws.merge_cells(f'A2:{last_col_letter}2')
             
             # SECCIÓN 1: RESUMEN DE PRODUCTOS
             ws['A4'] = 'RESUMEN DE PRODUCTOS'
             ws['A4'].font = Font(bold=True, size=14)
-            ws.merge_cells('A4:L4')
+            ws.merge_cells(f'A4:{last_col_letter}4')
             
-            # Encabezados del resumen
-            headers_resumen = ['CÓDIGO', 'NOMBRE', 'UNIDAD', 'SALDO INICIAL', 'ENTRADAS', 'SALIDAS', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL', 'PROVEEDOR']
+            # Encabezados principales (sin proveedor, sin totales de entradas/salidas)
+            headers_resumen = ['NOMBRE', 'UNIDAD', 'SALDO INICIAL', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL']
             for col, header in enumerate(headers_resumen, 1):
                 cell = ws.cell(row=5, column=col, value=header)
                 cell.font = header_font
@@ -3756,206 +3772,137 @@ def exportar_excel_inventario(periodo):
                 cell.alignment = center_alignment
                 cell.border = border
             
-            # Datos de productos (resumen)
+            # Encabezados de movimientos (a la derecha)
+            # Cada movimiento tiene: Fecha, Tipo, Cantidad
+            movimiento_cols_per_product = 3  # Fecha, Tipo, Cantidad
+            start_mov_col = len(headers_resumen) + 1
+            
+            # Crear encabezados para movimientos
+            for mov_idx in range(max_movimientos):
+                col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
+                col_tipo = col_fecha + 1
+                col_cantidad = col_tipo + 1
+                
+                # Encabezado del movimiento (merge de 3 columnas)
+                header_cell = ws.cell(row=4, column=col_fecha, value=f'MOVIMIENTO {mov_idx + 1}')
+                header_cell.font = Font(bold=True, size=10)
+                header_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                header_cell.alignment = center_alignment
+                header_cell.border = border
+                ws.merge_cells(ws.cell(row=4, column=col_fecha).coordinate + ':' + ws.cell(row=4, column=col_cantidad).coordinate)
+                
+                # Sub-encabezados
+                ws.cell(row=5, column=col_fecha, value='FECHA').font = header_font
+                ws.cell(row=5, column=col_fecha).fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                ws.cell(row=5, column=col_fecha).alignment = center_alignment
+                ws.cell(row=5, column=col_fecha).border = border
+                
+                ws.cell(row=5, column=col_tipo, value='TIPO').font = header_font
+                ws.cell(row=5, column=col_tipo).fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                ws.cell(row=5, column=col_tipo).alignment = center_alignment
+                ws.cell(row=5, column=col_tipo).border = border
+                
+                ws.cell(row=5, column=col_cantidad, value='CANTIDAD').font = header_font
+                ws.cell(row=5, column=col_cantidad).fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                ws.cell(row=5, column=col_cantidad).alignment = center_alignment
+                ws.cell(row=5, column=col_cantidad).border = border
+            
+            # Datos de productos con movimientos a la derecha
             for row, producto in enumerate(productos_cat, 6):
-                # Datos básicos
-                ws.cell(row=row, column=1, value=producto.codigo).border = border
-                ws.cell(row=row, column=2, value=producto.nombre).border = border
-                ws.cell(row=row, column=3, value=producto.unidad_medida).border = border
+                # Datos básicos del producto
+                ws.cell(row=row, column=1, value=producto.nombre).border = border
+                
+                # Unidad estandarizada
+                unidad = producto.unidad_medida.upper()
+                if unidad in ['L', 'LITRO', 'LITROS']:
+                    unidad_display = 'L'
+                elif unidad in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS']:
+                    unidad_display = 'KG'
+                elif unidad in ['G', 'GRAMO', 'GRAMOS']:
+                    unidad_display = 'G'
+                elif unidad in ['ML', 'MILILITRO', 'MILILITROS']:
+                    unidad_display = 'ML'
+                elif unidad in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS']:
+                    unidad_display = 'CC'
+                else:
+                    unidad_display = producto.unidad_medida
+                
+                ws.cell(row=row, column=2, value=unidad_display).border = border
                 
                 # Saldo inicial
                 saldo_inicial = getattr(producto, 'saldo_inicial', 0) or 0
-                ws.cell(row=row, column=4, value=saldo_inicial).border = border
-                
-                # Calcular entradas y salidas desde movimientos
-                entradas = sum(m.cantidad for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA')
-                salidas = sum(m.cantidad for m in producto.movimientos if m.tipo_movimiento == 'SALIDA')
-                
-                ws.cell(row=row, column=5, value=entradas).border = border
-                ws.cell(row=row, column=6, value=salidas).border = border
+                ws.cell(row=row, column=3, value=saldo_inicial).border = border
                 
                 # FÓRMULA: Saldo Real = Saldo Inicial + Entradas - Salidas
-                formula_cell = ws.cell(row=row, column=7)
-                formula_cell.value = f'=D{row}+E{row}-F{row}'
+                # Necesitamos calcular entradas y salidas desde movimientos
+                entradas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA')
+                salidas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'SALIDA')
+                saldo_real = saldo_inicial + entradas - salidas
+                
+                formula_cell = ws.cell(row=row, column=4)
+                formula_cell.value = saldo_real  # Usar valor calculado en lugar de fórmula para evitar problemas con movimientos
                 formula_cell.border = border
                 formula_cell.alignment = center_alignment
                 
                 # Precio unitario (solo para productos que deben tener precio)
                 if producto.debe_tener_precio():
                     precio = float(producto.precio_unitario) if producto.precio_unitario else 0
-                    ws.cell(row=row, column=8, value=precio).border = border
+                    ws.cell(row=row, column=5, value=precio).border = border
                     
                     # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
-                    valor_cell = ws.cell(row=row, column=9)
-                    valor_cell.value = f'=G{row}*H{row}'
+                    valor_cell = ws.cell(row=row, column=6)
+                    valor_cell.value = f'=D{row}*E{row}'
                     valor_cell.border = border
                     valor_cell.alignment = center_alignment
                 else:
                     # Para ALMACEN GENERAL, mostrar "-" en precio y valor
-                    ws.cell(row=row, column=8, value='-').border = border
-                    ws.cell(row=row, column=9, value='-').border = border
+                    ws.cell(row=row, column=5, value='-').border = border
+                    ws.cell(row=row, column=6, value='-').border = border
                 
-                # Proveedor
-                ws.cell(row=row, column=10, value=producto.proveedor or '').border = border
-            
-            # Fila de totales del resumen
-            total_resumen_row = len(productos_cat) + 7
-            ws.cell(row=total_resumen_row, column=1, value='TOTALES').font = Font(bold=True)
-            ws.cell(row=total_resumen_row, column=1).border = border
-            
-            # FÓRMULAS DE TOTALES
-            ws.cell(row=total_resumen_row, column=4, value=f'=SUM(D6:D{total_resumen_row-1})').border = border
-            ws.cell(row=total_resumen_row, column=5, value=f'=SUM(E6:E{total_resumen_row-1})').border = border
-            ws.cell(row=total_resumen_row, column=6, value=f'=SUM(F6:F{total_resumen_row-1})').border = border
-            ws.cell(row=total_resumen_row, column=7, value=f'=SUM(G6:G{total_resumen_row-1})').border = border
-            ws.cell(row=total_resumen_row, column=9, value=f'=SUM(I6:I{total_resumen_row-1})').border = border
-            
-            # Aplicar formato a totales
-            for col in range(1, 11):
-                cell = ws.cell(row=total_resumen_row, column=col)
-                cell.font = Font(bold=True)
-                cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
-                cell.border = border
-            
-            # SECCIÓN 2: DETALLE DE MOVIMIENTOS
-            movimientos_start_row = total_resumen_row + 3
-            ws.cell(row=movimientos_start_row, column=1, value='DETALLE DE MOVIMIENTOS')
-            ws.cell(row=movimientos_start_row, column=1).font = Font(bold=True, size=14)
-            ws.merge_cells(f'A{movimientos_start_row}:L{movimientos_start_row}')
-            
-            # Encabezados de movimientos
-            headers_movimientos = ['FECHA', 'CÓDIGO', 'PRODUCTO', 'TIPO', 'CANTIDAD', 'PRECIO UNIT.', 'TOTAL', 'MOTIVO', 'REFERENCIA', 'RESPONSABLE', 'USUARIO']
-            for col, header in enumerate(headers_movimientos, 1):
-                cell = ws.cell(row=movimientos_start_row+1, column=col, value=header)
-                cell.font = header_font
-                cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                cell.alignment = center_alignment
-                cell.border = border
-            
-            # Obtener todos los movimientos de productos de esta categoría
-            movimientos_categoria = []
-            for producto in productos_cat:
-                for movimiento in producto.movimientos:
-                    movimientos_categoria.append(movimiento)
-            
-            # Ordenar movimientos por fecha
-            movimientos_categoria.sort(key=lambda x: x.fecha_movimiento)
-            
-            # Datos de movimientos
-            current_row = movimientos_start_row + 2
-            for movimiento in movimientos_categoria:
-                ws.cell(row=current_row, column=1, value=movimiento.fecha_movimiento.strftime('%d/%m/%Y %H:%M')).border = border
-                ws.cell(row=current_row, column=2, value=movimiento.producto.codigo).border = border
-                ws.cell(row=current_row, column=3, value=movimiento.producto.nombre).border = border
+                # Obtener y ordenar movimientos del producto
+                movimientos_producto = sorted(producto.movimientos, key=lambda x: x.fecha_movimiento)
                 
-                # Tipo con color
-                tipo_cell = ws.cell(row=current_row, column=4, value=movimiento.tipo_movimiento)
-                tipo_cell.border = border
-                if movimiento.tipo_movimiento == 'ENTRADA':
-                    tipo_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
-                else:
-                    tipo_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
-                
-                ws.cell(row=current_row, column=5, value=movimiento.cantidad).border = border
-                
-                # Precio unitario y total solo para entradas
-                if movimiento.debe_tener_precio():
-                    ws.cell(row=current_row, column=6, value=float(movimiento.precio_unitario) if movimiento.precio_unitario else 0).border = border
-                    ws.cell(row=current_row, column=7, value=float(movimiento.total) if movimiento.total else 0).border = border
-                else:
-                    ws.cell(row=current_row, column=6, value='-').border = border
-                    ws.cell(row=current_row, column=7, value='-').border = border
-                ws.cell(row=current_row, column=8, value=movimiento.motivo or '').border = border
-                ws.cell(row=current_row, column=9, value=movimiento.referencia or '').border = border
-                ws.cell(row=current_row, column=10, value=movimiento.responsable or '').border = border
-                ws.cell(row=current_row, column=11, value=movimiento.usuario.username if movimiento.usuario else 'N/A').border = border
-                
-                current_row += 1
-            
-            # Totales de movimientos
-            if movimientos_categoria:
-                total_mov_row = current_row + 1
-                ws.cell(row=total_mov_row, column=1, value='TOTALES MOVIMIENTOS').font = Font(bold=True)
-                ws.cell(row=total_mov_row, column=1).border = border
-                
-                # Fórmulas de totales de movimientos
-                ws.cell(row=total_mov_row, column=5, value=f'=SUM(E{movimientos_start_row+2}:E{current_row-1})').border = border  # Total cantidad
-                ws.cell(row=total_mov_row, column=7, value=f'=SUM(G{movimientos_start_row+2}:G{current_row-1})').border = border  # Total valor
-                
-                # Aplicar formato a totales de movimientos
-                for col in range(1, 12):
-                    cell = ws.cell(row=total_mov_row, column=col)
-                    cell.font = Font(bold=True)
-                    cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
-                    cell.border = border
+                # Escribir movimientos a la derecha
+                for mov_idx, movimiento in enumerate(movimientos_producto):
+                    col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
+                    col_tipo = col_fecha + 1
+                    col_cantidad = col_tipo + 1
+                    
+                    # Fecha
+                    fecha_str = movimiento.fecha_movimiento.strftime('%d/%m/%Y')
+                    ws.cell(row=row, column=col_fecha, value=fecha_str).border = border
+                    
+                    # Tipo con color
+                    tipo_cell = ws.cell(row=row, column=col_tipo, value=movimiento.tipo_movimiento)
+                    tipo_cell.border = border
+                    if movimiento.tipo_movimiento == 'ENTRADA':
+                        tipo_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
+                    else:
+                        tipo_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
+                    
+                    # Cantidad
+                    cantidad_total = movimiento.calcular_cantidad_total()
+                    ws.cell(row=row, column=col_cantidad, value=cantidad_total).border = border
             
             # Ajustar ancho de columnas
-            column_widths = [15, 12, 25, 10, 10, 12, 12, 20, 15, 20, 15]
-            for col, width in enumerate(column_widths, 1):
-                from openpyxl.utils import get_column_letter
-                ws.column_dimensions[get_column_letter(col)].width = width
-        
-        # Crear hoja de resumen
-        ws_resumen = wb.create_sheet(title='RESUMEN GENERAL', index=0)
-        
-        # Título del resumen
-        ws_resumen['A1'] = f'RESUMEN GENERAL DE INVENTARIOS - PERÍODO {periodo}'
-        ws_resumen['A1'].font = Font(bold=True, size=16)
-        ws_resumen['A1'].alignment = center_alignment
-        ws_resumen.merge_cells('A1:G1')
-        
-        # Encabezados del resumen
-        resumen_headers = ['CATEGORÍA', 'TOTAL PRODUCTOS', 'TOTAL SALDO INICIAL', 'TOTAL ENTRADAS', 'TOTAL SALIDAS', 'TOTAL SALDO REAL', 'VALOR TOTAL']
-        for col, header in enumerate(resumen_headers, 1):
-            cell = ws_resumen.cell(row=3, column=col, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = center_alignment
-            cell.border = border
-        
-        # Calcular datos del resumen
-        resumen_data = []
-        for categoria, productos_cat in categorias.items():
-            total_productos = len(productos_cat)
-            total_saldo_inicial = sum(getattr(p, 'saldo_inicial', 0) or 0 for p in productos_cat)
-            total_entradas = sum(sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'ENTRADA') for p in productos_cat)
-            total_salidas = sum(sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'SALIDA') for p in productos_cat)
-            total_saldo_real = total_saldo_inicial + total_entradas - total_salidas
-            valor_total = sum((getattr(p, 'saldo_inicial', 0) or 0 + 
-                             sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'ENTRADA') - 
-                             sum(m.cantidad for m in p.movimientos if m.tipo_movimiento == 'SALIDA')) * 
-                            (float(p.precio_unitario) if p.precio_unitario else 0) for p in productos_cat)
+            # Columna NOMBRE más ancha, UNIDAD más pequeña
+            from openpyxl.utils import get_column_letter
+            ws.column_dimensions[get_column_letter(1)].width = 40  # NOMBRE - mucho más ancha
+            ws.column_dimensions[get_column_letter(2)].width = 8   # UNIDAD - más pequeña
+            ws.column_dimensions[get_column_letter(3)].width = 12  # SALDO INICIAL
+            ws.column_dimensions[get_column_letter(4)].width = 12  # SALDO REAL
+            ws.column_dimensions[get_column_letter(5)].width = 12  # PRECIO UNIT.
+            ws.column_dimensions[get_column_letter(6)].width = 12  # VALOR TOTAL
             
-            resumen_data.append([categoria, total_productos, total_saldo_inicial, total_entradas, total_salidas, total_saldo_real, valor_total])
-        
-        # Escribir datos del resumen
-        for row, data in enumerate(resumen_data, 4):
-            for col, value in enumerate(data, 1):
-                cell = ws_resumen.cell(row=row, column=col, value=value)
-                cell.border = border
-                if col == 1:  # Categoría
-                    cell.font = Font(bold=True)
-        
-        # Totales del resumen
-        total_resumen_row = len(resumen_data) + 5
-        ws_resumen.cell(row=total_resumen_row, column=1, value='TOTAL GENERAL').font = Font(bold=True)
-        ws_resumen.cell(row=total_resumen_row, column=1).border = border
-        
-        # Fórmulas de totales en resumen
-        for col in range(2, 8):
-            from openpyxl.utils import get_column_letter
-            formula_cell = ws_resumen.cell(row=total_resumen_row, column=col)
-            col_letter = get_column_letter(col)
-            formula_cell.value = f'=SUM({col_letter}4:{col_letter}{total_resumen_row-1})'
-            formula_cell.border = border
-            formula_cell.font = Font(bold=True)
-            formula_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
-        
-        # Ajustar ancho de columnas en resumen
-        resumen_widths = [20, 15, 18, 15, 15, 18, 15]
-        for col, width in enumerate(resumen_widths, 1):
-            from openpyxl.utils import get_column_letter
-            ws_resumen.column_dimensions[get_column_letter(col)].width = width
+            # Columnas de movimientos
+            for mov_idx in range(max_movimientos):
+                col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
+                col_tipo = col_fecha + 1
+                col_cantidad = col_tipo + 1
+                
+                ws.column_dimensions[get_column_letter(col_fecha)].width = 12   # FECHA
+                ws.column_dimensions[get_column_letter(col_tipo)].width = 10    # TIPO
+                ws.column_dimensions[get_column_letter(col_cantidad)].width = 12 # CANTIDAD
         
         # Guardar en archivo temporal
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
