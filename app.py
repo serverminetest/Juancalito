@@ -3747,24 +3747,27 @@ def exportar_excel_inventario(periodo):
             from openpyxl.utils import get_column_letter
             last_col_letter = get_column_letter(total_cols)
             
-            # Título de la hoja (escribir antes del merge)
+            # Lista para almacenar todos los merges y hacerlos al final
+            merges_to_do = []
+            
+            # Título de la hoja (escribir ANTES del merge)
             title_cell = ws['A1']
             title_cell.value = f'INVENTARIO {categoria} - PERÍODO {periodo}'
             title_cell.font = Font(bold=True, size=16)
             title_cell.alignment = center_alignment
-            ws.merge_cells(f'A1:{last_col_letter}1')
+            merges_to_do.append(f'A1:{last_col_letter}1')
             
-            # Fecha de generación (escribir antes del merge)
+            # Fecha de generación (escribir ANTES del merge)
             fecha_cell = ws['A2']
             fecha_cell.value = f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
             fecha_cell.font = Font(italic=True)
-            ws.merge_cells(f'A2:{last_col_letter}2')
+            merges_to_do.append(f'A2:{last_col_letter}2')
             
-            # SECCIÓN 1: RESUMEN DE PRODUCTOS (escribir antes del merge)
+            # SECCIÓN 1: RESUMEN DE PRODUCTOS (escribir ANTES del merge)
             resumen_cell = ws['A4']
             resumen_cell.value = 'RESUMEN DE PRODUCTOS'
             resumen_cell.font = Font(bold=True, size=14)
-            ws.merge_cells(f'A4:{last_col_letter}4')
+            merges_to_do.append(f'A4:{last_col_letter}4')
             
             # Encabezados principales (sin proveedor, sin totales de entradas/salidas)
             headers_resumen = ['NOMBRE', 'UNIDAD', 'SALDO INICIAL', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL']
@@ -3784,6 +3787,8 @@ def exportar_excel_inventario(periodo):
             start_mov_col = len(headers_resumen) + 1
             
             # Crear encabezados para movimientos
+            # PRIMERO: escribir todos los valores sin hacer merge
+            merge_ranges = []
             for mov_idx in range(max_movimientos):
                 col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
                 col_tipo = col_fecha + 1
@@ -3795,10 +3800,10 @@ def exportar_excel_inventario(periodo):
                 col_tipo_letter = get_column_letter(col_tipo)
                 col_cantidad_letter = get_column_letter(col_cantidad)
                 
-                # Primero hacer el merge
-                ws.merge_cells(f'{col_fecha_letter}4:{col_cantidad_letter}4')
+                # Guardar el rango para hacer merge después
+                merge_ranges.append((col_fecha_letter, col_cantidad_letter))
                 
-                # Luego crear la celda principal con el valor (usar coordenadas explícitas)
+                # Primero escribir el valor en la celda principal (ANTES del merge)
                 header_cell = ws[f'{col_fecha_letter}4']
                 header_cell.value = f'MOVIMIENTO {mov_idx + 1}'
                 header_cell.font = Font(bold=True, size=10)
@@ -3827,6 +3832,10 @@ def exportar_excel_inventario(periodo):
                 cantidad_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
                 cantidad_cell.alignment = center_alignment
                 cantidad_cell.border = border
+            
+            # Agregar merges de movimientos a la lista
+            for col_fecha_letter, col_cantidad_letter in merge_ranges:
+                merges_to_do.append(f'{col_fecha_letter}4:{col_cantidad_letter}4')
             
             # Datos de productos con movimientos a la derecha
             for row, producto in enumerate(productos_cat, 6):
@@ -3930,6 +3939,14 @@ def exportar_excel_inventario(periodo):
                     cantidad_cell = ws[f'{col_cantidad_letter}{row}']
                     cantidad_cell.value = cantidad_total
                     cantidad_cell.border = border
+            
+            # FINALMENTE: hacer todos los merges después de escribir todos los datos
+            for merge_range in merges_to_do:
+                try:
+                    ws.merge_cells(merge_range)
+                except Exception as e:
+                    # Si hay un error en un merge, continuar con los demás
+                    print(f"Advertencia: No se pudo hacer merge de {merge_range}: {e}")
             
             # Ajustar ancho de columnas
             # Columna NOMBRE más ancha, UNIDAD más pequeña
