@@ -3747,20 +3747,23 @@ def exportar_excel_inventario(periodo):
             from openpyxl.utils import get_column_letter
             last_col_letter = get_column_letter(total_cols)
             
-            # Título de la hoja
-            ws['A1'] = f'INVENTARIO {categoria} - PERÍODO {periodo}'
-            ws['A1'].font = Font(bold=True, size=16)
-            ws['A1'].alignment = center_alignment
+            # Título de la hoja (escribir antes del merge)
+            title_cell = ws['A1']
+            title_cell.value = f'INVENTARIO {categoria} - PERÍODO {periodo}'
+            title_cell.font = Font(bold=True, size=16)
+            title_cell.alignment = center_alignment
             ws.merge_cells(f'A1:{last_col_letter}1')
             
-            # Fecha de generación
-            ws['A2'] = f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
-            ws['A2'].font = Font(italic=True)
+            # Fecha de generación (escribir antes del merge)
+            fecha_cell = ws['A2']
+            fecha_cell.value = f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
+            fecha_cell.font = Font(italic=True)
             ws.merge_cells(f'A2:{last_col_letter}2')
             
-            # SECCIÓN 1: RESUMEN DE PRODUCTOS
-            ws['A4'] = 'RESUMEN DE PRODUCTOS'
-            ws['A4'].font = Font(bold=True, size=14)
+            # SECCIÓN 1: RESUMEN DE PRODUCTOS (escribir antes del merge)
+            resumen_cell = ws['A4']
+            resumen_cell.value = 'RESUMEN DE PRODUCTOS'
+            resumen_cell.font = Font(bold=True, size=14)
             ws.merge_cells(f'A4:{last_col_letter}4')
             
             # Encabezados principales (sin proveedor, sin totales de entradas/salidas)
@@ -3783,29 +3786,39 @@ def exportar_excel_inventario(periodo):
                 col_tipo = col_fecha + 1
                 col_cantidad = col_tipo + 1
                 
-                # Encabezado del movimiento (merge de 3 columnas)
+                # Obtener letras de columnas para el merge
+                from openpyxl.utils import get_column_letter
+                col_fecha_letter = get_column_letter(col_fecha)
+                col_cantidad_letter = get_column_letter(col_cantidad)
+                
+                # Primero hacer el merge
+                ws.merge_cells(f'{col_fecha_letter}4:{col_cantidad_letter}4')
+                
+                # Luego crear la celda principal con el valor (solo la primera celda del merge)
                 header_cell = ws.cell(row=4, column=col_fecha, value=f'MOVIMIENTO {mov_idx + 1}')
                 header_cell.font = Font(bold=True, size=10)
                 header_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
                 header_cell.alignment = center_alignment
                 header_cell.border = border
-                ws.merge_cells(ws.cell(row=4, column=col_fecha).coordinate + ':' + ws.cell(row=4, column=col_cantidad).coordinate)
                 
-                # Sub-encabezados
-                ws.cell(row=5, column=col_fecha, value='FECHA').font = header_font
-                ws.cell(row=5, column=col_fecha).fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                ws.cell(row=5, column=col_fecha).alignment = center_alignment
-                ws.cell(row=5, column=col_fecha).border = border
+                # Sub-encabezados en fila 5
+                fecha_cell = ws.cell(row=5, column=col_fecha, value='FECHA')
+                fecha_cell.font = header_font
+                fecha_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                fecha_cell.alignment = center_alignment
+                fecha_cell.border = border
                 
-                ws.cell(row=5, column=col_tipo, value='TIPO').font = header_font
-                ws.cell(row=5, column=col_tipo).fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                ws.cell(row=5, column=col_tipo).alignment = center_alignment
-                ws.cell(row=5, column=col_tipo).border = border
+                tipo_cell = ws.cell(row=5, column=col_tipo, value='TIPO')
+                tipo_cell.font = header_font
+                tipo_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                tipo_cell.alignment = center_alignment
+                tipo_cell.border = border
                 
-                ws.cell(row=5, column=col_cantidad, value='CANTIDAD').font = header_font
-                ws.cell(row=5, column=col_cantidad).fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                ws.cell(row=5, column=col_cantidad).alignment = center_alignment
-                ws.cell(row=5, column=col_cantidad).border = border
+                cantidad_cell = ws.cell(row=5, column=col_cantidad, value='CANTIDAD')
+                cantidad_cell.font = header_font
+                cantidad_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                cantidad_cell.alignment = center_alignment
+                cantidad_cell.border = border
             
             # Datos de productos con movimientos a la derecha
             for row, producto in enumerate(productos_cat, 6):
@@ -3870,7 +3883,8 @@ def exportar_excel_inventario(periodo):
                     
                     # Fecha
                     fecha_str = movimiento.fecha_movimiento.strftime('%d/%m/%Y')
-                    ws.cell(row=row, column=col_fecha, value=fecha_str).border = border
+                    fecha_cell = ws.cell(row=row, column=col_fecha, value=fecha_str)
+                    fecha_cell.border = border
                     
                     # Tipo con color
                     tipo_cell = ws.cell(row=row, column=col_tipo, value=movimiento.tipo_movimiento)
@@ -3882,7 +3896,8 @@ def exportar_excel_inventario(periodo):
                     
                     # Cantidad
                     cantidad_total = movimiento.calcular_cantidad_total()
-                    ws.cell(row=row, column=col_cantidad, value=cantidad_total).border = border
+                    cantidad_cell = ws.cell(row=row, column=col_cantidad, value=cantidad_total)
+                    cantidad_cell.border = border
             
             # Ajustar ancho de columnas
             # Columna NOMBRE más ancha, UNIDAD más pequeña
