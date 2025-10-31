@@ -3743,8 +3743,8 @@ def exportar_excel_inventario(periodo):
                     max_salidas = salidas_count
             
             # Calcular número total de columnas
-            headers_count = 5  # NOMBRE, SALDO INICIAL, SALDO REAL, PRECIO UNIT., VALOR TOTAL
-            entrada_cols = 5  # Fecha, Factura, Cantidad, Valor Unit, Total
+            headers_count = 3  # NOMBRE, SALDO REAL, VALOR TOTAL
+            entrada_cols = 6  # Fecha, Factura, Cantidad, Valor Unit, Total, Proveedor
             salida_cols = 3   # Fecha, Cantidad, Unidad
             separator_col_count = 2  # Separador antes de entradas y antes de salidas
             total_cols = headers_count + separator_col_count + (max_entradas * entrada_cols) + (max_salidas * salida_cols)
@@ -3776,8 +3776,8 @@ def exportar_excel_inventario(periodo):
             merges_to_do.append(f'A4:{last_col_letter}4')
             
             # Encabezados principales - solo datos básicos del producto
-            headers_resumen = ['NOMBRE', 'SALDO INICIAL', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL']
-            header_cols = ['A', 'B', 'C', 'D', 'E']
+            headers_resumen = ['NOMBRE', 'SALDO REAL', 'VALOR TOTAL']
+            header_cols = ['A', 'B', 'C']
             
             for col_idx, header in enumerate(headers_resumen):
                 col_letter = header_cols[col_idx]
@@ -3819,8 +3819,8 @@ def exportar_excel_inventario(periodo):
                 header_cell.border = border
                 merge_ranges.append(f'{start_col_letter}4:{end_col_letter}4')
                 
-                # Sub-encabezados: Fecha, Factura, Cantidad, Valor Unit, Total
-                sub_headers = ['FECHA', 'FACTURA', 'CANTIDAD', 'VALOR UNIT.', 'TOTAL']
+                # Sub-encabezados: Fecha, Factura, Cantidad, Valor Unit, Total, Proveedor
+                sub_headers = ['FECHA', 'FACTURA', 'CANTIDAD', 'VALOR UNIT.', 'TOTAL', 'PROVEEDOR']
                 for sub_idx, sub_header in enumerate(sub_headers):
                     sub_col_letter = get_column_letter(start_col + sub_idx)
                     sub_cell = ws[f'{sub_col_letter}5']
@@ -3898,54 +3898,34 @@ def exportar_excel_inventario(periodo):
                 nombre_cell.border = border
                 nombre_cell.fill = row_fill
                 
-                # Saldo inicial
+                # Calcular saldo real desde movimientos
                 saldo_inicial = getattr(producto, 'saldo_inicial', 0) or 0
-                saldo_inicial_cell = ws[f'B{row}']
-                saldo_inicial_cell.value = saldo_inicial
-                saldo_inicial_cell.border = border
-                saldo_inicial_cell.fill = row_fill
-                saldo_inicial_cell.alignment = center_alignment
-                
-                # Calcular entradas y salidas desde movimientos para el saldo real
                 entradas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA')
                 salidas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'SALIDA')
                 saldo_real = saldo_inicial + entradas - salidas
                 
                 # SALDO REAL (valor calculado)
-                saldo_real_cell = ws[f'C{row}']
+                saldo_real_cell = ws[f'B{row}']
                 saldo_real_cell.value = saldo_real
                 saldo_real_cell.border = border
                 saldo_real_cell.fill = row_fill
                 saldo_real_cell.alignment = center_alignment
                 saldo_real_cell.font = Font(bold=True)
                 
-                # Precio unitario (solo para productos que deben tener precio)
+                # VALOR TOTAL (solo para productos que deben tener precio)
                 if producto.debe_tener_precio():
                     precio = float(producto.precio_unitario) if producto.precio_unitario else 0
-                    precio_cell = ws[f'D{row}']
-                    precio_cell.value = precio
-                    precio_cell.number_format = '#,##0'
-                    precio_cell.border = border
-                    precio_cell.fill = row_fill
-                    precio_cell.alignment = center_alignment
-                    
-                    # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
-                    valor_cell = ws[f'E{row}']
-                    valor_cell.value = f'=C{row}*D{row}'
+                    valor_total = saldo_real * precio
+                    valor_cell = ws[f'C{row}']
+                    valor_cell.value = valor_total
                     valor_cell.number_format = '#,##0'
                     valor_cell.border = border
                     valor_cell.fill = row_fill
                     valor_cell.alignment = center_alignment
                     valor_cell.font = Font(bold=True)
                 else:
-                    # Para ALMACEN GENERAL, mostrar "-" en precio y valor
-                    precio_cell = ws[f'D{row}']
-                    precio_cell.value = '-'
-                    precio_cell.border = border
-                    precio_cell.fill = row_fill
-                    precio_cell.alignment = center_alignment
-                    
-                    valor_cell = ws[f'E{row}']
+                    # Para ALMACEN GENERAL, mostrar "-"
+                    valor_cell = ws[f'C{row}']
                     valor_cell.value = '-'
                     valor_cell.border = border
                     valor_cell.fill = row_fill
@@ -4007,6 +3987,11 @@ def exportar_excel_inventario(periodo):
                     total_cell.border = border
                     total_cell.alignment = center_alignment
                     total_cell.font = Font(bold=True)
+                    
+                    # Proveedor
+                    proveedor_cell = ws[f'{get_column_letter(start_col + 5)}{row}']
+                    proveedor_cell.value = producto.proveedor or ''
+                    proveedor_cell.border = border
                 
                 # Escribir SALIDAS
                 for sal_idx, salida in enumerate(salidas_producto):
@@ -4064,32 +4049,29 @@ def exportar_excel_inventario(periodo):
             ws[f'A{total_row}'].border = border
             
             # Fórmulas de totales (solo columnas principales)
-            ws[f'B{total_row}'].value = f'=SUM(B6:B{total_row-1})'  # Saldo inicial
-            ws[f'C{total_row}'].value = f'=SUM(C6:C{total_row-1})'  # Saldo real
-            ws[f'E{total_row}'].value = f'=SUM(E6:E{total_row-1})'  # Valor total
+            ws[f'B{total_row}'].value = f'=SUM(B6:B{total_row-1})'  # Saldo real
+            ws[f'C{total_row}'].value = f'=SUM(C6:C{total_row-1})'  # Valor total
             
             # Formato de totales
-            for col in ['B', 'C', 'E']:
+            for col in ['B', 'C']:
                 cell = ws[f'{col}{total_row}']
                 cell.font = total_font
                 cell.fill = total_fill
                 cell.border = border
                 cell.alignment = center_alignment
-                if col == 'E':
+                if col == 'C':
                     cell.number_format = '#,##0'
             
             # Ajustar ancho de columnas principales
             ws.column_dimensions['A'].width = 40  # NOMBRE - más ancha
-            ws.column_dimensions['B'].width = 12  # SALDO INICIAL
-            ws.column_dimensions['C'].width = 12  # SALDO REAL
-            ws.column_dimensions['D'].width = 15  # PRECIO UNIT.
-            ws.column_dimensions['E'].width = 15  # VALOR TOTAL
+            ws.column_dimensions['B'].width = 12  # SALDO REAL
+            ws.column_dimensions['C'].width = 15  # VALOR TOTAL
             
             # Separadores
             ws.column_dimensions[separator1_col_letter].width = 3
             ws.column_dimensions[separator2_col_letter].width = 3
             
-            # Columnas de ENTRADAS (5 columnas por entrada)
+            # Columnas de ENTRADAS (6 columnas por entrada)
             for ent_idx in range(max_entradas):
                 start_col = start_entradas_col + (ent_idx * entrada_cols)
                 ws.column_dimensions[get_column_letter(start_col)].width = 11     # FECHA
@@ -4097,6 +4079,7 @@ def exportar_excel_inventario(periodo):
                 ws.column_dimensions[get_column_letter(start_col + 2)].width = 10 # CANTIDAD
                 ws.column_dimensions[get_column_letter(start_col + 3)].width = 12 # VALOR UNIT.
                 ws.column_dimensions[get_column_letter(start_col + 4)].width = 12 # TOTAL
+                ws.column_dimensions[get_column_letter(start_col + 5)].width = 15 # PROVEEDOR
             
             # Columnas de SALIDAS (3 columnas por salida)
             for sal_idx in range(max_salidas):
@@ -4106,7 +4089,7 @@ def exportar_excel_inventario(periodo):
                 ws.column_dimensions[get_column_letter(start_col + 2)].width = 8  # UNIDAD
             
             # Congelar primeras filas y columnas para mejor navegación
-            ws.freeze_panes = 'F6'  # Congelar hasta columna E (datos principales) y fila 5 (encabezados)
+            ws.freeze_panes = 'D6'  # Congelar hasta columna C (datos principales) y fila 5 (encabezados)
         
         # Guardar en archivo temporal
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
