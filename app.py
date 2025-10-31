@@ -3731,18 +3731,23 @@ def exportar_excel_inventario(periodo):
         for categoria, productos_cat in categorias.items():
             ws = wb.create_sheet(title=categoria)
             
-            # Calcular número máximo de movimientos para determinar cuántas columnas necesitamos
-            max_movimientos = 0
+            # Calcular número máximo de entradas y salidas por separado
+            max_entradas = 0
+            max_salidas = 0
             for producto in productos_cat:
-                movimientos_count = len(producto.movimientos)
-                if movimientos_count > max_movimientos:
-                    max_movimientos = movimientos_count
+                entradas_count = len([m for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA'])
+                salidas_count = len([m for m in producto.movimientos if m.tipo_movimiento == 'SALIDA'])
+                if entradas_count > max_entradas:
+                    max_entradas = entradas_count
+                if salidas_count > max_salidas:
+                    max_salidas = salidas_count
             
             # Calcular número total de columnas
-            headers_count = 9  # CÓDIGO, NOMBRE, UNIDAD, SALDO INICIAL, ENTRADAS, SALIDAS, SALDO REAL, PRECIO UNIT., VALOR TOTAL
-            movimiento_cols_per_product = 3  # Fecha, Tipo, Cantidad
-            separator_col_count = 1  # Columna separadora
-            total_cols = headers_count + separator_col_count + (max_movimientos * movimiento_cols_per_product)
+            headers_count = 5  # NOMBRE, SALDO INICIAL, SALDO REAL, PRECIO UNIT., VALOR TOTAL
+            entrada_cols = 5  # Fecha, Factura, Cantidad, Valor Unit, Total
+            salida_cols = 3   # Fecha, Cantidad, Unidad
+            separator_col_count = 2  # Separador antes de entradas y antes de salidas
+            total_cols = headers_count + separator_col_count + (max_entradas * entrada_cols) + (max_salidas * salida_cols)
             
             # Obtener letra de última columna
             from openpyxl.utils import get_column_letter
@@ -3770,11 +3775,10 @@ def exportar_excel_inventario(periodo):
             resumen_cell.font = Font(bold=True, size=14)
             merges_to_do.append(f'A4:{last_col_letter}4')
             
-            # Encabezados principales con mejor formato
-            headers_resumen = ['CÓDIGO', 'NOMBRE', 'UNIDAD', 'SALDO INICIAL', 'ENTRADAS', 'SALIDAS', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL']
-            header_cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+            # Encabezados principales - solo datos básicos del producto
+            headers_resumen = ['NOMBRE', 'SALDO INICIAL', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL']
+            header_cols = ['A', 'B', 'C', 'D', 'E']
             
-            # Agregar columna de código y calcular totales
             for col_idx, header in enumerate(headers_resumen):
                 col_letter = header_cols[col_idx]
                 cell = ws[f'{col_letter}5']
@@ -3786,71 +3790,97 @@ def exportar_excel_inventario(periodo):
                 # Altura de fila para encabezados
                 ws.row_dimensions[5].height = 25
             
-            # Encabezados de movimientos (a la derecha)
-            # Cada movimiento tiene: Fecha, Tipo, Cantidad
-            movimiento_cols_per_product = 3  # Fecha, Tipo, Cantidad
-            start_mov_col = len(headers_resumen) + 1  # Empezar después de las columnas principales
+            # Encabezados de ENTRADAS y SALIDAS separadas
+            start_entradas_col = len(headers_resumen) + 1
+            separator1_col = start_entradas_col - 1
+            separator1_col_letter = get_column_letter(separator1_col)
             
-            # Agregar una columna separadora antes de los movimientos
-            separator_col = start_mov_col - 1
-            separator_col_letter = get_column_letter(separator_col)
+            # Calcular dónde empiezan las salidas
+            start_salidas_col = start_entradas_col + (max_entradas * entrada_cols) + 1
+            separator2_col = start_salidas_col - 1
+            separator2_col_letter = get_column_letter(separator2_col)
             
-            # Crear encabezados para movimientos
-            # PRIMERO: escribir todos los valores sin hacer merge
             merge_ranges = []
-            for mov_idx in range(max_movimientos):
-                col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
-                col_tipo = col_fecha + 1
-                col_cantidad = col_tipo + 1
+            
+            # Encabezados de ENTRADAS
+            for ent_idx in range(max_entradas):
+                start_col = start_entradas_col + (ent_idx * entrada_cols)
+                end_col = start_col + entrada_cols - 1
                 
-                # Obtener letras de columnas para el merge
-                from openpyxl.utils import get_column_letter
-                col_fecha_letter = get_column_letter(col_fecha)
-                col_tipo_letter = get_column_letter(col_tipo)
-                col_cantidad_letter = get_column_letter(col_cantidad)
+                start_col_letter = get_column_letter(start_col)
+                end_col_letter = get_column_letter(end_col)
                 
-                # Guardar el rango para hacer merge después
-                merge_ranges.append((col_fecha_letter, col_cantidad_letter))
-                
-                # Primero escribir el valor en la celda principal (ANTES del merge)
-                header_cell = ws[f'{col_fecha_letter}4']
-                header_cell.value = f'MOVIMIENTO {mov_idx + 1}'
+                # Encabezado principal "ENTRADA X"
+                header_cell = ws[f'{start_col_letter}4']
+                header_cell.value = f'ENTRADA {ent_idx + 1}'
                 header_cell.font = Font(bold=True, size=10)
-                header_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                header_cell.fill = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
                 header_cell.alignment = center_alignment
                 header_cell.border = border
+                merge_ranges.append(f'{start_col_letter}4:{end_col_letter}4')
                 
-                # Sub-encabezados en fila 5 (usar coordenadas explícitas)
-                fecha_cell = ws[f'{col_fecha_letter}5']
-                fecha_cell.value = 'FECHA'
-                fecha_cell.font = header_font
-                fecha_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                fecha_cell.alignment = center_alignment
-                fecha_cell.border = border
-                
-                tipo_cell = ws[f'{col_tipo_letter}5']
-                tipo_cell.value = 'TIPO'
-                tipo_cell.font = header_font
-                tipo_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                tipo_cell.alignment = center_alignment
-                tipo_cell.border = border
-                
-                cantidad_cell = ws[f'{col_cantidad_letter}5']
-                cantidad_cell.value = 'CANTIDAD'
-                cantidad_cell.font = header_font
-                cantidad_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-                cantidad_cell.alignment = center_alignment
-                cantidad_cell.border = border
+                # Sub-encabezados: Fecha, Factura, Cantidad, Valor Unit, Total
+                sub_headers = ['FECHA', 'FACTURA', 'CANTIDAD', 'VALOR UNIT.', 'TOTAL']
+                for sub_idx, sub_header in enumerate(sub_headers):
+                    sub_col_letter = get_column_letter(start_col + sub_idx)
+                    sub_cell = ws[f'{sub_col_letter}5']
+                    sub_cell.value = sub_header
+                    sub_cell.font = header_font
+                    sub_cell.fill = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
+                    sub_cell.alignment = center_alignment
+                    sub_cell.border = border
             
-            # Agregar columna separadora en encabezados
-            separator_header = ws[f'{separator_col_letter}5']
-            separator_header.value = ''
-            separator_header.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
-            separator_header.border = border
+            # Encabezados de SALIDAS
+            for sal_idx in range(max_salidas):
+                start_col = start_salidas_col + (sal_idx * salida_cols)
+                end_col = start_col + salida_cols - 1
+                
+                start_col_letter = get_column_letter(start_col)
+                end_col_letter = get_column_letter(end_col)
+                
+                # Encabezado principal "SALIDA X"
+                header_cell = ws[f'{start_col_letter}4']
+                header_cell.value = f'SALIDA {sal_idx + 1}'
+                header_cell.font = Font(bold=True, size=10)
+                header_cell.fill = PatternFill(start_color="F44336", end_color="F44336", fill_type="solid")
+                header_cell.alignment = center_alignment
+                header_cell.border = border
+                merge_ranges.append(f'{start_col_letter}4:{end_col_letter}4')
+                
+                # Sub-encabezados: Fecha, Cantidad, Unidad
+                sub_headers = ['FECHA', 'CANTIDAD', 'UNIDAD']
+                for sub_idx, sub_header in enumerate(sub_headers):
+                    sub_col_letter = get_column_letter(start_col + sub_idx)
+                    sub_cell = ws[f'{sub_col_letter}5']
+                    sub_cell.value = sub_header
+                    sub_cell.font = header_font
+                    sub_cell.fill = PatternFill(start_color="F44336", end_color="F44336", fill_type="solid")
+                    sub_cell.alignment = center_alignment
+                    sub_cell.border = border
             
-            # Agregar merges de movimientos a la lista
-            for col_fecha_letter, col_cantidad_letter in merge_ranges:
-                merges_to_do.append(f'{col_fecha_letter}4:{col_cantidad_letter}4')
+            # Agregar columnas separadoras en encabezados (fila 4 y 5)
+            separator1_header_4 = ws[f'{separator1_col_letter}4']
+            separator1_header_4.value = ''
+            separator1_header_4.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            separator1_header_4.border = border
+            
+            separator1_header_5 = ws[f'{separator1_col_letter}5']
+            separator1_header_5.value = ''
+            separator1_header_5.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            separator1_header_5.border = border
+            
+            separator2_header_4 = ws[f'{separator2_col_letter}4']
+            separator2_header_4.value = ''
+            separator2_header_4.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            separator2_header_4.border = border
+            
+            separator2_header_5 = ws[f'{separator2_col_letter}5']
+            separator2_header_5.value = ''
+            separator2_header_5.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            separator2_header_5.border = border
+            
+            # Agregar merges a la lista
+            merges_to_do.extend(merge_ranges)
             
             # Datos de productos con mejor formato y organización
             from openpyxl.utils import get_column_letter
@@ -3862,70 +3892,28 @@ def exportar_excel_inventario(periodo):
                 # Alternar colores de fila para mejor legibilidad
                 row_fill = fill_even if row_idx % 2 == 0 else fill_odd
                 
-                # CÓDIGO
-                codigo_cell = ws[f'A{row}']
-                codigo_cell.value = producto.codigo
-                codigo_cell.border = border
-                codigo_cell.fill = row_fill
-                codigo_cell.font = Font(bold=True)
-                
-                # NOMBRE
-                nombre_cell = ws[f'B{row}']
+                # NOMBRE (solo nombre, sin código ni unidad)
+                nombre_cell = ws[f'A{row}']
                 nombre_cell.value = producto.nombre
                 nombre_cell.border = border
                 nombre_cell.fill = row_fill
                 
-                # Unidad estandarizada
-                unidad = producto.unidad_medida.upper()
-                if unidad in ['L', 'LITRO', 'LITROS']:
-                    unidad_display = 'L'
-                elif unidad in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS']:
-                    unidad_display = 'KG'
-                elif unidad in ['G', 'GRAMO', 'GRAMOS']:
-                    unidad_display = 'G'
-                elif unidad in ['ML', 'MILILITRO', 'MILILITROS']:
-                    unidad_display = 'ML'
-                elif unidad in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS']:
-                    unidad_display = 'CC'
-                else:
-                    unidad_display = producto.unidad_medida
-                
-                unidad_cell = ws[f'C{row}']
-                unidad_cell.value = unidad_display
-                unidad_cell.border = border
-                unidad_cell.fill = row_fill
-                unidad_cell.alignment = center_alignment
-                
                 # Saldo inicial
                 saldo_inicial = getattr(producto, 'saldo_inicial', 0) or 0
-                saldo_inicial_cell = ws[f'D{row}']
+                saldo_inicial_cell = ws[f'B{row}']
                 saldo_inicial_cell.value = saldo_inicial
                 saldo_inicial_cell.border = border
                 saldo_inicial_cell.fill = row_fill
                 saldo_inicial_cell.alignment = center_alignment
                 
-                # Calcular entradas y salidas desde movimientos
+                # Calcular entradas y salidas desde movimientos para el saldo real
                 entradas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA')
                 salidas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'SALIDA')
-                
-                # ENTRADAS
-                entradas_cell = ws[f'E{row}']
-                entradas_cell.value = entradas
-                entradas_cell.border = border
-                entradas_cell.fill = PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid")  # Verde claro
-                entradas_cell.alignment = center_alignment
-                
-                # SALIDAS
-                salidas_cell = ws[f'F{row}']
-                salidas_cell.value = salidas
-                salidas_cell.border = border
-                salidas_cell.fill = PatternFill(start_color="FFEBEE", end_color="FFEBEE", fill_type="solid")  # Rojo claro
-                salidas_cell.alignment = center_alignment
-                
-                # SALDO REAL (fórmula)
                 saldo_real = saldo_inicial + entradas - salidas
-                saldo_real_cell = ws[f'G{row}']
-                saldo_real_cell.value = f'=D{row}+E{row}-F{row}'
+                
+                # SALDO REAL (valor calculado)
+                saldo_real_cell = ws[f'C{row}']
+                saldo_real_cell.value = saldo_real
                 saldo_real_cell.border = border
                 saldo_real_cell.fill = row_fill
                 saldo_real_cell.alignment = center_alignment
@@ -3934,7 +3922,7 @@ def exportar_excel_inventario(periodo):
                 # Precio unitario (solo para productos que deben tener precio)
                 if producto.debe_tener_precio():
                     precio = float(producto.precio_unitario) if producto.precio_unitario else 0
-                    precio_cell = ws[f'H{row}']
+                    precio_cell = ws[f'D{row}']
                     precio_cell.value = precio
                     precio_cell.number_format = '#,##0'
                     precio_cell.border = border
@@ -3942,8 +3930,8 @@ def exportar_excel_inventario(periodo):
                     precio_cell.alignment = center_alignment
                     
                     # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
-                    valor_cell = ws[f'I{row}']
-                    valor_cell.value = f'=G{row}*H{row}'
+                    valor_cell = ws[f'E{row}']
+                    valor_cell.value = f'=C{row}*D{row}'
                     valor_cell.number_format = '#,##0'
                     valor_cell.border = border
                     valor_cell.fill = row_fill
@@ -3951,58 +3939,111 @@ def exportar_excel_inventario(periodo):
                     valor_cell.font = Font(bold=True)
                 else:
                     # Para ALMACEN GENERAL, mostrar "-" en precio y valor
-                    precio_cell = ws[f'H{row}']
+                    precio_cell = ws[f'D{row}']
                     precio_cell.value = '-'
                     precio_cell.border = border
                     precio_cell.fill = row_fill
                     precio_cell.alignment = center_alignment
                     
-                    valor_cell = ws[f'I{row}']
+                    valor_cell = ws[f'E{row}']
                     valor_cell.value = '-'
                     valor_cell.border = border
                     valor_cell.fill = row_fill
                     valor_cell.alignment = center_alignment
                 
-                # Columna separadora antes de movimientos
-                separator_cell = ws[f'{separator_col_letter}{row}']
-                separator_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")  # Gris para separador
-                separator_cell.border = border
+                # Separadores
+                separator1_cell = ws[f'{separator1_col_letter}{row}']
+                separator1_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+                separator1_cell.border = border
                 
-                # Obtener y ordenar movimientos del producto
-                movimientos_producto = sorted(producto.movimientos, key=lambda x: x.fecha_movimiento)
+                separator2_cell = ws[f'{separator2_col_letter}{row}']
+                separator2_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+                separator2_cell.border = border
                 
-                # Escribir movimientos a la derecha
-                for mov_idx, movimiento in enumerate(movimientos_producto):
-                    col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
-                    col_tipo = col_fecha + 1
-                    col_cantidad = col_tipo + 1
+                # Obtener entradas y salidas separadas y ordenadas por fecha
+                entradas_producto = sorted([m for m in producto.movimientos if m.tipo_movimiento == 'ENTRADA'], 
+                                         key=lambda x: x.fecha_movimiento)
+                salidas_producto = sorted([m for m in producto.movimientos if m.tipo_movimiento == 'SALIDA'], 
+                                         key=lambda x: x.fecha_movimiento)
+                
+                # Escribir ENTRADAS
+                for ent_idx, entrada in enumerate(entradas_producto):
+                    start_col = start_entradas_col + (ent_idx * entrada_cols)
                     
-                    # Obtener letras de columnas
-                    from openpyxl.utils import get_column_letter
-                    col_fecha_letter = get_column_letter(col_fecha)
-                    col_tipo_letter = get_column_letter(col_tipo)
-                    col_cantidad_letter = get_column_letter(col_cantidad)
-                    
-                    # Fecha (usar coordenadas explícitas)
-                    fecha_str = movimiento.fecha_movimiento.strftime('%d/%m/%Y')
-                    fecha_cell = ws[f'{col_fecha_letter}{row}']
-                    fecha_cell.value = fecha_str
+                    # Fecha
+                    fecha_cell = ws[f'{get_column_letter(start_col)}{row}']
+                    fecha_cell.value = entrada.fecha_movimiento.strftime('%d/%m/%Y')
                     fecha_cell.border = border
+                    fecha_cell.alignment = center_alignment
                     
-                    # Tipo con color (usar coordenadas explícitas)
-                    tipo_cell = ws[f'{col_tipo_letter}{row}']
-                    tipo_cell.value = movimiento.tipo_movimiento
-                    tipo_cell.border = border
-                    if movimiento.tipo_movimiento == 'ENTRADA':
-                        tipo_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
-                    else:
-                        tipo_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
+                    # Factura (referencia)
+                    factura_cell = ws[f'{get_column_letter(start_col + 1)}{row}']
+                    factura_cell.value = entrada.referencia or ''
+                    factura_cell.border = border
                     
-                    # Cantidad (usar coordenadas explícitas)
-                    cantidad_total = movimiento.calcular_cantidad_total()
-                    cantidad_cell = ws[f'{col_cantidad_letter}{row}']
-                    cantidad_cell.value = cantidad_total
+                    # Cantidad
+                    cantidad_cell = ws[f'{get_column_letter(start_col + 2)}{row}']
+                    cantidad_cell.value = entrada.calcular_cantidad_total()
                     cantidad_cell.border = border
+                    cantidad_cell.alignment = center_alignment
+                    
+                    # Valor Unitario
+                    valor_unit_cell = ws[f'{get_column_letter(start_col + 3)}{row}']
+                    if entrada.precio_unitario:
+                        valor_unit_cell.value = float(entrada.precio_unitario)
+                        valor_unit_cell.number_format = '#,##0'
+                    else:
+                        valor_unit_cell.value = 0
+                    valor_unit_cell.border = border
+                    valor_unit_cell.alignment = center_alignment
+                    
+                    # Total
+                    total_cell = ws[f'{get_column_letter(start_col + 4)}{row}']
+                    if entrada.total:
+                        total_cell.value = float(entrada.total)
+                        total_cell.number_format = '#,##0'
+                    else:
+                        total_cell.value = 0
+                    total_cell.border = border
+                    total_cell.alignment = center_alignment
+                    total_cell.font = Font(bold=True)
+                
+                # Escribir SALIDAS
+                for sal_idx, salida in enumerate(salidas_producto):
+                    start_col = start_salidas_col + (sal_idx * salida_cols)
+                    
+                    # Unidad estandarizada del producto
+                    unidad = producto.unidad_medida.upper()
+                    if unidad in ['L', 'LITRO', 'LITROS']:
+                        unidad_display = 'L'
+                    elif unidad in ['KG', 'KILO', 'KILOS', 'KILOGRAMO', 'KILOGRAMOS']:
+                        unidad_display = 'KG'
+                    elif unidad in ['G', 'GRAMO', 'GRAMOS']:
+                        unidad_display = 'G'
+                    elif unidad in ['ML', 'MILILITRO', 'MILILITROS']:
+                        unidad_display = 'ML'
+                    elif unidad in ['CC', 'CENTIMETRO CUBICO', 'CENTIMETROS CUBICOS']:
+                        unidad_display = 'CC'
+                    else:
+                        unidad_display = producto.unidad_medida
+                    
+                    # Fecha
+                    fecha_cell = ws[f'{get_column_letter(start_col)}{row}']
+                    fecha_cell.value = salida.fecha_movimiento.strftime('%d/%m/%Y')
+                    fecha_cell.border = border
+                    fecha_cell.alignment = center_alignment
+                    
+                    # Cantidad
+                    cantidad_cell = ws[f'{get_column_letter(start_col + 1)}{row}']
+                    cantidad_cell.value = salida.calcular_cantidad_total()
+                    cantidad_cell.border = border
+                    cantidad_cell.alignment = center_alignment
+                    
+                    # Unidad
+                    unidad_cell = ws[f'{get_column_letter(start_col + 2)}{row}']
+                    unidad_cell.value = unidad_display
+                    unidad_cell.border = border
+                    unidad_cell.alignment = center_alignment
             
             # FINALMENTE: hacer todos los merges después de escribir todos los datos
             for merge_range in merges_to_do:
@@ -4021,49 +4062,51 @@ def exportar_excel_inventario(periodo):
             ws[f'A{total_row}'].font = total_font
             ws[f'A{total_row}'].fill = total_fill
             ws[f'A{total_row}'].border = border
-            merges_to_do.append(f'A{total_row}:C{total_row}')  # Agregar merge a la lista
             
-            # Fórmulas de totales
-            ws[f'D{total_row}'].value = f'=SUM(D6:D{total_row-1})'  # Saldo inicial
-            ws[f'E{total_row}'].value = f'=SUM(E6:E{total_row-1})'  # Entradas
-            ws[f'F{total_row}'].value = f'=SUM(F6:F{total_row-1})'  # Salidas
-            ws[f'G{total_row}'].value = f'=SUM(G6:G{total_row-1})'  # Saldo real
-            ws[f'I{total_row}'].value = f'=SUM(I6:I{total_row-1})'  # Valor total
+            # Fórmulas de totales (solo columnas principales)
+            ws[f'B{total_row}'].value = f'=SUM(B6:B{total_row-1})'  # Saldo inicial
+            ws[f'C{total_row}'].value = f'=SUM(C6:C{total_row-1})'  # Saldo real
+            ws[f'E{total_row}'].value = f'=SUM(E6:E{total_row-1})'  # Valor total
             
             # Formato de totales
-            for col in ['D', 'E', 'F', 'G', 'I']:
+            for col in ['B', 'C', 'E']:
                 cell = ws[f'{col}{total_row}']
                 cell.font = total_font
                 cell.fill = total_fill
                 cell.border = border
                 cell.alignment = center_alignment
-                if col == 'I':
+                if col == 'E':
                     cell.number_format = '#,##0'
             
-            # Ajustar ancho de columnas con mejor distribución
-            ws.column_dimensions['A'].width = 15  # CÓDIGO
-            ws.column_dimensions['B'].width = 35  # NOMBRE - más ancha
-            ws.column_dimensions['C'].width = 10  # UNIDAD
-            ws.column_dimensions['D'].width = 12  # SALDO INICIAL
-            ws.column_dimensions['E'].width = 12  # ENTRADAS
-            ws.column_dimensions['F'].width = 12  # SALIDAS
-            ws.column_dimensions['G'].width = 12  # SALDO REAL
-            ws.column_dimensions['H'].width = 15  # PRECIO UNIT.
-            ws.column_dimensions['I'].width = 15  # VALOR TOTAL
-            ws.column_dimensions[separator_col_letter].width = 3  # Separador delgado
+            # Ajustar ancho de columnas principales
+            ws.column_dimensions['A'].width = 40  # NOMBRE - más ancha
+            ws.column_dimensions['B'].width = 12  # SALDO INICIAL
+            ws.column_dimensions['C'].width = 12  # SALDO REAL
+            ws.column_dimensions['D'].width = 15  # PRECIO UNIT.
+            ws.column_dimensions['E'].width = 15  # VALOR TOTAL
             
-            # Columnas de movimientos
-            for mov_idx in range(max_movimientos):
-                col_fecha = start_mov_col + (mov_idx * movimiento_cols_per_product)
-                col_tipo = col_fecha + 1
-                col_cantidad = col_tipo + 1
-                
-                ws.column_dimensions[get_column_letter(col_fecha)].width = 11   # FECHA
-                ws.column_dimensions[get_column_letter(col_tipo)].width = 9       # TIPO
-                ws.column_dimensions[get_column_letter(col_cantidad)].width = 11 # CANTIDAD
+            # Separadores
+            ws.column_dimensions[separator1_col_letter].width = 3
+            ws.column_dimensions[separator2_col_letter].width = 3
+            
+            # Columnas de ENTRADAS (5 columnas por entrada)
+            for ent_idx in range(max_entradas):
+                start_col = start_entradas_col + (ent_idx * entrada_cols)
+                ws.column_dimensions[get_column_letter(start_col)].width = 11     # FECHA
+                ws.column_dimensions[get_column_letter(start_col + 1)].width = 15 # FACTURA
+                ws.column_dimensions[get_column_letter(start_col + 2)].width = 10 # CANTIDAD
+                ws.column_dimensions[get_column_letter(start_col + 3)].width = 12 # VALOR UNIT.
+                ws.column_dimensions[get_column_letter(start_col + 4)].width = 12 # TOTAL
+            
+            # Columnas de SALIDAS (3 columnas por salida)
+            for sal_idx in range(max_salidas):
+                start_col = start_salidas_col + (sal_idx * salida_cols)
+                ws.column_dimensions[get_column_letter(start_col)].width = 11     # FECHA
+                ws.column_dimensions[get_column_letter(start_col + 1)].width = 10 # CANTIDAD
+                ws.column_dimensions[get_column_letter(start_col + 2)].width = 8  # UNIDAD
             
             # Congelar primeras filas y columnas para mejor navegación
-            ws.freeze_panes = 'J6'  # Congelar hasta columna I (antes de movimientos) y fila 5 (encabezados)
+            ws.freeze_panes = 'F6'  # Congelar hasta columna E (datos principales) y fila 5 (encabezados)
         
         # Guardar en archivo temporal
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
