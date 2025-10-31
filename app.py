@@ -3819,8 +3819,8 @@ def exportar_excel_inventario(periodo):
                 header_cell.border = border
                 merge_ranges.append(f'{start_col_letter}4:{end_col_letter}4')
                 
-                # Sub-encabezados: Fecha, Factura, Cantidad, Valor Unit, Total, Proveedor
-                sub_headers = ['FECHA', 'FACTURA', 'CANTIDAD', 'VALOR UNIT.', 'TOTAL', 'PROVEEDOR']
+                # Sub-encabezados: Fecha, Factura, Cantidad, Proveedor, Valor Unit, Total
+                sub_headers = ['FECHA', 'FACTURA', 'CANTIDAD', 'PROVEEDOR', 'VALOR UNIT.', 'TOTAL']
                 for sub_idx, sub_header in enumerate(sub_headers):
                     sub_col_letter = get_column_letter(start_col + sub_idx)
                     sub_cell = ws[f'{sub_col_letter}5']
@@ -3967,8 +3967,21 @@ def exportar_excel_inventario(periodo):
                     cantidad_cell.border = border
                     cantidad_cell.alignment = center_alignment
                     
+                    # Proveedor (antes de Valor Unit) - leer del producto asociado al movimiento
+                    proveedor_cell = ws[f'{get_column_letter(start_col + 3)}{row}']
+                    # Usar el producto del movimiento para asegurar que tenemos el proveedor correcto
+                    producto_movimiento = entrada.producto
+                    proveedor_valor = ''
+                    if producto_movimiento and producto_movimiento.proveedor:
+                        proveedor_valor = str(producto_movimiento.proveedor).strip()
+                    elif producto.proveedor:
+                        # Fallback al producto del loop
+                        proveedor_valor = str(producto.proveedor).strip()
+                    proveedor_cell.value = proveedor_valor
+                    proveedor_cell.border = border
+                    
                     # Valor Unitario
-                    valor_unit_cell = ws[f'{get_column_letter(start_col + 3)}{row}']
+                    valor_unit_cell = ws[f'{get_column_letter(start_col + 4)}{row}']
                     if entrada.precio_unitario:
                         valor_unit_cell.value = float(entrada.precio_unitario)
                         valor_unit_cell.number_format = '#,##0'
@@ -3978,7 +3991,7 @@ def exportar_excel_inventario(periodo):
                     valor_unit_cell.alignment = center_alignment
                     
                     # Total
-                    total_cell = ws[f'{get_column_letter(start_col + 4)}{row}']
+                    total_cell = ws[f'{get_column_letter(start_col + 5)}{row}']
                     if entrada.total:
                         total_cell.value = float(entrada.total)
                         total_cell.number_format = '#,##0'
@@ -3987,11 +4000,6 @@ def exportar_excel_inventario(periodo):
                     total_cell.border = border
                     total_cell.alignment = center_alignment
                     total_cell.font = Font(bold=True)
-                    
-                    # Proveedor
-                    proveedor_cell = ws[f'{get_column_letter(start_col + 5)}{row}']
-                    proveedor_cell.value = producto.proveedor or ''
-                    proveedor_cell.border = border
                 
                 # Escribir SALIDAS
                 for sal_idx, salida in enumerate(salidas_producto):
@@ -4077,9 +4085,9 @@ def exportar_excel_inventario(periodo):
                 ws.column_dimensions[get_column_letter(start_col)].width = 11     # FECHA
                 ws.column_dimensions[get_column_letter(start_col + 1)].width = 15 # FACTURA
                 ws.column_dimensions[get_column_letter(start_col + 2)].width = 10 # CANTIDAD
-                ws.column_dimensions[get_column_letter(start_col + 3)].width = 12 # VALOR UNIT.
-                ws.column_dimensions[get_column_letter(start_col + 4)].width = 12 # TOTAL
-                ws.column_dimensions[get_column_letter(start_col + 5)].width = 15 # PROVEEDOR
+                ws.column_dimensions[get_column_letter(start_col + 3)].width = 15 # PROVEEDOR
+                ws.column_dimensions[get_column_letter(start_col + 4)].width = 12 # VALOR UNIT.
+                ws.column_dimensions[get_column_letter(start_col + 5)].width = 12 # TOTAL
             
             # Columnas de SALIDAS (3 columnas por salida)
             for sal_idx in range(max_salidas):
