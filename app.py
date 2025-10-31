@@ -4409,6 +4409,7 @@ def nuevo_movimiento_inventario():
             referencia = request.form.get('referencia', '').strip()
             responsable = request.form.get('responsable', '').strip()
             observaciones = request.form.get('observaciones', '').strip()
+            proveedor = request.form.get('proveedor', '').strip()
             
             # Campos para sistema de empaques
             tipo_ingreso = request.form.get('tipo_ingreso', 'INDIVIDUAL')
@@ -4491,6 +4492,9 @@ def nuevo_movimiento_inventario():
             stock_anterior = producto.stock_actual
             if tipo_movimiento == 'ENTRADA':
                 producto.stock_actual += cantidad
+                # Actualizar proveedor del producto si se proporciona
+                if proveedor:
+                    producto.proveedor = proveedor
             elif tipo_movimiento == 'SALIDA':
                 producto.stock_actual -= cantidad
             

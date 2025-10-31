@@ -42,7 +42,8 @@
                                         <option value="{{ producto.id }}" 
                                                 data-stock="{{ producto.stock_actual }}"
                                                 data-unidad="{{ producto.unidad_medida }}"
-                                                data-precio="{{ producto.precio_unitario }}">
+                                                data-precio="{{ producto.precio_unitario }}"
+                                                data-proveedor="{{ producto.proveedor or '' }}">
                                             {{ producto.codigo }} - {{ producto.nombre }} 
                                             (Stock: {{ producto.stock_actual }} {{ producto.unidad_medida }})
                                         </option>
@@ -173,6 +174,13 @@
                                            placeholder="Nombre de la persona responsable">
                                 </div>
 
+                                <div class="mb-3" id="proveedor_container" style="display: none;">
+                                    <label for="proveedor" class="form-label">Proveedor *</label>
+                                    <input type="text" class="form-control" id="proveedor" name="proveedor" 
+                                           placeholder="Nombre del proveedor">
+                                    <div class="form-text">El proveedor se actualizará en el producto</div>
+                                </div>
+
                                 <div class="mb-3">
                                     <label for="observaciones" class="form-label">Observaciones</label>
                                     <textarea class="form-control" id="observaciones" name="observaciones" rows="3" 
@@ -292,6 +300,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const unidadEmpaqueSpan = document.getElementById('unidad_empaque');
     const totalEmpaquesSpan = document.getElementById('total_empaques');
     const valorEmpaquesSpan = document.getElementById('valor_empaques');
+    
+    // Elementos para proveedor
+    const proveedorContainer = document.getElementById('proveedor_container');
+    const proveedorInput = document.getElementById('proveedor');
 
     function actualizarInfo() {
         const productoOption = productoSelect.options[productoSelect.selectedIndex];
@@ -310,13 +322,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tipoMovimiento === 'ENTRADA') {
             tipoIngresoContainer.style.display = 'block';
             totalContainer.style.display = 'block';
+            proveedorContainer.style.display = 'block'; // Mostrar campo de proveedor para entradas
             actualizarTipoIngreso();
         } else {
             tipoIngresoContainer.style.display = 'none';
             ingresoIndividualContainer.style.display = 'none';
             ingresoEmpaqueContainer.style.display = 'none';
             totalContainer.style.display = 'none';
+            proveedorContainer.style.display = 'none'; // Ocultar campo de proveedor para salidas
             precioInput.value = 0; // Limpiar precio para salidas
+        }
+        
+        // Cargar proveedor del producto si existe y hacer obligatorio para entradas
+        if (tipoMovimiento === 'ENTRADA') {
+            if (productoSelect.value) {
+                const proveedor = productoOption.dataset.proveedor || '';
+                proveedorInput.value = proveedor;
+            }
+            proveedorInput.required = true;
+        } else {
+            proveedorInput.required = false;
         }
 
         // Actualizar unidad de medida
