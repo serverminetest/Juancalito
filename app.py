@@ -3768,8 +3768,11 @@ def exportar_excel_inventario(periodo):
             
             # Encabezados principales (sin proveedor, sin totales de entradas/salidas)
             headers_resumen = ['NOMBRE', 'UNIDAD', 'SALDO INICIAL', 'SALDO REAL', 'PRECIO UNIT.', 'VALOR TOTAL']
-            for col, header in enumerate(headers_resumen, 1):
-                cell = ws.cell(row=5, column=col, value=header)
+            header_cols = ['A', 'B', 'C', 'D', 'E', 'F']
+            for col_idx, header in enumerate(headers_resumen):
+                col_letter = header_cols[col_idx]
+                cell = ws[f'{col_letter}5']
+                cell.value = header
                 cell.font = header_font
                 cell.fill = header_fill
                 cell.alignment = center_alignment
@@ -3789,32 +3792,37 @@ def exportar_excel_inventario(periodo):
                 # Obtener letras de columnas para el merge
                 from openpyxl.utils import get_column_letter
                 col_fecha_letter = get_column_letter(col_fecha)
+                col_tipo_letter = get_column_letter(col_tipo)
                 col_cantidad_letter = get_column_letter(col_cantidad)
                 
                 # Primero hacer el merge
                 ws.merge_cells(f'{col_fecha_letter}4:{col_cantidad_letter}4')
                 
-                # Luego crear la celda principal con el valor (solo la primera celda del merge)
-                header_cell = ws.cell(row=4, column=col_fecha, value=f'MOVIMIENTO {mov_idx + 1}')
+                # Luego crear la celda principal con el valor (usar coordenadas explícitas)
+                header_cell = ws[f'{col_fecha_letter}4']
+                header_cell.value = f'MOVIMIENTO {mov_idx + 1}'
                 header_cell.font = Font(bold=True, size=10)
                 header_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
                 header_cell.alignment = center_alignment
                 header_cell.border = border
                 
-                # Sub-encabezados en fila 5
-                fecha_cell = ws.cell(row=5, column=col_fecha, value='FECHA')
+                # Sub-encabezados en fila 5 (usar coordenadas explícitas)
+                fecha_cell = ws[f'{col_fecha_letter}5']
+                fecha_cell.value = 'FECHA'
                 fecha_cell.font = header_font
                 fecha_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
                 fecha_cell.alignment = center_alignment
                 fecha_cell.border = border
                 
-                tipo_cell = ws.cell(row=5, column=col_tipo, value='TIPO')
+                tipo_cell = ws[f'{col_tipo_letter}5']
+                tipo_cell.value = 'TIPO'
                 tipo_cell.font = header_font
                 tipo_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
                 tipo_cell.alignment = center_alignment
                 tipo_cell.border = border
                 
-                cantidad_cell = ws.cell(row=5, column=col_cantidad, value='CANTIDAD')
+                cantidad_cell = ws[f'{col_cantidad_letter}5']
+                cantidad_cell.value = 'CANTIDAD'
                 cantidad_cell.font = header_font
                 cantidad_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
                 cantidad_cell.alignment = center_alignment
@@ -3822,8 +3830,12 @@ def exportar_excel_inventario(periodo):
             
             # Datos de productos con movimientos a la derecha
             for row, producto in enumerate(productos_cat, 6):
-                # Datos básicos del producto
-                ws.cell(row=row, column=1, value=producto.nombre).border = border
+                from openpyxl.utils import get_column_letter
+                
+                # Datos básicos del producto (usar coordenadas explícitas)
+                nombre_cell = ws[f'A{row}']
+                nombre_cell.value = producto.nombre
+                nombre_cell.border = border
                 
                 # Unidad estandarizada
                 unidad = producto.unidad_medida.upper()
@@ -3840,11 +3852,15 @@ def exportar_excel_inventario(periodo):
                 else:
                     unidad_display = producto.unidad_medida
                 
-                ws.cell(row=row, column=2, value=unidad_display).border = border
+                unidad_cell = ws[f'B{row}']
+                unidad_cell.value = unidad_display
+                unidad_cell.border = border
                 
                 # Saldo inicial
                 saldo_inicial = getattr(producto, 'saldo_inicial', 0) or 0
-                ws.cell(row=row, column=3, value=saldo_inicial).border = border
+                saldo_inicial_cell = ws[f'C{row}']
+                saldo_inicial_cell.value = saldo_inicial
+                saldo_inicial_cell.border = border
                 
                 # FÓRMULA: Saldo Real = Saldo Inicial + Entradas - Salidas
                 # Necesitamos calcular entradas y salidas desde movimientos
@@ -3852,25 +3868,32 @@ def exportar_excel_inventario(periodo):
                 salidas = sum(m.calcular_cantidad_total() for m in producto.movimientos if m.tipo_movimiento == 'SALIDA')
                 saldo_real = saldo_inicial + entradas - salidas
                 
-                formula_cell = ws.cell(row=row, column=4)
-                formula_cell.value = saldo_real  # Usar valor calculado en lugar de fórmula para evitar problemas con movimientos
-                formula_cell.border = border
-                formula_cell.alignment = center_alignment
+                saldo_real_cell = ws[f'D{row}']
+                saldo_real_cell.value = saldo_real  # Usar valor calculado en lugar de fórmula para evitar problemas con movimientos
+                saldo_real_cell.border = border
+                saldo_real_cell.alignment = center_alignment
                 
                 # Precio unitario (solo para productos que deben tener precio)
                 if producto.debe_tener_precio():
                     precio = float(producto.precio_unitario) if producto.precio_unitario else 0
-                    ws.cell(row=row, column=5, value=precio).border = border
+                    precio_cell = ws[f'E{row}']
+                    precio_cell.value = precio
+                    precio_cell.border = border
                     
                     # FÓRMULA: Valor Total = Saldo Real × Precio Unitario
-                    valor_cell = ws.cell(row=row, column=6)
+                    valor_cell = ws[f'F{row}']
                     valor_cell.value = f'=D{row}*E{row}'
                     valor_cell.border = border
                     valor_cell.alignment = center_alignment
                 else:
                     # Para ALMACEN GENERAL, mostrar "-" en precio y valor
-                    ws.cell(row=row, column=5, value='-').border = border
-                    ws.cell(row=row, column=6, value='-').border = border
+                    precio_cell = ws[f'E{row}']
+                    precio_cell.value = '-'
+                    precio_cell.border = border
+                    
+                    valor_cell = ws[f'F{row}']
+                    valor_cell.value = '-'
+                    valor_cell.border = border
                 
                 # Obtener y ordenar movimientos del producto
                 movimientos_producto = sorted(producto.movimientos, key=lambda x: x.fecha_movimiento)
@@ -3881,22 +3904,31 @@ def exportar_excel_inventario(periodo):
                     col_tipo = col_fecha + 1
                     col_cantidad = col_tipo + 1
                     
-                    # Fecha
+                    # Obtener letras de columnas
+                    from openpyxl.utils import get_column_letter
+                    col_fecha_letter = get_column_letter(col_fecha)
+                    col_tipo_letter = get_column_letter(col_tipo)
+                    col_cantidad_letter = get_column_letter(col_cantidad)
+                    
+                    # Fecha (usar coordenadas explícitas)
                     fecha_str = movimiento.fecha_movimiento.strftime('%d/%m/%Y')
-                    fecha_cell = ws.cell(row=row, column=col_fecha, value=fecha_str)
+                    fecha_cell = ws[f'{col_fecha_letter}{row}']
+                    fecha_cell.value = fecha_str
                     fecha_cell.border = border
                     
-                    # Tipo con color
-                    tipo_cell = ws.cell(row=row, column=col_tipo, value=movimiento.tipo_movimiento)
+                    # Tipo con color (usar coordenadas explícitas)
+                    tipo_cell = ws[f'{col_tipo_letter}{row}']
+                    tipo_cell.value = movimiento.tipo_movimiento
                     tipo_cell.border = border
                     if movimiento.tipo_movimiento == 'ENTRADA':
                         tipo_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
                     else:
                         tipo_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
                     
-                    # Cantidad
+                    # Cantidad (usar coordenadas explícitas)
                     cantidad_total = movimiento.calcular_cantidad_total()
-                    cantidad_cell = ws.cell(row=row, column=col_cantidad, value=cantidad_total)
+                    cantidad_cell = ws[f'{col_cantidad_letter}{row}']
+                    cantidad_cell.value = cantidad_total
                     cantidad_cell.border = border
             
             # Ajustar ancho de columnas
