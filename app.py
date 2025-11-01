@@ -3302,12 +3302,6 @@ def copiar_inventario_mes_anterior():
             
             periodo_anterior = f"{año_anterior:04d}-{mes_anterior:02d}"
             
-            # Verificar si ya existen productos en el mes actual
-            productos_actuales = Producto.query.filter_by(periodo=periodo_actual).count()
-            if productos_actuales > 0:
-                flash(f'Ya existen {productos_actuales} productos en el período {periodo_actual}. No se pueden copiar.', 'warning')
-                return redirect(url_for('inventarios'))
-            
             # Obtener productos del mes anterior
             productos_anteriores = Producto.query.filter_by(periodo=periodo_anterior, activo=True).all()
             
@@ -3317,28 +3311,72 @@ def copiar_inventario_mes_anterior():
             
             # Copiar productos al mes actual
             productos_copiados = 0
+            productos_actualizados = 0
             for producto in productos_anteriores:
                 # El saldo final del mes anterior se convierte en saldo inicial del nuevo mes
                 saldo_final_anterior = producto.calcular_saldo_final()
                 
-                nuevo_producto = Producto(
+                # Verificar si ya existe un producto con el mismo código en el período actual
+                producto_existente = Producto.query.filter_by(
                     codigo=producto.codigo,
-                    nombre=producto.nombre,
-                    descripcion=producto.descripcion,
-                    categoria=producto.categoria,
-                    periodo=periodo_actual,
-                    unidad_medida=producto.unidad_medida,
-                    precio_unitario=producto.precio_unitario,
-                    stock_minimo=producto.stock_minimo,
-                    saldo_inicial=saldo_final_anterior,  # ✅ Saldo final del mes anterior
-                    stock_actual=saldo_final_anterior,   # ✅ Stock actual = saldo inicial (sin movimientos aún)
-                    ubicacion=producto.ubicacion,
-                    proveedor=producto.proveedor,
-                    activo=True,
-                    mes_cerrado=False  # El nuevo mes está abierto
-                )
-                db.session.add(nuevo_producto)
-                productos_copiados += 1
+                    periodo=periodo_actual
+                ).first()
+                
+                if producto_existente:
+                    # Si existe en el período actual, actualizar
+                    producto_existente.nombre = producto.nombre
+                    producto_existente.descripcion = producto.descripcion
+                    producto_existente.categoria = producto.categoria
+                    producto_existente.unidad_medida = producto.unidad_medida
+                    producto_existente.precio_unitario = producto.precio_unitario
+                    producto_existente.stock_minimo = producto.stock_minimo
+                    producto_existente.saldo_inicial = saldo_final_anterior
+                    producto_existente.stock_actual = saldo_final_anterior
+                    producto_existente.ubicacion = producto.ubicacion
+                    producto_existente.proveedor = producto.proveedor
+                    producto_existente.activo = True
+                    producto_existente.mes_cerrado = False
+                    productos_actualizados += 1
+                else:
+                    # Verificar si existe con ese código en otro período
+                    producto_otro_periodo = Producto.query.filter_by(codigo=producto.codigo).first()
+                    
+                    if producto_otro_periodo:
+                        # Si existe en otro período, actualizar su período al actual
+                        producto_otro_periodo.nombre = producto.nombre
+                        producto_otro_periodo.descripcion = producto.descripcion
+                        producto_otro_periodo.categoria = producto.categoria
+                        producto_otro_periodo.periodo = periodo_actual
+                        producto_otro_periodo.unidad_medida = producto.unidad_medida
+                        producto_otro_periodo.precio_unitario = producto.precio_unitario
+                        producto_otro_periodo.stock_minimo = producto.stock_minimo
+                        producto_otro_periodo.saldo_inicial = saldo_final_anterior
+                        producto_otro_periodo.stock_actual = saldo_final_anterior
+                        producto_otro_periodo.ubicacion = producto.ubicacion
+                        producto_otro_periodo.proveedor = producto.proveedor
+                        producto_otro_periodo.activo = True
+                        producto_otro_periodo.mes_cerrado = False
+                        productos_actualizados += 1
+                    else:
+                        # Si no existe, crear nuevo producto
+                        nuevo_producto = Producto(
+                            codigo=producto.codigo,
+                            nombre=producto.nombre,
+                            descripcion=producto.descripcion,
+                            categoria=producto.categoria,
+                            periodo=periodo_actual,
+                            unidad_medida=producto.unidad_medida,
+                            precio_unitario=producto.precio_unitario,
+                            stock_minimo=producto.stock_minimo,
+                            saldo_inicial=saldo_final_anterior,  # ✅ Saldo final del mes anterior
+                            stock_actual=saldo_final_anterior,   # ✅ Stock actual = saldo inicial (sin movimientos aún)
+                            ubicacion=producto.ubicacion,
+                            proveedor=producto.proveedor,
+                            activo=True,
+                            mes_cerrado=False  # El nuevo mes está abierto
+                        )
+                        db.session.add(nuevo_producto)
+                        productos_copiados += 1
             
             # Cerrar el mes anterior para evitar modificaciones
             for producto in productos_anteriores:
@@ -3346,7 +3384,13 @@ def copiar_inventario_mes_anterior():
             
             db.session.commit()
             
-            flash(f'✅ {productos_copiados} productos copiados desde {periodo_anterior} a {periodo_actual}. Saldos iniciales configurados automáticamente. Mes {periodo_anterior} cerrado.', 'success')
+            mensaje = f'✅ Proceso completado: '
+            if productos_copiados > 0:
+                mensaje += f'{productos_copiados} productos copiados. '
+            if productos_actualizados > 0:
+                mensaje += f'{productos_actualizados} productos actualizados. '
+            mensaje += f'Saldos iniciales configurados automáticamente. Mes {periodo_anterior} cerrado.'
+            flash(mensaje, 'success')
             
         except Exception as e:
             db.session.rollback()
