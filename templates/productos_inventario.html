@@ -46,7 +46,7 @@
     </div>
     
     <!-- Contenedor de resultados de búsqueda (fuera del card) -->
-    <div id="resultados-sugerencias" class="list-group" style="display: none; position: absolute; z-index: 9999; width: calc(100% - 2rem); background: white; border: 1px solid #dee2e6; border-radius: 0.375rem; margin-top: -1rem; margin-left: 1rem;"></div>
+    <div id="resultados-sugerencias" class="list-group resultados-sugerencias"></div>
 
     <!-- Filtros Avanzados (Colapsable) -->
     <div class="collapse" id="filtrosAvanzados">
@@ -324,6 +324,41 @@ const inputBusqueda = document.getElementById('busqueda-rapida');
 const resultadosSugerencias = document.getElementById('resultados-sugerencias');
 const inputBusquedaHidden = document.getElementById('busqueda-hidden');
 
+function posicionarSugerencias() {
+    if (!resultadosSugerencias || resultadosSugerencias.style.display !== 'block') {
+        return;
+    }
+
+    const inputRect = inputBusqueda.getBoundingClientRect();
+    const offset = 8;
+    const padding = 16;
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+
+    resultadosSugerencias.style.top = `${inputRect.bottom + offset}px`;
+
+    if (window.innerWidth <= 576) {
+        const mobilePadding = 12;
+        resultadosSugerencias.style.left = `${mobilePadding}px`;
+        resultadosSugerencias.style.right = `${mobilePadding}px`;
+        resultadosSugerencias.style.width = `calc(100vw - ${mobilePadding * 2}px)`;
+    } else {
+        let width = Math.min(inputRect.width, viewportWidth - padding * 2);
+        let left = inputRect.left;
+
+        if (left < padding) {
+            left = padding;
+        }
+
+        if (left + width > viewportWidth - padding) {
+            left = Math.max(padding, viewportWidth - padding - width);
+        }
+
+        resultadosSugerencias.style.left = `${left}px`;
+        resultadosSugerencias.style.right = 'auto';
+        resultadosSugerencias.style.width = `${width}px`;
+    }
+}
+
 inputBusqueda.addEventListener('input', function() {
     clearTimeout(timeoutBusqueda);
     const query = this.value.trim();
@@ -355,34 +390,32 @@ inputBusqueda.addEventListener('input', function() {
                                       producto.stock_actual <= 10 ? 'warning' : 'success';
                     
                     html += `
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <span class="badge bg-secondary">${producto.codigo}</span>
-                                        ${producto.nombre}
-                                    </h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-tag"></i> ${producto.categoria}
-                                        ${producto.proveedor ? ' | <i class="fas fa-truck"></i> ' + producto.proveedor : ''}
-                                    </small>
+                        <div class="list-group-item resultado-item">
+                            <div class="resultado-info">
+                                <h6 class="mb-1">
+                                    <span class="badge bg-secondary">${producto.codigo}</span>
+                                    ${producto.nombre}
+                                </h6>
+                                <div class="resultado-meta text-muted">
+                                    <span><i class="fas fa-tag"></i> ${producto.categoria}</span>
+                                    ${producto.proveedor ? `<span><i class="fas fa-truck"></i> ${producto.proveedor}</span>` : ''}
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="text-end me-2">
-                                        <span class="badge bg-${stockClass}">${producto.stock_actual} ${estandarizarUnidad(producto.unidad_medida)}</span>
-                                    </div>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="/inventarios/productos/editar/${producto.id}" 
-                                           class="btn btn-outline-primary btn-sm" 
-                                           title="Editar Producto">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <a href="/inventarios/movimientos/nuevo?producto_id=${producto.id}" 
-                                           class="btn btn-outline-success btn-sm" 
-                                           title="Registrar Movimiento">
-                                            <i class="fas fa-exchange-alt"></i>
-                                        </a>
-                                    </div>
+                            </div>
+                            <div class="resultado-acciones">
+                                <div class="resultado-stock">
+                                    <span class="badge bg-${stockClass}">${producto.stock_actual} ${estandarizarUnidad(producto.unidad_medida)}</span>
+                                </div>
+                                <div class="btn-group btn-group-sm resultado-botones" role="group">
+                                    <a href="/inventarios/productos/editar/${producto.id}" 
+                                       class="btn btn-outline-primary btn-sm" 
+                                       title="Editar Producto">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="/inventarios/movimientos/nuevo?producto_id=${producto.id}" 
+                                       class="btn btn-outline-success btn-sm" 
+                                       title="Registrar Movimiento">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -391,13 +424,7 @@ inputBusqueda.addEventListener('input', function() {
                 
                 resultadosSugerencias.innerHTML = html;
                 resultadosSugerencias.style.display = 'block';
-                
-                // Posicionar los resultados correctamente pegados al input
-                const inputRect = inputBusqueda.getBoundingClientRect();
-                
-                resultadosSugerencias.style.top = inputRect.bottom + 'px';
-                resultadosSugerencias.style.left = inputRect.left + 'px';
-                resultadosSugerencias.style.width = inputRect.width + 'px';
+                posicionarSugerencias();
             })
             .catch(error => {
                 console.error('Error en búsqueda:', error);
@@ -412,18 +439,8 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Reposicionar resultados cuando se hace scroll
-function reposicionarResultados() {
-    if (resultadosSugerencias.style.display === 'block') {
-        const inputRect = inputBusqueda.getBoundingClientRect();
-        resultadosSugerencias.style.top = inputRect.bottom + 'px';
-        resultadosSugerencias.style.left = inputRect.left + 'px';
-        resultadosSugerencias.style.width = inputRect.width + 'px';
-    }
-}
-
-window.addEventListener('scroll', reposicionarResultados);
-window.addEventListener('resize', reposicionarResultados);
+window.addEventListener('scroll', posicionarSugerencias, { passive: true });
+window.addEventListener('resize', posicionarSugerencias);
 
 // Búsqueda con Enter
 inputBusqueda.addEventListener('keypress', function(e) {
@@ -481,60 +498,141 @@ function estandarizarUnidad(unidad) {
 </script>
 
 <style>
-#resultados-sugerencias {
-    max-height: 400px;
-    overflow-y: auto;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+.resultados-sugerencias {
+    display: none;
+    position: fixed;
     z-index: 9999 !important;
-    position: fixed !important;
-    background: white !important;
-    border: 1px solid #dee2e6 !important;
-    border-radius: 0 0 0.375rem 0.375rem !important;
-    margin-top: 0 !important;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0 0 0.5rem 0.5rem;
+    max-height: 420px;
+    overflow-y: auto;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    padding: 0;
 }
 
-#resultados-sugerencias .list-group-item {
+.resultados-sugerencias .resultado-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     border-left: 3px solid transparent;
-    transition: all 0.2s;
     border-bottom: 1px solid #f8f9fa;
+    transition: all 0.2s ease;
 }
 
-#resultados-sugerencias .list-group-item:last-child {
+.resultados-sugerencias .resultado-item:last-child {
     border-bottom: none;
 }
 
-#resultados-sugerencias .list-group-item:hover {
+.resultados-sugerencias .resultado-item:hover {
     border-left-color: #0d6efd;
     transform: translateX(3px);
     background-color: #f8f9fa;
 }
 
-/* Estilos para los botones en los resultados de búsqueda */
-#resultados-sugerencias .btn-group-sm .btn {
+.resultados-sugerencias .resultado-info {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+
+.resultados-sugerencias .resultado-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.resultados-sugerencias .resultado-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.resultados-sugerencias .resultado-acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: nowrap;
+}
+
+.resultados-sugerencias .resultado-stock {
+    min-width: 96px;
+    text-align: right;
+}
+
+.resultados-sugerencias .btn-group-sm {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+.resultados-sugerencias .btn-group-sm .btn {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
     border-radius: 0.25rem;
+    flex: 0 0 auto;
 }
 
-#resultados-sugerencias .btn-group-sm .btn:hover {
+.resultados-sugerencias .btn-group-sm .btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Asegurar que las tarjetas de estadísticas no interfieran */
 .row .card {
     position: relative;
     z-index: 1;
 }
 
-/* El contenedor de búsqueda debe tener posición relativa */
 .card-body {
     position: relative;
 }
 
-/* Asegurar que el contenedor principal tenga posición relativa */
 .container-fluid {
     position: relative;
+}
+
+@media (max-width: 992px) {
+    .resultados-sugerencias .resultado-item {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .resultados-sugerencias .resultado-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .resultados-sugerencias .resultado-acciones {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+
+    .resultados-sugerencias .resultado-stock {
+        text-align: left;
+    }
+
+    .resultados-sugerencias .btn-group-sm {
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .resultados-sugerencias .btn-group-sm .btn {
+        flex: 1 1 48%;
+    }
+}
+
+@media (max-width: 576px) {
+    .resultados-sugerencias {
+        left: 12px !important;
+        right: 12px !important;
+        width: calc(100vw - 24px) !important;
+    }
+
+    .resultados-sugerencias .btn-group-sm .btn {
+        flex: 1 1 100%;
+    }
 }
 
 @media print {
