@@ -559,6 +559,7 @@ function estandarizarUnidad(unidad) {
 .resultados-sugerencias .resultado-stock {
     min-width: 96px;
     text-align: right;
+    flex-shrink: 0;
 }
 
 .resultados-sugerencias .btn-group-sm {
@@ -601,25 +602,34 @@ function estandarizarUnidad(unidad) {
     .resultados-sugerencias .resultado-item {
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.5rem;
     }
 
     .resultados-sugerencias .resultado-acciones {
         width: 100%;
-        justify-content: flex-start;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         gap: 0.5rem;
+        flex-wrap: nowrap;
     }
 
     .resultados-sugerencias .resultado-stock {
         text-align: left;
+        min-width: auto;
+        flex-shrink: 0;
     }
 
     .resultados-sugerencias .btn-group-sm {
-        width: 100%;
+        display: flex;
         gap: 0.5rem;
+        flex-shrink: 0;
+        margin-left: auto;
     }
 
     .resultados-sugerencias .btn-group-sm .btn {
-        flex: 1 1 48%;
+        flex: 0 0 auto;
+        min-width: 44px;
     }
 }
 
@@ -630,8 +640,18 @@ function estandarizarUnidad(unidad) {
         width: calc(100vw - 24px) !important;
     }
 
+    .resultados-sugerencias .resultado-acciones {
+        gap: 0.25rem;
+    }
+
+    .resultados-sugerencias .btn-group-sm {
+        margin-left: auto;
+    }
+
     .resultados-sugerencias .btn-group-sm .btn {
-        flex: 1 1 100%;
+        flex: 0 0 auto;
+        min-width: 40px;
+        padding: 0.25rem 0.4rem;
     }
 }
 
