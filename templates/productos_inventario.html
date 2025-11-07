@@ -608,10 +608,10 @@ function estandarizarUnidad(unidad) {
     .resultados-sugerencias .resultado-acciones {
         width: 100%;
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: center;
         gap: 0.5rem;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
     }
 
     .resultados-sugerencias .resultado-stock {
@@ -624,7 +624,7 @@ function estandarizarUnidad(unidad) {
         display: flex;
         gap: 0.5rem;
         flex-shrink: 0;
-        margin-left: auto;
+        margin-left: 0;
     }
 
     .resultados-sugerencias .btn-group-sm .btn {
@@ -641,17 +641,17 @@ function estandarizarUnidad(unidad) {
     }
 
     .resultados-sugerencias .resultado-acciones {
-        gap: 0.25rem;
+        gap: 0.35rem;
     }
 
     .resultados-sugerencias .btn-group-sm {
-        margin-left: auto;
+        margin-left: 0;
     }
 
     .resultados-sugerencias .btn-group-sm .btn {
-        flex: 0 0 auto;
+        flex: 1 0 auto;
         min-width: 40px;
-        padding: 0.25rem 0.4rem;
+        padding: 0.25rem 0.45rem;
     }
 }
 
