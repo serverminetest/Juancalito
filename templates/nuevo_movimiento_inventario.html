@@ -42,8 +42,7 @@
                                         <option value="{{ producto.id }}" 
                                                 data-stock="{{ producto.stock_actual }}"
                                                 data-unidad="{{ producto.unidad_medida }}"
-                                                data-precio="{{ producto.precio_unitario }}"
-                                                data-proveedor="{{ producto.proveedor or '' }}">
+                                                data-precio="{{ producto.precio_unitario }}">
                                             {{ producto.codigo }} - {{ producto.nombre }} 
                                             (Stock: {{ producto.stock_actual }} {{ producto.unidad_medida }})
                                         </option>
@@ -178,7 +177,7 @@
                                     <label for="proveedor" class="form-label">Proveedor *</label>
                                     <input type="text" class="form-control" id="proveedor" name="proveedor" 
                                            placeholder="Nombre del proveedor">
-                                    <div class="form-text">El proveedor se actualizará en el producto</div>
+                                    <div class="form-text">Se registrará junto a este movimiento de entrada</div>
                                 </div>
 
                                 <div class="mb-3">
@@ -333,15 +332,12 @@ document.addEventListener('DOMContentLoaded', function() {
             precioInput.value = 0; // Limpiar precio para salidas
         }
         
-        // Cargar proveedor del producto si existe y hacer obligatorio para entradas
+        // Requerir proveedor solo para entradas
         if (tipoMovimiento === 'ENTRADA') {
-            if (productoSelect.value) {
-                const proveedor = productoOption.dataset.proveedor || '';
-                proveedorInput.value = proveedor;
-            }
             proveedorInput.required = true;
         } else {
             proveedorInput.required = false;
+            proveedorInput.value = '';
         }
 
         // Actualizar unidad de medida

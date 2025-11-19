@@ -282,10 +282,14 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if movimiento.producto.proveedor %}
-                                    <small>{{ movimiento.producto.proveedor }}</small>
+                                {% if movimiento.tipo_movimiento == 'ENTRADA' %}
+                                    {% if movimiento.proveedor %}
+                                        <small>{{ movimiento.proveedor }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Sin proveedor</small>
+                                    {% endif %}
                                 {% else %}
-                                    <small class="text-muted">-</small>
+                                    <small class="text-muted">No aplica</small>
                                 {% endif %}
                             </td>
                             <td>

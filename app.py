@@ -726,6 +726,7 @@ class MovimientoInventario(db.Model):
     observaciones = db.Column(db.Text)
     fecha_movimiento = db.Column(db.DateTime, default=colombia_now)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    proveedor = db.Column(db.String(200))
     
     # Nuevos campos para sistema de empaques
     tipo_ingreso = db.Column(db.String(20), default='INDIVIDUAL')  # EMPAQUE, INDIVIDUAL
@@ -2972,7 +2973,6 @@ def nuevo_producto_inventario():
             stock_minimo = int(request.form.get('stock_minimo', 0))
             stock_actual = int(request.form.get('stock_actual', 0))
             ubicacion = request.form.get('ubicacion', '').strip()
-            proveedor = request.form.get('proveedor', '').strip()
             fecha_vencimiento = request.form.get('fecha_vencimiento')
             lote = request.form.get('lote', '').strip()
             
@@ -3016,7 +3016,6 @@ def nuevo_producto_inventario():
                 stock_minimo=stock_minimo,
                 stock_actual=stock_actual,
                 ubicacion=ubicacion,
-                proveedor=proveedor,
                 fecha_vencimiento=fecha_venc,
                 lote=lote
             )
@@ -3285,7 +3284,6 @@ def editar_producto_inventario(id):
             stock_actual = int(request.form.get('stock_actual', 0))
             saldo_inicial = int(request.form.get('saldo_inicial', 0))
             ubicacion = request.form.get('ubicacion', '').strip()
-            proveedor = request.form.get('proveedor', '').strip()
             fecha_vencimiento = request.form.get('fecha_vencimiento')
             lote = request.form.get('lote', '').strip()
             activo = 'activo' in request.form
@@ -3316,7 +3314,6 @@ def editar_producto_inventario(id):
             producto.stock_actual = stock_actual
             producto.saldo_inicial = saldo_inicial
             producto.ubicacion = ubicacion
-            producto.proveedor = proveedor
             producto.lote = lote
             producto.activo = activo
             
@@ -4619,6 +4616,12 @@ def nuevo_movimiento_inventario():
                 flash(f'Stock insuficiente. Stock actual: {producto.stock_actual}', 'error')
                 return redirect(url_for('nuevo_movimiento_inventario'))
             
+            if tipo_movimiento == 'ENTRADA' and not proveedor:
+                flash('El proveedor es obligatorio para las entradas.', 'error')
+                return redirect(url_for('nuevo_movimiento_inventario'))
+            if tipo_movimiento == 'SALIDA':
+                proveedor = ''
+            
             # Calcular precio y total según tipo de ingreso
             if tipo_movimiento == 'ENTRADA':
                 if tipo_ingreso == 'EMPAQUE' and cantidad_empaques and contenido_por_empaque and precio_por_empaque:
@@ -4654,7 +4657,8 @@ def nuevo_movimiento_inventario():
                 precio_por_empaque=precio_por_empaque,
                 responsable=responsable,
                 observaciones=observaciones,
-                created_by=current_user.id
+                created_by=current_user.id,
+                proveedor=proveedor or None
             )
             
             # Actualizar stock del producto automáticamente

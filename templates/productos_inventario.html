@@ -33,7 +33,7 @@
             <div class="input-group input-group-lg">
                 <span class="input-group-text"><i class="fas fa-search"></i></span>
                 <input type="text" id="busqueda-rapida" class="form-control" 
-                       placeholder="Buscar por código, nombre, proveedor, ubicación..." 
+                       placeholder="Buscar por código, nombre, ubicación..." 
                        value="{{ busqueda_actual }}" autocomplete="off">
                 <button class="btn btn-outline-secondary" type="button" onclick="limpiarBusqueda()">
                     <i class="fas fa-times"></i>
@@ -209,9 +209,6 @@
                                     <strong>{{ producto.nombre }}</strong>
                                     {% if producto.descripcion %}
                                     <br><small class="text-muted">{{ producto.descripcion[:60] }}{% if producto.descripcion|length > 60 %}...{% endif %}</small>
-                                    {% endif %}
-                                    {% if producto.proveedor %}
-                                    <br><small class="text-info"><i class="fas fa-truck"></i> {{ producto.proveedor }}</small>
                                     {% endif %}
                                 </div>
                             </td>
@@ -398,7 +395,6 @@ inputBusqueda.addEventListener('input', function() {
                                 </h6>
                                 <div class="resultado-meta text-muted">
                                     <span><i class="fas fa-tag"></i> ${producto.categoria}</span>
-                                    ${producto.proveedor ? `<span><i class="fas fa-truck"></i> ${producto.proveedor}</span>` : ''}
                                 </div>
                             </div>
                             <div class="resultado-acciones">
