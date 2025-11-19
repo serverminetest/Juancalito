@@ -30,6 +30,12 @@ from notificaciones import (
 # Configurar zona horaria de Colombia (UTC-5)
 COLOMBIA_TZ = timezone(timedelta(hours=-5))
 
+# Token global para QR (mismo para asistencia y visitantes)
+QR_TOKEN_SECRETO_GLOBAL = os.environ.get('QR_TOKEN_GLOBAL', 'flores_juncalito_qr_global')
+def generar_token_qr_constante():
+    """Genera un token estable para los QR públicos"""
+    return hashlib.sha256(QR_TOKEN_SECRETO_GLOBAL.encode()).hexdigest()[:32]
+
 def colombia_now():
     """Devuelve la fecha y hora actual en zona horaria de Colombia"""
     return datetime.now(COLOMBIA_TZ)
@@ -820,34 +826,39 @@ class Visitante(db.Model):
     created_at = db.Column(db.DateTime, default=colombia_now)
     updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
 
+
+def obtener_visitantes_recurrentes():
+    """Obtiene la lista de visitantes registrados previamente (último registro por documento)."""
+    subconsulta = db.session.query(
+        db.func.max(Visitante.id).label('max_id')
+    ).group_by(Visitante.documento).subquery()
+
+    visitantes_unicos = Visitante.query.filter(
+        Visitante.id.in_(subconsulta)
+    ).order_by(Visitante.nombre.asc()).all()
+
+    return visitantes_unicos
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Funciones para el sistema de QR y tokens
 def generar_token_diario():
-    """Genera un token único para el día actual que persiste 24 horas"""
-    fecha_actual = date.today().strftime('%Y-%m-%d')
-    # Usar una clave secreta fija para que el token sea consistente durante el día
-    clave_secreta = "flores_juncalito_sas_2024"
-    token_base = f"{clave_secreta}_{fecha_actual}"
-    return hashlib.sha256(token_base.encode()).hexdigest()[:32]
+    """Genera un token estable para los QR públicos"""
+    return generar_token_qr_constante()
 
 def validar_token_diario(token):
-    """Valida si el token corresponde al día actual"""
+    """Valida si el token corresponde al token público configurado"""
     token_actual = generar_token_diario()
     return token == token_actual
 
 def generar_token_diario_visitantes():
-    """Genera un token único para visitantes del día actual que persiste 24 horas"""
-    fecha_actual = date.today().strftime('%Y-%m-%d')
-    # Usar una clave secreta diferente para visitantes
-    clave_secreta = "flores_juncalito_visitantes_2024"
-    token_base = f"{clave_secreta}_{fecha_actual}"
-    return hashlib.sha256(token_base.encode()).hexdigest()[:32]
+    """Genera el mismo token estable usado en asistencia"""
+    return generar_token_qr_constante()
 
 def validar_token_diario_visitantes(token):
-    """Valida si el token de visitantes corresponde al día actual"""
+    """Valida si el token de visitantes corresponde al token público"""
     token_actual = generar_token_diario_visitantes()
     return token == token_actual
 
@@ -1309,12 +1320,113 @@ def asistencia_publica(token):
 @app.route('/visitantes-publico/<token>', methods=['GET', 'POST'])
 def visitantes_publico(token):
     """Página pública para que los visitantes se registren"""
+    modo_activo = 'nuevo'
+    visitantes_recurrentes = obtener_visitantes_recurrentes()
+
     # Validar que el token sea del día actual
     if not validar_token_diario_visitantes(token):
         flash('El código QR ha expirado. Solicite un nuevo código al administrador.', 'error')
-        return render_template('visitantes_publico.html', token=token, error=True)
+        return render_template(
+            'visitantes_publico.html',
+            token=token,
+            error=True,
+            visitantes_recurrentes=visitantes_recurrentes,
+            modo_activo=modo_activo
+        )
     
     if request.method == 'POST':
+        modo_registro = request.form.get('modo_registro', 'nuevo')
+        modo_activo = modo_registro
+        
+        if modo_registro == 'recurrente':
+            visitante_recurrente_id = request.form.get('visitante_recurrente_id')
+            documento_verificacion = request.form.get('documento_verificacion', '').strip()
+
+            if not visitante_recurrente_id or not documento_verificacion:
+                flash('Seleccione su nombre y escriba su documento para continuar.', 'error')
+                return render_template(
+                    'visitantes_publico.html',
+                    token=token,
+                    visitantes_recurrentes=visitantes_recurrentes,
+                    modo_activo=modo_activo
+                )
+
+            visitante_referencia = Visitante.query.get(int(visitante_recurrente_id))
+
+            if not visitante_referencia:
+                flash('No encontramos el visitante seleccionado. Intente nuevamente.', 'error')
+                return render_template(
+                    'visitantes_publico.html',
+                    token=token,
+                    visitantes_recurrentes=visitantes_recurrentes,
+                    modo_activo=modo_activo
+                )
+
+            if visitante_referencia.documento.strip() != documento_verificacion:
+                flash('El documento ingresado no coincide con el registrado anteriormente.', 'error')
+                return render_template(
+                    'visitantes_publico.html',
+                    token=token,
+                    visitantes_recurrentes=visitantes_recurrentes,
+                    modo_activo=modo_activo
+                )
+
+            fecha_hoy = date.today()
+            visitante_existente = Visitante.query.filter(
+                Visitante.documento == documento_verificacion,
+                db.func.date(Visitante.fecha_entrada) == fecha_hoy,
+                Visitante.estado_visita == 'En visita'
+            ).first()
+
+            if visitante_existente:
+                flash('Ya existe un registro activo para este documento el día de hoy.', 'warning')
+                return render_template(
+                    'visitantes_publico.html',
+                    token=token,
+                    visitantes_recurrentes=visitantes_recurrentes,
+                    modo_activo=modo_activo
+                )
+
+            visitante = Visitante(
+                nombre=visitante_referencia.nombre,
+                apellido=visitante_referencia.apellido,
+                documento=visitante_referencia.documento,
+                eps=visitante_referencia.eps,
+                rh=visitante_referencia.rh,
+                telefono=visitante_referencia.telefono,
+                empresa=visitante_referencia.empresa,
+                motivo_visita=visitante_referencia.motivo_visita,
+                fecha_entrada=colombia_now(),
+                estado_visita='En visita',
+                nombre_contacto_emergencia=visitante_referencia.nombre_contacto_emergencia,
+                telefono_emergencia=visitante_referencia.telefono_emergencia,
+                parentesco=visitante_referencia.parentesco,
+                activo=True
+            )
+
+            try:
+                db.session.add(visitante)
+                db.session.commit()
+
+                notificar_visitante_nuevo(
+                    f"{visitante.nombre} {visitante.apellido}",
+                    visitante.empresa or "Sin empresa"
+                )
+
+                flash(f'¡Bienvenido nuevamente {visitante.nombre}! Tu entrada rápida quedó registrada a las {colombia_now().strftime("%H:%M")}', 'success')
+            except Exception:
+                db.session.rollback()
+                flash('Error al registrar la entrada rápida. Intente nuevamente.', 'error')
+
+            visitantes_recurrentes = obtener_visitantes_recurrentes()
+            modo_activo = 'nuevo'
+            return render_template(
+                'visitantes_publico.html',
+                token=token,
+                visitantes_recurrentes=visitantes_recurrentes,
+                modo_activo=modo_activo
+            )
+
         nombre = request.form.get('nombre', '').strip()
         apellido = request.form.get('apellido', '').strip()
         documento = request.form.get('documento', '').strip()
@@ -1345,7 +1457,12 @@ def visitantes_publico(token):
         campos_faltantes = [campo for campo, valor in campos_requeridos.items() if not valor]
         if campos_faltantes:
             flash('Por favor complete todos los campos requeridos', 'error')
-            return render_template('visitantes_publico.html', token=token)
+            return render_template(
+                'visitantes_publico.html',
+                token=token,
+                visitantes_recurrentes=visitantes_recurrentes,
+                modo_activo=modo_activo
+            )
         
         # Verificar si ya existe un visitante con el mismo documento hoy
         fecha_hoy = date.today()
@@ -1368,7 +1485,7 @@ def visitantes_publico(token):
             telefono=telefono,
             empresa=empresa,
             motivo_visita=motivo_visita,
-            fecha_entrada=datetime.now(),
+            fecha_entrada=colombia_now(),
             estado_visita='En visita',
             nombre_contacto_emergencia=nombre_contacto_emergencia,
             telefono_emergencia=telefono_emergencia,
@@ -1391,9 +1508,21 @@ def visitantes_publico(token):
             db.session.rollback()
             flash('Error al registrar el visitante. Intente nuevamente.', 'error')
         
-        return render_template('visitantes_publico.html', token=token)
+        visitantes_recurrentes = obtener_visitantes_recurrentes()
+        modo_activo = 'nuevo'
+        return render_template(
+            'visitantes_publico.html',
+            token=token,
+            visitantes_recurrentes=visitantes_recurrentes,
+            modo_activo=modo_activo
+        )
     
-    return render_template('visitantes_publico.html', token=token)
+    return render_template(
+        'visitantes_publico.html',
+        token=token,
+        visitantes_recurrentes=visitantes_recurrentes,
+        modo_activo=modo_activo
+    )
 
 @app.route('/asistencia/registrar', methods=['POST'])
 @login_required
