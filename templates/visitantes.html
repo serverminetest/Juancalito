@@ -48,6 +48,10 @@
                         <strong>QR permanente:</strong> disponible mientras no se regenere
                     </small>
                 </div>
+                <button class="btn btn-outline-success btn-sm mb-3" 
+                        onclick="copiarUrlQR()">
+                    <i class="fas fa-copy"></i> Copiar URL
+                </button>
                 <p class="text-muted small mb-0">
                     Los visitantes pueden escanear este código para registrarse automáticamente
                 </p>
@@ -355,6 +359,28 @@
 
 {% block scripts %}
 <script>
+// Función para copiar URL del QR
+function copiarUrlQR() {
+    const urlQR = '{{ url_qr }}';
+    navigator.clipboard.writeText(urlQR).then(function() {
+        // Mostrar feedback visual
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
+        btn.classList.remove('btn-outline-success');
+        btn.classList.add('btn-success');
+        
+        setTimeout(function() {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-success');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Error al copiar: ', err);
+        alert('Error al copiar la URL. Por favor, cópiela manualmente:\n' + urlQR);
+    });
+}
+
 // Variables globales para la acción
 let visitanteIdActual = null;
 let accionActual = null;
