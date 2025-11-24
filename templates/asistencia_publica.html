@@ -326,6 +326,8 @@
 
         // Función para recargar el formulario
         function recargarFormulario() {
+            // Limpiar flag de envío
+            sessionStorage.removeItem('formSubmitted');
             document.querySelector('form').reset();
             document.getElementById('documento').focus();
         }
@@ -369,8 +371,25 @@
             };
         }
 
+        // Prevenir reenvío del formulario al recargar
+        window.addEventListener('pageshow', function(event) {
+            // Si la página se carga desde el cache (back/forward) o recarga después de POST
+            if (event.persisted || (performance.navigation && performance.navigation.type === 1)) {
+                // Limpiar cualquier flag de envío pendiente
+                sessionStorage.removeItem('formSubmitted');
+                // Limpiar formulario
+                document.querySelector('form').reset();
+            }
+        });
+
         // Validación del formulario
         document.querySelector('form').addEventListener('submit', function(e) {
+            // Verificar si el formulario ya fue enviado
+            if (sessionStorage.getItem('formSubmitted') === 'true') {
+                e.preventDefault();
+                return false;
+            }
+
             const documento = document.getElementById('documento').value.trim();
             const nombre = document.getElementById('nombre').value.trim();
             
@@ -387,6 +406,9 @@
                 alert('Por favor seleccione el tipo de registro (entrada o salida)');
                 return false;
             }
+            
+            // Marcar formulario como enviado
+            sessionStorage.setItem('formSubmitted', 'true');
             
             // Mostrar modal de confirmación en lugar de confirm() nativo
             e.preventDefault();

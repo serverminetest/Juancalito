@@ -385,9 +385,33 @@
             configurarModoRegistro();
         });
         
+        // Prevenir reenvío del formulario al recargar
+        window.addEventListener('pageshow', function(event) {
+            // Si la página se carga desde el cache (back/forward) o recarga después de POST
+            if (event.persisted || (performance.navigation && performance.navigation.type === 1)) {
+                // Limpiar cualquier flag de envío pendiente
+                sessionStorage.removeItem('formNuevoSubmitted');
+                sessionStorage.removeItem('formRecurrenteSubmitted');
+                // Limpiar formularios
+                document.querySelectorAll('form').forEach(form => form.reset());
+            }
+        });
+
         // Activar polling rápido cuando se envía cualquiera de los formularios
         document.querySelectorAll('form').forEach(function(formulario) {
-            formulario.addEventListener('submit', function() {
+            formulario.addEventListener('submit', function(e) {
+                const formId = formulario.id;
+                const storageKey = formId === 'formRegistroNuevo' ? 'formNuevoSubmitted' : 'formRecurrenteSubmitted';
+                
+                // Verificar si el formulario ya fue enviado
+                if (sessionStorage.getItem(storageKey) === 'true') {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Marcar formulario como enviado
+                sessionStorage.setItem(storageKey, 'true');
+                
                 if (typeof window.activarPollingRapido === 'function') {
                     window.activarPollingRapido();
                 }
@@ -396,8 +420,12 @@
         
         // Función para recargar el formulario
         function recargarFormulario() {
+            // Limpiar flags de envío
+            sessionStorage.removeItem('formNuevoSubmitted');
+            sessionStorage.removeItem('formRecurrenteSubmitted');
             document.querySelectorAll('form').forEach(form => form.reset());
-            window.location.reload();
+            // No recargar la página, solo limpiar formularios
+            window.location.href = window.location.href.split('?')[0];
         }
 
         function configurarModoRegistro() {

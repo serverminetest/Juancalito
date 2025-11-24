@@ -1210,7 +1210,7 @@ def asistencia_publica(token):
         
         if not documento or not nombre or not tipo_registro:
             flash('Por favor complete todos los campos y seleccione el tipo de registro', 'error')
-            return render_template('asistencia_publica.html', token=token)
+            return redirect(url_for('asistencia_publica', token=token))
         
         # Buscar empleado por documento (exacto)
         empleado = Empleado.query.filter_by(cedula=documento).first()
@@ -1231,7 +1231,7 @@ def asistencia_publica(token):
         
         if not empleado:
             flash('No se encontró un empleado con ese documento o nombre. Verifique los datos ingresados.', 'error')
-            return render_template('asistencia_publica.html', token=token)
+            return redirect(url_for('asistencia_publica', token=token))
         
         # Verificar que el nombre coincida (validación más flexible)
         nombre_empleado = empleado.nombre_completo.lower().strip()
@@ -1242,12 +1242,12 @@ def asistencia_publica(token):
                 nombre_empleado in nombre_ingresado or 
                 nombre_ingresado in nombre_empleado):
             flash(f'El nombre ingresado no coincide con el empleado registrado. Empleado: {empleado.nombre_completo}', 'error')
-            return render_template('asistencia_publica.html', token=token)
+            return redirect(url_for('asistencia_publica', token=token))
         
         # Verificar que el empleado esté activo
         if empleado.estado_empleado != 'Activo':
             flash('El empleado no está activo en el sistema', 'error')
-            return render_template('asistencia_publica.html', token=token)
+            return redirect(url_for('asistencia_publica', token=token))
         
         fecha_hoy = date.today()
         hora_actual = colombia_now().time()
@@ -1261,7 +1261,7 @@ def asistencia_publica(token):
         if tipo_registro == 'entrada':
             if asistencia_existente:
                 flash(f'Ya se registró entrada para {empleado.nombre_completo} hoy a las {asistencia_existente.hora_entrada.strftime("%H:%M")}', 'warning')
-                return render_template('asistencia_publica.html', token=token)
+                return redirect(url_for('asistencia_publica', token=token))
             
             # Registrar entrada
             asistencia = Asistencia(
@@ -1282,6 +1282,8 @@ def asistencia_publica(token):
                 )
                 
                 flash(f'Entrada registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
+                # Usar redirect para evitar reenvío al recargar (patrón PRG)
+                return redirect(url_for('asistencia_publica', token=token))
             except Exception as e:
                 db.session.rollback()
                 flash('Error al registrar la entrada. Intente nuevamente.', 'error')
@@ -1289,11 +1291,11 @@ def asistencia_publica(token):
         elif tipo_registro == 'salida':
             if not asistencia_existente:
                 flash(f'No se encontró registro de entrada para {empleado.nombre_completo} hoy. Debe registrar entrada primero.', 'error')
-                return render_template('asistencia_publica.html', token=token)
+                return redirect(url_for('asistencia_publica', token=token))
             
             if asistencia_existente.hora_salida:
                 flash(f'Ya se registró salida para {empleado.nombre_completo} hoy a las {asistencia_existente.hora_salida.strftime("%H:%M")}', 'warning')
-                return render_template('asistencia_publica.html', token=token)
+                return redirect(url_for('asistencia_publica', token=token))
             
             # Registrar salida
             asistencia_existente.hora_salida = hora_actual
@@ -1309,11 +1311,14 @@ def asistencia_publica(token):
                 )
                 
                 flash(f'Salida registrada exitosamente para {empleado.nombre_completo} a las {colombia_now().strftime("%H:%M")}', 'success')
+                # Usar redirect para evitar reenvío al recargar (patrón PRG)
+                return redirect(url_for('asistencia_publica', token=token))
             except Exception as e:
                 db.session.rollback()
                 flash('Error al registrar la salida. Intente nuevamente.', 'error')
         
-        return render_template('asistencia_publica.html', token=token)
+        # Si hay errores, también hacer redirect
+        return redirect(url_for('asistencia_publica', token=token))
     
     return render_template('asistencia_publica.html', token=token)
 
@@ -1345,32 +1350,17 @@ def visitantes_publico(token):
 
             if not visitante_recurrente_id or not documento_verificacion:
                 flash('Seleccione su nombre y escriba su documento para continuar.', 'error')
-                return render_template(
-                    'visitantes_publico.html',
-                    token=token,
-                    visitantes_recurrentes=visitantes_recurrentes,
-                    modo_activo=modo_activo
-                )
+                return redirect(url_for('visitantes_publico', token=token))
 
             visitante_referencia = Visitante.query.get(int(visitante_recurrente_id))
 
             if not visitante_referencia:
                 flash('No encontramos el visitante seleccionado. Intente nuevamente.', 'error')
-                return render_template(
-                    'visitantes_publico.html',
-                    token=token,
-                    visitantes_recurrentes=visitantes_recurrentes,
-                    modo_activo=modo_activo
-                )
+                return redirect(url_for('visitantes_publico', token=token))
 
             if visitante_referencia.documento.strip() != documento_verificacion:
                 flash('El documento ingresado no coincide con el registrado anteriormente.', 'error')
-                return render_template(
-                    'visitantes_publico.html',
-                    token=token,
-                    visitantes_recurrentes=visitantes_recurrentes,
-                    modo_activo=modo_activo
-                )
+                return redirect(url_for('visitantes_publico', token=token))
 
             fecha_hoy = date.today()
             visitante_existente = Visitante.query.filter(
@@ -1381,12 +1371,7 @@ def visitantes_publico(token):
 
             if visitante_existente:
                 flash('Ya existe un registro activo para este documento el día de hoy.', 'warning')
-                return render_template(
-                    'visitantes_publico.html',
-                    token=token,
-                    visitantes_recurrentes=visitantes_recurrentes,
-                    modo_activo=modo_activo
-                )
+                return redirect(url_for('visitantes_publico', token=token))
 
             visitante = Visitante(
                 nombre=visitante_referencia.nombre,
@@ -1415,18 +1400,12 @@ def visitantes_publico(token):
                 )
 
                 flash(f'¡Bienvenido nuevamente {visitante.nombre}! Tu entrada rápida quedó registrada a las {colombia_now().strftime("%H:%M")}', 'success')
+                # Usar redirect para evitar reenvío al recargar (patrón PRG)
+                return redirect(url_for('visitantes_publico', token=token))
             except Exception:
                 db.session.rollback()
                 flash('Error al registrar la entrada rápida. Intente nuevamente.', 'error')
-
-            visitantes_recurrentes = obtener_visitantes_recurrentes()
-            modo_activo = 'nuevo'
-            return render_template(
-                'visitantes_publico.html',
-                token=token,
-                visitantes_recurrentes=visitantes_recurrentes,
-                modo_activo=modo_activo
-            )
+                return redirect(url_for('visitantes_publico', token=token))
 
         nombre = request.form.get('nombre', '').strip()
         apellido = request.form.get('apellido', '').strip()
@@ -1458,12 +1437,7 @@ def visitantes_publico(token):
         campos_faltantes = [campo for campo, valor in campos_requeridos.items() if not valor]
         if campos_faltantes:
             flash('Por favor complete todos los campos requeridos', 'error')
-            return render_template(
-                'visitantes_publico.html',
-                token=token,
-                visitantes_recurrentes=visitantes_recurrentes,
-                modo_activo=modo_activo
-            )
+            return redirect(url_for('visitantes_publico', token=token))
         
         # Verificar si ya existe un visitante con el mismo documento hoy
         fecha_hoy = date.today()
@@ -1474,7 +1448,7 @@ def visitantes_publico(token):
         
         if visitante_existente:
             flash(f'Ya existe un registro de visitante con documento {documento} para hoy', 'warning')
-            return render_template('visitantes_publico.html', token=token)
+            return redirect(url_for('visitantes_publico', token=token))
         
         # Crear nuevo visitante
         visitante = Visitante(
@@ -1505,18 +1479,12 @@ def visitantes_publico(token):
             )
             
             flash(f'Visitante {nombre} {apellido} registrado exitosamente a las {colombia_now().strftime("%H:%M")}', 'success')
+            # Usar redirect para evitar reenvío al recargar (patrón PRG)
+            return redirect(url_for('visitantes_publico', token=token))
         except Exception as e:
             db.session.rollback()
             flash('Error al registrar el visitante. Intente nuevamente.', 'error')
-        
-        visitantes_recurrentes = obtener_visitantes_recurrentes()
-        modo_activo = 'nuevo'
-        return render_template(
-            'visitantes_publico.html',
-            token=token,
-            visitantes_recurrentes=visitantes_recurrentes,
-            modo_activo=modo_activo
-        )
+            return redirect(url_for('visitantes_publico', token=token))
     
     return render_template(
         'visitantes_publico.html',
