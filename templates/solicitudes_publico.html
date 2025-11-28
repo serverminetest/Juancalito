@@ -509,15 +509,24 @@
                     // Asegurar z-index del modal-dialog y modal-content
                     const modalDialog = document.querySelector('.modal-dialog');
                     if (modalDialog) {
-                        modalDialog.style.zIndex = '1060';
+                        modalDialog.style.zIndex = '1061';
                         modalDialog.style.position = 'relative';
                     }
                     const modalContent = document.querySelector('.modal-content');
                     if (modalContent) {
-                        modalContent.style.zIndex = '1060';
+                        modalContent.style.zIndex = '1061';
                         modalContent.style.position = 'relative';
+                        modalContent.style.pointerEvents = 'auto';
                     }
-                }, 50);
+                    
+                    // Asegurar que todos los inputs sean clickeables
+                    const inputs = modalElement.querySelectorAll('input, textarea, select, button, label');
+                    inputs.forEach(input => {
+                        input.style.pointerEvents = 'auto';
+                        input.style.position = 'relative';
+                        input.style.zIndex = '1062';
+                    });
+                }, 100);
                 
                 // Mostrar modal
                 if (modal) {
