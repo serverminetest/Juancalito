@@ -40,6 +40,12 @@
         /* Asegurar que el modal esté por encima de todo */
         .modal {
             z-index: 1060 !important;
+            pointer-events: none !important;
+        }
+        .modal.show {
+            z-index: 1060 !important;
+            display: block !important;
+            pointer-events: none !important;
         }
         .modal-backdrop {
             z-index: 1040 !important;
@@ -48,20 +54,10 @@
         .modal-backdrop.show {
             z-index: 1040 !important;
         }
-        /* Hacer que el backdrop no bloquee eventos del modal */
-        .modal-backdrop + .modal {
-            pointer-events: none;
-        }
-        .modal-backdrop + .modal .modal-dialog {
-            pointer-events: auto;
-        }
-        .modal.show {
-            z-index: 1060 !important;
-            display: block !important;
-        }
         .modal-dialog {
             z-index: 1061 !important;
             position: relative;
+            pointer-events: auto !important;
         }
         .modal-content {
             z-index: 1061 !important;
@@ -69,15 +65,29 @@
             pointer-events: auto !important;
         }
         /* Asegurar que los elementos del modal sean clickeables */
-        .modal-body,
-        .modal-header,
+        .modal-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            pointer-events: auto !important;
+        }
+        .modal-body {
+            pointer-events: auto !important;
+        }
         .modal-footer {
             pointer-events: auto !important;
         }
-        .modal-body *,
-        .modal-header *,
-        .modal-footer * {
+        /* Asegurar que todos los elementos interactivos funcionen */
+        .modal input,
+        .modal textarea,
+        .modal select,
+        .modal button,
+        .modal label,
+        .modal a,
+        .modal .btn-close {
             pointer-events: auto !important;
+            position: relative;
+            z-index: 1062;
         }
         .card {
             border: none;
