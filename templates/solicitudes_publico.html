@@ -43,15 +43,35 @@
         }
         .modal-backdrop {
             z-index: 1040 !important;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            pointer-events: auto !important;
+        }
+        .modal-backdrop.show {
+            z-index: 1040 !important;
+        }
+        .modal.show {
+            z-index: 1060 !important;
+            display: block !important;
         }
         .modal-dialog {
-            z-index: 1060 !important;
+            z-index: 1061 !important;
             position: relative;
         }
         .modal-content {
-            z-index: 1060 !important;
+            z-index: 1061 !important;
             position: relative;
+            pointer-events: auto !important;
+        }
+        /* Asegurar que los elementos del modal sean clickeables */
+        .modal-body,
+        .modal-header,
+        .modal-footer {
+            pointer-events: auto !important;
+        }
+        .modal-body *,
+        .modal-header *,
+        .modal-footer * {
+            pointer-events: auto !important;
         }
         .card {
             border: none;
@@ -398,6 +418,25 @@
                     backdrop: true,
                     keyboard: true,
                     focus: true
+                });
+                
+                // Event listeners para asegurar que el modal funcione
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    // Asegurar z-index cuando se muestra
+                    this.style.zIndex = '1060';
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.style.zIndex = '1040';
+                    }
+                    const modalDialog = this.querySelector('.modal-dialog');
+                    if (modalDialog) {
+                        modalDialog.style.zIndex = '1061';
+                    }
+                    const modalContent = this.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.zIndex = '1061';
+                        modalContent.style.pointerEvents = 'auto';
+                    }
                 });
             }
             return modalSolicitud;
