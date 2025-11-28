@@ -29,6 +29,10 @@
             pointer-events: none;
             z-index: 0;
         }
+        /* Cuando el modal está abierto, ocultar el fondo decorativo */
+        body.modal-open::before {
+            display: none;
+        }
         .container {
             position: relative;
             z-index: 1;
@@ -439,24 +443,42 @@
                 // Asegurar que el modal esté inicializado
                 const modal = initModal();
                 
-                // Limpiar backdrops duplicados antes de mostrar
+                // Limpiar backdrops duplicados y asegurar z-index correcto
                 setTimeout(() => {
+                    // Limpiar backdrops duplicados
                     const backdrops = document.querySelectorAll('.modal-backdrop');
                     if (backdrops.length > 1) {
                         for (let i = 1; i < backdrops.length; i++) {
                             backdrops[i].remove();
                         }
                     }
-                    // Asegurar z-index correcto
+                    
+                    // Asegurar z-index correcto del modal
                     const modalElement = document.getElementById('modalSolicitud');
                     if (modalElement) {
                         modalElement.style.zIndex = '1060';
+                        modalElement.style.display = 'block';
                     }
+                    
+                    // Asegurar z-index correcto del backdrop
                     const backdrop = document.querySelector('.modal-backdrop');
                     if (backdrop) {
                         backdrop.style.zIndex = '1040';
+                        backdrop.style.pointerEvents = 'auto';
                     }
-                }, 10);
+                    
+                    // Asegurar z-index del modal-dialog y modal-content
+                    const modalDialog = document.querySelector('.modal-dialog');
+                    if (modalDialog) {
+                        modalDialog.style.zIndex = '1060';
+                        modalDialog.style.position = 'relative';
+                    }
+                    const modalContent = document.querySelector('.modal-content');
+                    if (modalContent) {
+                        modalContent.style.zIndex = '1060';
+                        modalContent.style.position = 'relative';
+                    }
+                }, 50);
                 
                 // Mostrar modal
                 if (modal) {
