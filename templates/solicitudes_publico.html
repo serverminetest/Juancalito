@@ -40,12 +40,10 @@
         /* Asegurar que el modal esté por encima de todo */
         .modal {
             z-index: 1060 !important;
-            pointer-events: none !important;
         }
         .modal.show {
             z-index: 1060 !important;
             display: block !important;
-            pointer-events: none !important;
         }
         .modal-backdrop {
             z-index: 1040 !important;
@@ -53,6 +51,10 @@
         }
         .modal-backdrop.show {
             z-index: 1040 !important;
+        }
+        /* Hacer que el backdrop no bloquee eventos del modal */
+        .modal-backdrop {
+            pointer-events: none !important;
         }
         .modal-dialog {
             z-index: 1061 !important;
@@ -69,25 +71,6 @@
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
             border-radius: 15px 15px 0 0;
-            pointer-events: auto !important;
-        }
-        .modal-body {
-            pointer-events: auto !important;
-        }
-        .modal-footer {
-            pointer-events: auto !important;
-        }
-        /* Asegurar que todos los elementos interactivos funcionen */
-        .modal input,
-        .modal textarea,
-        .modal select,
-        .modal button,
-        .modal label,
-        .modal a,
-        .modal .btn-close {
-            pointer-events: auto !important;
-            position: relative;
-            z-index: 1062;
         }
         .card {
             border: none;
@@ -443,7 +426,7 @@
                 existingBackdrops.forEach(backdrop => backdrop.remove());
                 
                 modalSolicitud = new bootstrap.Modal(modalElement, {
-                    backdrop: 'static',  // Cambiar a 'static' para que no cierre al hacer clic pero permita interacción
+                    backdrop: true,
                     keyboard: true,
                     focus: true
                 });
@@ -528,11 +511,11 @@
                         modalElement.style.display = 'block';
                     }
                     
-                    // Asegurar z-index correcto del backdrop
+                    // Asegurar z-index correcto del backdrop (no bloquear eventos)
                     const backdrop = document.querySelector('.modal-backdrop');
                     if (backdrop) {
                         backdrop.style.zIndex = '1040';
-                        backdrop.style.pointerEvents = 'auto';
+                        backdrop.style.pointerEvents = 'none'; // No bloquear eventos del modal
                     }
                     
                     // Asegurar z-index del modal-dialog y modal-content
