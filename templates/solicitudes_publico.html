@@ -64,20 +64,29 @@
             pointer-events: auto !important;
             background-color: #ffffff !important;
             opacity: 1 !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
         }
         /* Asegurar que los elementos del modal sean clickeables */
         .modal-header {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
+            background: linear-gradient(135deg, #28a745, #20c997) !important;
+            color: white !important;
             border-radius: 15px 15px 0 0;
             opacity: 1 !important;
         }
         .modal-body {
             background-color: #ffffff !important;
             opacity: 1 !important;
+            color: #000000 !important;
         }
         .modal-footer {
             background-color: #ffffff !important;
+            opacity: 1 !important;
+        }
+        /* Asegurar que el modal esté completamente visible */
+        .modal.show {
+            opacity: 1 !important;
+        }
+        .modal.fade.show {
             opacity: 1 !important;
         }
         .card {
