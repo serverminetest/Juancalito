@@ -47,14 +47,11 @@
         }
         .modal-backdrop {
             z-index: 1040 !important;
-            background-color: rgba(0, 0, 0, 0.5) !important;
+            background-color: rgba(0, 0, 0, 0.4) !important;
+            pointer-events: none !important;
         }
         .modal-backdrop.show {
             z-index: 1040 !important;
-        }
-        /* Hacer que el backdrop no bloquee eventos del modal */
-        .modal-backdrop {
-            pointer-events: none !important;
         }
         .modal-dialog {
             z-index: 1061 !important;
