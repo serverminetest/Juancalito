@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Nómina - Flores Juncalito SAS{% endblock %}
+
+{% block page_title %}Cálculo de Nómina{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-money-bill-wave"></i> Cálculo de Nómina
+                </h6>
+                <div class="d-flex gap-2">
+                    <form method="GET" class="d-flex gap-2">
+                        <select name="mes" class="form-select form-select-sm" style="width: auto;">
+                            {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if periodo_mes == i %}selected{% endif %}>
+                                {{ ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][i-1] }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="number" name="ano" class="form-control form-control-sm" style="width: 100px;" value="{{ periodo_ano }}" min="2020" max="2100">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Período:</strong> {{ ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][periodo_mes-1] }} {{ periodo_ano }}
+                </div>
+
+                {% if nomina_data %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Días Trabajados</th>
+                                <th>Horas Totales</th>
+                                <th>Horas Extras</th>
+                                <th>Salario Base</th>
+                                <th>Valor Horas Extras</th>
+                                <th>Total a Pagar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in nomina_data %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.empleado.nombre_completo }}</strong><br>
+                                    <small class="text-muted">{{ item.empleado.cargo_puesto }}</small>
+                                </td>
+                                <td class="text-center">{{ item.total_dias }}</td>
+                                <td class="text-center">{{ "%.1f"|format(item.total_horas) }}</td>
+                                <td class="text-center">
+                                    {% if item.horas_extras > 0 %}
+                                        <span class="badge bg-warning">{{ "%.1f"|format(item.horas_extras) }}</span>
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">$ {{ "{:,.0f}"|format(item.salario_base) }}</td>
+                                <td class="text-end">
+                                    {% if item.valor_horas_extras > 0 %}
+                                        $ {{ "{:,.0f}"|format(item.valor_horas_extras) }}
+                                    {% else %}
+                                        $ 0
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <strong>$ {{ "{:,.0f}"|format(item.total_pagar) }}</strong>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th colspan="6" class="text-end">TOTAL GENERAL:</th>
+                                <th class="text-end">
+                                    $ {{ "{:,.0f}"|format(nomina_data|sum(attribute='total_pagar')) }}
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Resumen estadístico -->
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card text-center border-primary">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">{{ nomina_data|length }}</h5>
+                                <p class="card-text mb-0">Empleados</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center border-success">
+                            <div class="card-body">
+                                <h5 class="card-title text-success">
+                                    {{ "%.1f"|format(nomina_data|sum(attribute='total_horas')) }}
+                                </h5>
+                                <p class="card-text mb-0">Horas Totales</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center border-warning">
+                            <div class="card-body">
+                                <h5 class="card-title text-warning">
+                                    {{ "%.1f"|format(nomina_data|sum(attribute='horas_extras')) }}
+                                </h5>
+                                <p class="card-text mb-0">Horas Extras</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center border-danger">
+                            <div class="card-body">
+                                <h5 class="card-title text-danger">
+                                    $ {{ "{:,.0f}"|format(nomina_data|sum(attribute='total_pagar')) }}
+                                </h5>
+                                <p class="card-text mb-0">Total Nómina</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
+                    No hay datos de nómina para el período seleccionado.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1280,10 +1280,14 @@ def solicitudes():
     
     solicitudes = query.order_by(SolicitudEmpleado.created_at.desc()).all()
     
+    # Generar QR para solicitudes
+    qr_buffer_solicitudes, token_solicitudes, url_qr_solicitudes = generar_qr_solicitudes()
+    
     return render_template('solicitudes.html', 
                          solicitudes=solicitudes,
                          estado_filtro=estado_filtro,
-                         tipo_filtro=tipo_filtro)
+                         tipo_filtro=tipo_filtro,
+                         url_qr_solicitudes=url_qr_solicitudes)
 
 @app.route('/solicitudes/<int:id>')
 @login_required

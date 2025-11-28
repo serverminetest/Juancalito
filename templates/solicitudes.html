@@ -5,18 +5,68 @@
 {% block page_title %}Solicitudes de Empleados{% endblock %}
 
 {% block content %}
+<!-- Sección QR de Solicitudes -->
+<div class="row justify-content-center mb-4 mx-0">
+    <!-- QR Code -->
+    <div class="col-lg-5 col-md-5 mb-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-qrcode"></i> Código QR para Solicitudes
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ url_for('generar_qr_solicitudes_imagen') }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
+                <div class="alert alert-info py-2">
+                    <small>
+                        <strong>URL:</strong><br>
+                        <code class="small" id="url-solicitudes">{{ url_qr_solicitudes[:50] }}...</code><br>
+                        <i class="fas fa-infinity text-success"></i>
+                        <strong>QR permanente:</strong> disponible mientras no se regenere
+                    </small>
+                </div>
+                <button class="btn btn-outline-warning btn-sm mb-3" 
+                        onclick="copiarUrlSolicitudes()">
+                    <i class="fas fa-copy"></i> Copiar URL
+                </button>
+                <p class="text-muted small mb-0">
+                    Los empleados pueden escanear este código para realizar solicitudes desde sus dispositivos móviles.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Espacio en medio -->
+    <div class="col-lg-1 d-none d-lg-block"></div>
+    
+    <!-- Información de Tipos -->
+    <div class="col-lg-5 col-md-5 mb-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Tipos de Solicitudes
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="fas fa-plane text-info"></i> <strong>Vacaciones</strong></li>
+                    <li class="mb-2"><i class="fas fa-heart text-success"></i> <strong>Permiso Remunerado</strong></li>
+                    <li class="mb-2"><i class="fas fa-dove text-secondary"></i> <strong>Licencia por Luto</strong></li>
+                    <li class="mb-2"><i class="fas fa-home text-warning"></i> <strong>Licencia por Calamidad Doméstica</strong></li>
+                    <li class="mb-0"><i class="fas fa-file-medical text-danger"></i> <strong>Incapacidades</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">
                     <i class="fas fa-file-alt"></i> Gestión de Solicitudes
                 </h6>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('asistencia') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-qrcode"></i> Ver QR Solicitudes
-                    </a>
-                </div>
             </div>
             <div class="card-body">
                 <!-- Filtros -->
@@ -124,6 +174,16 @@ function filtrarSolicitudes() {
     const estado = document.getElementById('filtro-estado').value;
     const tipo = document.getElementById('filtro-tipo').value;
     window.location.href = `{{ url_for('solicitudes') }}?estado=${estado}&tipo=${tipo}`;
+}
+
+function copiarUrlSolicitudes() {
+    const url = '{{ url_qr_solicitudes }}';
+    navigator.clipboard.writeText(url).then(function() {
+        alert('URL copiada al portapapeles');
+    }, function(err) {
+        console.error('Error al copiar:', err);
+        alert('Error al copiar la URL');
+    });
 }
 </script>
 {% endblock %}
