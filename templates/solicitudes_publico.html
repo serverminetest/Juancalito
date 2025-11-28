@@ -17,17 +17,11 @@
             border: none;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            background: white;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             margin-bottom: 20px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
         .card-header {
-            background: linear-gradient(135deg, #8B4513, #A0522D);
+            background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
             border-radius: 15px 15px 0 0 !important;
             padding: 1.5rem;
@@ -58,19 +52,19 @@
             cursor: pointer;
         }
         .solicitud-option:hover {
-            border-color: #8B4513;
+            border-color: #28a745;
             background: #f8f9fa;
             transform: translateX(5px);
         }
         .solicitud-option.selected {
-            border-color: #8B4513;
-            background: #fff8f0;
-            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
+            border-color: #28a745;
+            background: #d4edda;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
         }
         .solicitud-icon {
             width: 60px;
             height: 60px;
-            background: #f5e6d3;
+            background: #d4edda;
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -79,7 +73,7 @@
         }
         .solicitud-icon i {
             font-size: 28px;
-            color: #8B4513;
+            color: #28a745;
         }
         .solicitud-content {
             flex: 1;
@@ -87,28 +81,22 @@
         .solicitud-title {
             font-size: 18px;
             font-weight: 600;
-            color: #8B4513;
+            color: #2d5a3d;
             margin: 0 0 5px 0;
         }
         .solicitud-arrow {
-            color: #8B4513;
+            color: #28a745;
             font-size: 20px;
         }
-        .form-section {
-            display: none;
-        }
-        .form-section.active {
-            display: block;
-        }
         .btn-primary {
-            background: linear-gradient(135deg, #8B4513, #A0522D);
+            background: linear-gradient(135deg, #28a745, #20c997);
             border: none;
             border-radius: 10px;
             padding: 12px 30px;
             font-weight: 600;
         }
         .btn-primary:hover {
-            background: linear-gradient(135deg, #A0522D, #8B4513);
+            background: linear-gradient(135deg, #218838, #1ea085);
             transform: translateY(-2px);
         }
         .form-control, .form-select {
@@ -117,8 +105,8 @@
             padding: 12px 15px;
         }
         .form-control:focus, .form-select:focus {
-            border-color: #8B4513;
-            box-shadow: 0 0 0 0.2rem rgba(139, 69, 19, 0.25);
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
         }
         .logo-container {
             text-align: center;
@@ -127,7 +115,24 @@
         .logo {
             font-size: 2rem;
             font-weight: bold;
-            color: #8B4513;
+            color: #2d5a3d;
+        }
+        .time-display {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            color: white;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            border-radius: 15px;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 15px 15px 0 0;
         }
         .section-title {
             font-size: 24px;
@@ -146,7 +151,13 @@
                         <img src="{{ url_for('static', filename='images/Logo.png') }}" alt="Flores Juncalito SAS" style="height: 40px; margin-right: 10px;">
                         Flores Juncalito SAS
                     </div>
-                    <h2 class="mt-3" style="color: #8B4513;">Realizar Una Solicitud</h2>
+                    <h2 class="mt-3" style="color: #2d5a3d;">Realizar Una Solicitud</h2>
+                    <div class="time-display">
+                        <i class="fas fa-calendar-day"></i>
+                        <strong id="currentDate"></strong><br>
+                        <i class="fas fa-clock"></i>
+                        <strong id="currentTime"></strong>
+                    </div>
                 </div>
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -228,57 +239,64 @@
                     </div>
                 </div>
 
-                <!-- Formulario de Solicitud -->
-                <div class="card form-section" id="formulario-solicitud">
-                    <div class="card-header">
-                        <h4 id="titulo-formulario">Completar Solicitud</h4>
-                    </div>
-                    <div class="card-body p-4">
-                        <form method="POST" enctype="multipart/form-data" id="form-solicitud">
-                            <input type="hidden" name="tipo_solicitud" id="tipo_solicitud_input">
-                            
-                            <div class="mb-3">
-                                <label for="documento" class="form-label">Número de Documento *</label>
-                                <input type="text" class="form-control" id="documento" name="documento" required>
+                <!-- Modal para el Formulario -->
+                <div class="modal fade" id="modalSolicitud" tabindex="-1" aria-labelledby="modalSolicitudLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="titulo-formulario">
+                                    <i class="fas fa-file-alt"></i> Completar Solicitud
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
+                            <div class="modal-body">
+                                <form method="POST" enctype="multipart/form-data" id="form-solicitud">
+                                    <input type="hidden" name="tipo_solicitud" id="tipo_solicitud_input">
+                                    
+                                    <div class="mb-3">
+                                        <label for="documento" class="form-label">Número de Documento *</label>
+                                        <input type="text" class="form-control" id="documento" name="documento" required>
+                                    </div>
 
-                            <div class="mb-3">
-                                <label for="nombre" class="form-label">Nombre Completo *</label>
-                                <input type="text" class="form-control" id="nombre" name="nombre" required>
-                            </div>
+                                    <div class="mb-3">
+                                        <label for="nombre" class="form-label">Nombre Completo *</label>
+                                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                    </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
-                                    <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="fecha_fin" class="form-label">Fecha de Fin *</label>
-                                    <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
-                                </div>
-                            </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="fecha_fin" class="form-label">Fecha de Fin *</label>
+                                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                                        </div>
+                                    </div>
 
-                            <div class="mb-3">
-                                <label for="motivo" class="form-label">Motivo *</label>
-                                <textarea class="form-control" id="motivo" name="motivo" rows="4" required placeholder="Describa el motivo de su solicitud..."></textarea>
-                            </div>
+                                    <div class="mb-3">
+                                        <label for="motivo" class="form-label">Motivo *</label>
+                                        <textarea class="form-control" id="motivo" name="motivo" rows="4" required placeholder="Describa el motivo de su solicitud..."></textarea>
+                                    </div>
 
-                            <div class="mb-3">
-                                <label for="observaciones" class="form-label">Observaciones Adicionales</label>
-                                <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales (opcional)..."></textarea>
-                            </div>
+                                    <div class="mb-3">
+                                        <label for="observaciones" class="form-label">Observaciones Adicionales</label>
+                                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales (opcional)..."></textarea>
+                                    </div>
 
-                            <div class="mb-3">
-                                <label for="adjuntos" class="form-label">Archivos Adjuntos (Opcional)</label>
-                                <input type="file" class="form-control" id="adjuntos" name="adjuntos" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-                                <small class="form-text text-muted">Puede adjuntar documentos de respaldo (máx. 5MB por archivo). Formatos: PDF, imágenes, Word</small>
-                            </div>
+                                    <div class="mb-3">
+                                        <label for="adjuntos" class="form-label">Archivos Adjuntos (Opcional)</label>
+                                        <input type="file" class="form-control" id="adjuntos" name="adjuntos" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                        <small class="form-text text-muted">Puede adjuntar documentos de respaldo (máx. 5MB por archivo). Formatos: PDF, imágenes, Word</small>
+                                    </div>
 
-                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
-                                <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+                                    </div>
+                                </form>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -287,7 +305,29 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Actualizar reloj
+        function updateClock() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            const dateStr = now.toLocaleDateString('es-CO', options);
+            const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            document.getElementById('currentDate').textContent = dateStr;
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        
+        // Actualizar cada segundo
+        updateClock();
+        setInterval(updateClock, 1000);
+
         // Manejar selección de tipo de solicitud
+        const modalSolicitud = new bootstrap.Modal(document.getElementById('modalSolicitud'));
+        
         document.querySelectorAll('.solicitud-option').forEach(option => {
             option.addEventListener('click', function() {
                 // Remover selección anterior
@@ -304,35 +344,34 @@
                 
                 // Actualizar título del formulario
                 const titulos = {
-                    'VACACIONES': 'Solicitud de Vacaciones',
-                    'PERMISO_REMUNERADO': 'Solicitud de Permiso Remunerado',
-                    'LICENCIA_LUTO': 'Solicitud de Licencia por Luto',
-                    'CALAMIDAD': 'Solicitud de Licencia por Calamidad Doméstica',
-                    'INCAPACIDAD': 'Solicitud de Incapacidad'
+                    'VACACIONES': '<i class="fas fa-plane"></i> Solicitud de Vacaciones',
+                    'PERMISO_REMUNERADO': '<i class="fas fa-heart"></i> Solicitud de Permiso Remunerado',
+                    'LICENCIA_LUTO': '<i class="fas fa-dove"></i> Solicitud de Licencia por Luto',
+                    'CALAMIDAD': '<i class="fas fa-home"></i> Solicitud de Licencia por Calamidad Doméstica',
+                    'INCAPACIDAD': '<i class="fas fa-file-medical"></i> Solicitud de Incapacidad'
                 };
-                document.getElementById('titulo-formulario').textContent = titulos[tipo] || 'Completar Solicitud';
+                document.getElementById('titulo-formulario').innerHTML = titulos[tipo] || 'Completar Solicitud';
                 
-                // Mostrar formulario
-                document.getElementById('formulario-solicitud').classList.add('active');
+                // Resetear formulario
+                document.getElementById('form-solicitud').reset();
                 
-                // Scroll suave al formulario
-                document.getElementById('formulario-solicitud').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Mostrar modal
+                modalSolicitud.show();
             });
-        });
-
-        // Botón cancelar
-        document.getElementById('btn-cancelar').addEventListener('click', function() {
-            document.getElementById('formulario-solicitud').classList.remove('active');
-            document.querySelectorAll('.solicitud-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            document.getElementById('form-solicitud').reset();
         });
 
         // Validar fechas
         document.getElementById('fecha_inicio').addEventListener('change', function() {
             const fechaFin = document.getElementById('fecha_fin');
             fechaFin.min = this.value;
+        });
+
+        // Limpiar selección al cerrar modal
+        document.getElementById('modalSolicitud').addEventListener('hidden.bs.modal', function() {
+            document.querySelectorAll('.solicitud-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            document.getElementById('form-solicitud').reset();
         });
 
         // Prevenir reenvío del formulario
