@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Control de Cesantías - Flores Juncalito SAS{% endblock %}
+
+{% block page_title %}Control de Retiros de Cesantías{% endblock %}
+
+{% block content %}
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Retiros Aprobados
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_retiros }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-piggy-bank fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Retiros Este Mes
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ retiros_mes_actual }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar-check fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Solicitudes Pendientes
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pendientes }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            <a href="{{ url_for('solicitudes') }}?tipo_filtro=RETIRO_CESANTIAS" class="text-info text-decoration-none">
+                                Ver Todas las Solicitudes
+                            </a>
+                        </div>
+                        <div class="h6 mb-0 font-weight-bold text-gray-800">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-list fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Solicitudes Pendientes -->
+{% if solicitudes_pendientes %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-warning">
+                <h6 class="m-0 font-weight-bold text-dark">
+                    <i class="fas fa-exclamation-triangle"></i> Solicitudes Pendientes de Aprobación
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Documento</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Motivo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for solicitud in solicitudes_pendientes %}
+                            <tr>
+                                <td>{{ solicitud.empleado.nombre_completo }}</td>
+                                <td>{{ solicitud.empleado.cedula }}</td>
+                                <td>{{ solicitud.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <small>{{ solicitud.motivo[:100] }}{% if solicitud.motivo|length > 100 %}...{% endif %}</small>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('ver_solicitud', id=solicitud.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> Revisar
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Retiros Aprobados -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-check-circle"></i> Retiros de Cesantías Aprobados
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if solicitudes_cesantias %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="tablaCesantias">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Documento</th>
+                                <th>Cargo</th>
+                                <th>Departamento</th>
+                                <th>Fecha Aprobación</th>
+                                <th>Aprobado Por</th>
+                                <th>Motivo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for solicitud in solicitudes_cesantias %}
+                            <tr>
+                                <td><strong>{{ solicitud.empleado.nombre_completo }}</strong></td>
+                                <td>{{ solicitud.empleado.cedula }}</td>
+                                <td>{{ solicitud.empleado.cargo_puesto }}</td>
+                                <td>{{ solicitud.empleado.departamento_laboral }}</td>
+                                <td>
+                                    {% if solicitud.fecha_aprobacion %}
+                                        {{ solicitud.fecha_aprobacion.strftime('%d/%m/%Y %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if solicitud.aprobado_por %}
+                                        {{ solicitud.aprobado_por.username }}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ solicitud.motivo[:80] }}{% if solicitud.motivo|length > 80 %}...{% endif %}</small>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('ver_solicitud', id=solicitud.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> Ver Detalles
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay retiros de cesantías aprobados registrados.</p>
+                    <a href="{{ url_for('solicitudes') }}?tipo_filtro=RETIRO_CESANTIAS" class="btn btn-primary">
+                        <i class="fas fa-list"></i> Ver Solicitudes
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Inicializar DataTables si está disponible
+    $(document).ready(function() {
+        if ($.fn.DataTable) {
+            $('#tablaCesantias').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+                },
+                "order": [[4, "desc"]], // Ordenar por fecha de aprobación descendente
+                "pageLength": 25
+            });
+        }
+    });
+</script>
+{% endblock %}
+

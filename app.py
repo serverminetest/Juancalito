@@ -3109,97 +3109,41 @@ def eliminar_backup(nombre):
     
     return redirect(url_for('backups'))
 
-# Sistema de Cálculo de Nómina
-@app.route('/nomina')
+# Sistema de Control de Cesantías
+@app.route('/cesantias')
 @login_required
-def nomina():
-    """Página principal de nómina"""
+def cesantias():
+    """Página principal de control de cesantías"""
     if not current_user.is_admin:
         flash('Solo los administradores pueden acceder a esta sección', 'error')
         return redirect(url_for('dashboard'))
     
-    # Obtener período (mes y año)
-    periodo_mes = request.args.get('mes', date.today().month)
-    periodo_ano = request.args.get('ano', date.today().year)
+    # Obtener todas las solicitudes de retiro de cesantías aprobadas
+    solicitudes_cesantias = SolicitudEmpleado.query.filter_by(
+        tipo_solicitud='RETIRO_CESANTIAS',
+        estado='APROBADA'
+    ).order_by(SolicitudEmpleado.fecha_aprobacion.desc()).all()
     
-    try:
-        periodo_mes = int(periodo_mes)
-        periodo_ano = int(periodo_ano)
-    except:
-        periodo_mes = date.today().month
-        periodo_ano = date.today().year
+    # Obtener también las pendientes para mostrar
+    solicitudes_pendientes = SolicitudEmpleado.query.filter_by(
+        tipo_solicitud='RETIRO_CESANTIAS',
+        estado='PENDIENTE'
+    ).order_by(SolicitudEmpleado.created_at.desc()).all()
     
-    # Calcular nómina para todos los empleados activos
-    empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
-    nomina_data = []
+    # Estadísticas
+    total_retiros = len(solicitudes_cesantias)
+    retiros_mes_actual = len([s for s in solicitudes_cesantias 
+                              if s.fecha_aprobacion and 
+                              s.fecha_aprobacion.month == date.today().month and
+                              s.fecha_aprobacion.year == date.today().year])
+    pendientes = len(solicitudes_pendientes)
     
-    primer_dia_mes = date(periodo_ano, periodo_mes, 1)
-    if periodo_mes == 12:
-        ultimo_dia_mes = date(periodo_ano + 1, 1, 1) - timedelta(days=1)
-    else:
-        ultimo_dia_mes = date(periodo_ano, periodo_mes + 1, 1) - timedelta(days=1)
-    
-    for empleado in empleados:
-        # Obtener asistencias del mes
-        asistencias = Asistencia.query.filter(
-            Asistencia.empleado_id == empleado.id,
-            Asistencia.fecha >= primer_dia_mes,
-            Asistencia.fecha <= ultimo_dia_mes,
-            Asistencia.horas_trabajadas.isnot(None)
-        ).all()
-        
-        # Calcular totales
-        total_horas = sum(a.horas_trabajadas for a in asistencias if a.horas_trabajadas)
-        total_dias = len(asistencias)
-        
-        # Obtener contrato activo
-        contrato = Contrato.query.filter_by(
-            empleado_id=empleado.id,
-            activo=True
-        ).first()
-        
-        salario_base = contrato.salario if contrato else empleado.salario_base
-        
-        # Calcular salario según tipo
-        if empleado.tipo_salario == 'Mensual':
-            # Salario mensual fijo
-            salario_calculado = salario_base
-            valor_hora = salario_base / 240  # 30 días * 8 horas
-        elif empleado.tipo_salario == 'Quincenal':
-            salario_calculado = salario_base * 2  # Dos quincenas
-            valor_hora = (salario_base * 2) / 240
-        else:
-            # Por horas
-            valor_hora = salario_base
-            salario_calculado = total_horas * valor_hora
-        
-        # Calcular horas extras (más de 8 horas por día)
-        horas_extras = 0
-        for asistencia in asistencias:
-            if asistencia.horas_trabajadas and asistencia.horas_trabajadas > 8:
-                horas_extras += asistencia.horas_trabajadas - 8
-        
-        valor_horas_extras = horas_extras * valor_hora * 1.25  # 25% extra
-        
-        # Total a pagar
-        total_pagar = salario_calculado + valor_horas_extras
-        
-        nomina_data.append({
-            'empleado': empleado,
-            'total_horas': total_horas,
-            'total_dias': total_dias,
-            'horas_extras': horas_extras,
-            'salario_base': salario_base,
-            'salario_calculado': salario_calculado,
-            'valor_horas_extras': valor_horas_extras,
-            'total_pagar': total_pagar,
-            'asistencias': asistencias
-        })
-    
-    return render_template('nomina.html',
-                         nomina_data=nomina_data,
-                         periodo_mes=periodo_mes,
-                         periodo_ano=periodo_ano)
+    return render_template('cesantias.html',
+                         solicitudes_cesantias=solicitudes_cesantias,
+                         solicitudes_pendientes=solicitudes_pendientes,
+                         total_retiros=total_retiros,
+                         retiros_mes_actual=retiros_mes_actual,
+                         pendientes=pendientes)
 
 # Inicialización de la base de datos
 def init_db():

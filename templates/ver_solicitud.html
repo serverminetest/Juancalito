@@ -56,6 +56,8 @@
                                         <span class="badge bg-warning"><i class="fas fa-home"></i> Calamidad Doméstica</span>
                                     {% elif solicitud.tipo_solicitud == 'INCAPACIDAD' %}
                                         <span class="badge bg-danger"><i class="fas fa-file-medical"></i> Incapacidad</span>
+                                    {% elif solicitud.tipo_solicitud == 'RETIRO_CESANTIAS' %}
+                                        <span class="badge bg-primary"><i class="fas fa-piggy-bank"></i> Retiro de Cesantías</span>
                                     {% endif %}
                                 </td>
                             </tr>
