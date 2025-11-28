@@ -180,8 +180,26 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint in ['solicitudes', 'ver_solicitud'] %}active{% endif %}" href="{{ url_for('solicitudes') }}">
+                                <i class="fas fa-file-alt"></i> Solicitudes
+                                {% if solicitudes_pendientes and solicitudes_pendientes > 0 %}
+                                    <span class="badge bg-danger ms-1">{{ solicitudes_pendientes }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.endpoint in ['inventarios', 'productos_inventario', 'categorias_inventario', 'movimientos_inventario'] %}active{% endif %}" href="{{ url_for('inventarios') }}">
                                 <i class="fas fa-boxes"></i> Inventarios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'nomina' %}active{% endif %}" href="{{ url_for('nomina') }}">
+                                <i class="fas fa-money-bill-wave"></i> Nómina
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'backups' %}active{% endif %}" href="{{ url_for('backups') }}">
+                                <i class="fas fa-database"></i> Backups
                             </a>
                         </li>
                         <li class="nav-item">

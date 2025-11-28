@@ -66,7 +66,10 @@
                         </div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">{{ asistencias_hoy }}</div>
                         <div class="text-xs text-muted">
-                            <i class="fas fa-chart-line text-info"></i> {{ asistencias_semana }} esta semana
+                            <i class="fas fa-chart-line text-info"></i> {{ asistencias_semana }} esta semana<br>
+                            <i class="fas fa-calendar text-primary"></i> {{ asistencias_mes }} este mes<br>
+                            <i class="fas fa-calendar-alt text-warning"></i> {{ asistencias_ano }} este año<br>
+                            <i class="fas fa-clock text-success"></i> {{ "%.1f"|format(horas_trabajadas_mes) }} horas este mes
                         </div>
                     </div>
                     <div class="col-auto">

@@ -495,6 +495,17 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tu_clave_secreta_muy_se
 def colombia_time_filter(dt):
     """Filtro para convertir fechas a zona horaria de Colombia en templates"""
     return to_colombia_time(dt)
+
+# Context processor para pasar variables globales a todos los templates
+@app.context_processor
+def inject_global_vars():
+    """Inyecta variables globales en todos los templates"""
+    try:
+        solicitudes_pendientes = SolicitudEmpleado.query.filter_by(estado='PENDIENTE').count()
+    except:
+        solicitudes_pendientes = 0
+    return dict(solicitudes_pendientes=solicitudes_pendientes)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Configuración de base de datos
@@ -797,6 +808,46 @@ class Asistencia(db.Model):
     # Índice único para evitar asistencia duplicada por día
     __table_args__ = (db.UniqueConstraint('empleado_id', 'fecha', name='unique_attendance_per_day'),)
 
+class SolicitudEmpleado(db.Model):
+    """Modelo para solicitudes de empleados (vacaciones, licencias, etc.)"""
+    id = db.Column(db.Integer, primary_key=True)
+    empleado_id = db.Column(db.Integer, db.ForeignKey('empleado.id'), nullable=False)
+    
+    # Tipo de solicitud
+    tipo_solicitud = db.Column(db.String(50), nullable=False)  # VACACIONES, LICENCIA_LUTO, CALAMIDAD, INCAPACIDAD, PERMISO_REMUNERADO
+    
+    # Fechas
+    fecha_inicio = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=False)
+    
+    # Información de la solicitud
+    motivo = db.Column(db.Text, nullable=False)
+    observaciones = db.Column(db.Text)
+    
+    # Estado de la solicitud
+    estado = db.Column(db.String(20), default='PENDIENTE')  # PENDIENTE, APROBADA, RECHAZADA
+    
+    # Aprobación/Rechazo
+    aprobado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    fecha_aprobacion = db.Column(db.DateTime, nullable=True)
+    comentario_admin = db.Column(db.Text)  # Comentario al aprobar/rechazar
+    
+    # Archivos adjuntos (almacenados como BYTEA)
+    adjuntos_data = db.Column(db.LargeBinary, nullable=True)  # JSON con información de archivos
+    adjuntos_nombres = db.Column(db.Text)  # Nombres de archivos separados por |
+    
+    # Documentos del admin (respuesta)
+    documentos_admin_data = db.Column(db.LargeBinary, nullable=True)
+    documentos_admin_nombres = db.Column(db.Text)
+    
+    # Campos del sistema
+    created_at = db.Column(db.DateTime, default=colombia_now)
+    updated_at = db.Column(db.DateTime, default=colombia_now, onupdate=colombia_now)
+    
+    # Relaciones
+    empleado = db.relationship('Empleado', backref=db.backref('solicitudes', lazy=True))
+    aprobado_por = db.relationship('User', backref=db.backref('solicitudes_aprobadas', lazy=True))
+
 class Visitante(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
@@ -862,6 +913,29 @@ def validar_token_diario_visitantes(token):
     """Valida si el token de visitantes corresponde al token público"""
     token_actual = generar_token_diario_visitantes()
     return token == token_actual
+
+def generar_qr_solicitudes():
+    """Genera un código QR para solicitudes de empleados"""
+    token = generar_token_qr_constante()  # Mismo token estático
+    url_solicitudes = f"{request.url_root}solicitudes-publico/{token}"
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url_solicitudes)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Guardar en memoria
+    img_buffer = io.BytesIO()
+    img.save(img_buffer, format='PNG')
+    img_buffer.seek(0)
+    
+    return img_buffer, token, url_solicitudes
 
 def generar_qr_asistencia():
     """Genera un código QR para la asistencia del día"""
@@ -960,16 +1034,35 @@ def dashboard():
         total_visitantes_hoy = 0
         total_visitantes_mes = 0
     
-    # Asistencias
+    # Asistencias - Mejorado para incluir todos los meses
     try:
         asistencias_hoy = Asistencia.query.filter_by(fecha=date.today()).count()
         asistencias_semana = Asistencia.query.filter(
             Asistencia.fecha >= date.today() - timedelta(days=7)
         ).count()
+        # Asistencias del mes actual
+        primer_dia_mes = date.today().replace(day=1)
+        asistencias_mes = Asistencia.query.filter(
+            Asistencia.fecha >= primer_dia_mes
+        ).count()
+        # Asistencias del año actual
+        primer_dia_ano = date.today().replace(month=1, day=1)
+        asistencias_ano = Asistencia.query.filter(
+            Asistencia.fecha >= primer_dia_ano
+        ).count()
+        # Total de horas trabajadas del mes
+        asistencias_mes_completas = Asistencia.query.filter(
+            Asistencia.fecha >= primer_dia_mes,
+            Asistencia.horas_trabajadas.isnot(None)
+        ).all()
+        horas_trabajadas_mes = sum(a.horas_trabajadas for a in asistencias_mes_completas if a.horas_trabajadas)
     except Exception as e:
         print(f"⚠️ Error obteniendo estadísticas de asistencias: {e}")
         asistencias_hoy = 0
         asistencias_semana = 0
+        asistencias_mes = 0
+        asistencias_ano = 0
+        horas_trabajadas_mes = 0
     
     # Contratos
     try:
@@ -1012,6 +1105,13 @@ def dashboard():
         print(f"⚠️ Error obteniendo empleados recientes: {e}")
         empleados_recientes = 0
     
+    # Solicitudes pendientes
+    try:
+        solicitudes_pendientes = SolicitudEmpleado.query.filter_by(estado='PENDIENTE').count()
+    except Exception as e:
+        print(f"⚠️ Error obteniendo solicitudes pendientes: {e}")
+        solicitudes_pendientes = 0
+    
     return render_template('dashboard.html', 
                          total_empleados=total_empleados,
                          total_empleados_inactivos=total_empleados_inactivos,
@@ -1019,12 +1119,16 @@ def dashboard():
                          total_visitantes_mes=total_visitantes_mes,
                          asistencias_hoy=asistencias_hoy,
                          asistencias_semana=asistencias_semana,
+                         asistencias_mes=asistencias_mes,
+                         asistencias_ano=asistencias_ano,
+                         horas_trabajadas_mes=horas_trabajadas_mes,
                          contratos_vencer=contratos_vencer,
                          total_contratos_activos=total_contratos_activos,
                          total_productos=total_productos,
                          productos_stock_bajo=productos_stock_bajo,
                          contratos_generados_hoy=contratos_generados_hoy,
-                         empleados_recientes=empleados_recientes)
+                         empleados_recientes=empleados_recientes,
+                         solicitudes_pendientes=solicitudes_pendientes)
 
 # Gestión de Empleados
 @app.route('/empleados')
@@ -1158,6 +1262,208 @@ def eliminar_empleado(id):
     flash('Empleado desactivado exitosamente', 'success')
     return redirect(url_for('empleados'))
 
+# Gestión de Solicitudes de Empleados
+@app.route('/solicitudes')
+@login_required
+def solicitudes():
+    """Lista todas las solicitudes"""
+    estado_filtro = request.args.get('estado', 'TODAS')
+    tipo_filtro = request.args.get('tipo', 'TODAS')
+    
+    query = SolicitudEmpleado.query
+    
+    if estado_filtro != 'TODAS':
+        query = query.filter_by(estado=estado_filtro)
+    
+    if tipo_filtro != 'TODAS':
+        query = query.filter_by(tipo_solicitud=tipo_filtro)
+    
+    solicitudes = query.order_by(SolicitudEmpleado.created_at.desc()).all()
+    
+    return render_template('solicitudes.html', 
+                         solicitudes=solicitudes,
+                         estado_filtro=estado_filtro,
+                         tipo_filtro=tipo_filtro)
+
+@app.route('/solicitudes/<int:id>')
+@login_required
+def ver_solicitud(id):
+    """Ver detalles de una solicitud"""
+    solicitud = SolicitudEmpleado.query.get_or_404(id)
+    
+    # Procesar adjuntos si existen
+    adjuntos = []
+    if solicitud.adjuntos_data:
+        try:
+            import json
+            adjuntos_json = json.loads(solicitud.adjuntos_data.decode())
+            adjuntos = [{'nombre': a['nombre']} for a in adjuntos_json]
+        except:
+            pass
+    
+    # Procesar documentos del admin si existen
+    documentos_admin = []
+    if solicitud.documentos_admin_data:
+        try:
+            import json
+            docs_json = json.loads(solicitud.documentos_admin_data.decode())
+            documentos_admin = [{'nombre': d['nombre']} for d in docs_json]
+        except:
+            pass
+    
+    return render_template('ver_solicitud.html', 
+                         solicitud=solicitud,
+                         adjuntos=adjuntos,
+                         documentos_admin=documentos_admin)
+
+@app.route('/solicitudes/<int:id>/aprobar', methods=['POST'])
+@login_required
+def aprobar_solicitud(id):
+    """Aprobar una solicitud"""
+    solicitud = SolicitudEmpleado.query.get_or_404(id)
+    
+    if solicitud.estado != 'PENDIENTE':
+        flash('Esta solicitud ya fue procesada', 'warning')
+        return redirect(url_for('ver_solicitud', id=id))
+    
+    comentario = request.form.get('comentario', '').strip()
+    
+    # Procesar documentos del admin si se subieron
+    documentos_admin_data = None
+    documentos_admin_nombres = []
+    if 'documentos_admin' in request.files:
+        archivos = request.files.getlist('documentos_admin')
+        archivos_data_list = []
+        for archivo in archivos:
+            if archivo and archivo.filename:
+                if not archivo.filename.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx')):
+                    flash('Solo se permiten archivos PDF, imágenes o documentos Word', 'error')
+                    return redirect(url_for('ver_solicitud', id=id))
+                
+                archivo.seek(0, os.SEEK_END)
+                tamaño = archivo.tell()
+                archivo.seek(0)
+                if tamaño > 5 * 1024 * 1024:
+                    flash('Cada archivo debe ser menor a 5MB', 'error')
+                    return redirect(url_for('ver_solicitud', id=id))
+                
+                archivos_data_list.append({
+                    'nombre': archivo.filename,
+                    'data': archivo.read()
+                })
+                documentos_admin_nombres.append(archivo.filename)
+        
+        if archivos_data_list:
+            import json
+            documentos_admin_data = json.dumps([{'nombre': a['nombre'], 'data': a['data'].hex()} for a in archivos_data_list]).encode()
+    
+    solicitud.estado = 'APROBADA'
+    solicitud.aprobado_por_id = current_user.id
+    solicitud.fecha_aprobacion = colombia_now()
+    solicitud.comentario_admin = comentario or None
+    if documentos_admin_data:
+        solicitud.documentos_admin_data = documentos_admin_data
+        solicitud.documentos_admin_nombres = '|'.join(documentos_admin_nombres)
+    
+    try:
+        db.session.commit()
+        flash('Solicitud aprobada exitosamente', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error al aprobar la solicitud', 'error')
+    
+    return redirect(url_for('ver_solicitud', id=id))
+
+@app.route('/solicitudes/<int:id>/rechazar', methods=['POST'])
+@login_required
+def rechazar_solicitud(id):
+    """Rechazar una solicitud"""
+    solicitud = SolicitudEmpleado.query.get_or_404(id)
+    
+    if solicitud.estado != 'PENDIENTE':
+        flash('Esta solicitud ya fue procesada', 'warning')
+        return redirect(url_for('ver_solicitud', id=id))
+    
+    comentario = request.form.get('comentario', '').strip()
+    
+    if not comentario:
+        flash('Debe especificar el motivo del rechazo', 'error')
+        return redirect(url_for('ver_solicitud', id=id))
+    
+    solicitud.estado = 'RECHAZADA'
+    solicitud.aprobado_por_id = current_user.id
+    solicitud.fecha_aprobacion = colombia_now()
+    solicitud.comentario_admin = comentario
+    
+    try:
+        db.session.commit()
+        flash('Solicitud rechazada', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error al rechazar la solicitud', 'error')
+    
+    return redirect(url_for('ver_solicitud', id=id))
+
+@app.route('/solicitudes/<int:id>/adjunto/<int:adjunto_idx>')
+@login_required
+def descargar_adjunto_solicitud(id, adjunto_idx):
+    """Descargar un archivo adjunto de una solicitud"""
+    solicitud = SolicitudEmpleado.query.get_or_404(id)
+    
+    if not solicitud.adjuntos_data:
+        flash('No hay archivos adjuntos', 'error')
+        return redirect(url_for('ver_solicitud', id=id))
+    
+    try:
+        import json
+        adjuntos_json = json.loads(solicitud.adjuntos_data.decode())
+        if adjunto_idx >= len(adjuntos_json):
+            flash('Archivo no encontrado', 'error')
+            return redirect(url_for('ver_solicitud', id=id))
+        
+        adjunto = adjuntos_json[adjunto_idx]
+        archivo_data = bytes.fromhex(adjunto['data'])
+        
+        return send_file(
+            io.BytesIO(archivo_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=adjunto['nombre']
+        )
+    except Exception as e:
+        flash('Error al descargar el archivo', 'error')
+        return redirect(url_for('ver_solicitud', id=id))
+
+@app.route('/solicitudes/<int:id>/documento-admin/<int:doc_idx>')
+@login_required
+def descargar_documento_admin(id, doc_idx):
+    """Descargar un documento del admin"""
+    solicitud = SolicitudEmpleado.query.get_or_404(id)
+    
+    if not solicitud.documentos_admin_data:
+        flash('No hay documentos', 'error')
+        return redirect(url_for('ver_solicitud', id=id))
+    
+    try:
+        import json
+        docs_json = json.loads(solicitud.documentos_admin_data.decode())
+        if doc_idx >= len(docs_json):
+            flash('Documento no encontrado', 'error')
+            return redirect(url_for('ver_solicitud', id=id))
+        
+        doc = docs_json[doc_idx]
+        archivo_data = bytes.fromhex(doc['data'])
+        
+        return send_file(
+            io.BytesIO(archivo_data),
+            mimetype='application/octet-stream',
+            as_attachment=True,
+            download_name=doc['nombre']
+        )
+    except Exception as e:
+        flash('Error al descargar el documento', 'error')
+        return redirect(url_for('ver_solicitud', id=id))
+
 # Gestión de Contratos - Rutas movidas a la sección completa más abajo
 
 # Gestión de Asistencia
@@ -1173,12 +1479,16 @@ def asistencia():
     # Generar QR para el día actual
     qr_buffer, token, url_qr = generar_qr_asistencia()
     
+    # Generar QR para solicitudes
+    qr_buffer_solicitudes, token_solicitudes, url_qr_solicitudes = generar_qr_solicitudes()
+    
     return render_template('asistencia.html', 
                          asistencias=asistencias, 
                          empleados=empleados, 
                          fecha=fecha,
                          token_diario=token,
-                         url_qr=url_qr)
+                         url_qr=url_qr,
+                         url_qr_solicitudes=url_qr_solicitudes)
 
 @app.route('/asistencia/qr')
 @login_required
@@ -1192,6 +1502,13 @@ def generar_qr_imagen():
 def generar_qr_visitantes_imagen():
     """Genera y devuelve la imagen del código QR para visitantes"""
     qr_buffer, token, url_qr = generar_qr_visitantes()
+    return send_file(qr_buffer, mimetype='image/png')
+
+@app.route('/solicitudes/qr')
+@login_required
+def generar_qr_solicitudes_imagen():
+    """Genera y devuelve la imagen del código QR para solicitudes"""
+    qr_buffer, token, url_qr = generar_qr_solicitudes()
     return send_file(qr_buffer, mimetype='image/png')
 
 # Ruta pública para asistencia (sin login requerido)
@@ -1492,6 +1809,135 @@ def visitantes_publico(token):
         visitantes_recurrentes=visitantes_recurrentes,
         modo_activo=modo_activo
     )
+
+# Ruta pública para solicitudes de empleados (sin login requerido)
+@app.route('/solicitudes-publico/<token>', methods=['GET', 'POST'])
+def solicitudes_publico(token):
+    """Página pública para que los empleados realicen solicitudes"""
+    # Validar token (mismo token estático)
+    if not validar_token_diario(token):
+        flash('El código QR no es válido. Solicite un nuevo código al administrador.', 'error')
+        return render_template('solicitudes_publico.html', token=token, error=True)
+    
+    if request.method == 'POST':
+        # Verificar que no se esté reenviando el formulario
+        if 'form_submitted' in session and session.get('form_submitted') == True:
+            flash('La solicitud ya fue enviada. Por favor, no recargue la página.', 'warning')
+            return redirect(url_for('solicitudes_publico', token=token))
+        
+        documento = request.form.get('documento', '').strip()
+        nombre = request.form.get('nombre', '').strip()
+        tipo_solicitud = request.form.get('tipo_solicitud', '').strip()
+        fecha_inicio = request.form.get('fecha_inicio', '').strip()
+        fecha_fin = request.form.get('fecha_fin', '').strip()
+        motivo = request.form.get('motivo', '').strip()
+        observaciones = request.form.get('observaciones', '').strip()
+        
+        # Validar campos requeridos
+        if not all([documento, nombre, tipo_solicitud, fecha_inicio, fecha_fin, motivo]):
+            flash('Por favor complete todos los campos requeridos', 'error')
+            return redirect(url_for('solicitudes_publico', token=token))
+        
+        # Buscar empleado
+        empleado = Empleado.query.filter_by(cedula=documento).first()
+        if not empleado:
+            flash('No se encontró un empleado con ese documento. Verifique los datos.', 'error')
+            return redirect(url_for('solicitudes_publico', token=token))
+        
+        # Validar nombre
+        if empleado.nombre_completo.lower().strip() != nombre.lower().strip():
+            flash(f'El nombre no coincide. Empleado registrado: {empleado.nombre_completo}', 'error')
+            return redirect(url_for('solicitudes_publico', token=token))
+        
+        # Validar que el empleado esté activo
+        if empleado.estado_empleado != 'Activo':
+            flash('El empleado no está activo en el sistema', 'error')
+            return redirect(url_for('solicitudes_publico', token=token))
+        
+        # Validar fechas
+        try:
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin_obj = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+            if fecha_fin_obj < fecha_inicio_obj:
+                flash('La fecha de fin debe ser posterior a la fecha de inicio', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+        except ValueError:
+            flash('Formato de fecha inválido', 'error')
+            return redirect(url_for('solicitudes_publico', token=token))
+        
+        # Procesar archivos adjuntos
+        adjuntos_data = None
+        adjuntos_nombres = []
+        if 'adjuntos' in request.files:
+            archivos = request.files.getlist('adjuntos')
+            archivos_data_list = []
+            for archivo in archivos:
+                if archivo and archivo.filename:
+                    # Validar tipo de archivo
+                    if not archivo.filename.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx')):
+                        flash('Solo se permiten archivos PDF, imágenes o documentos Word', 'error')
+                        return redirect(url_for('solicitudes_publico', token=token))
+                    
+                    # Validar tamaño (máximo 5MB por archivo)
+                    archivo.seek(0, os.SEEK_END)
+                    tamaño = archivo.tell()
+                    archivo.seek(0)
+                    if tamaño > 5 * 1024 * 1024:  # 5MB
+                        flash('Cada archivo debe ser menor a 5MB', 'error')
+                        return redirect(url_for('solicitudes_publico', token=token))
+                    
+                    archivos_data_list.append({
+                        'nombre': archivo.filename,
+                        'data': archivo.read()
+                    })
+                    adjuntos_nombres.append(archivo.filename)
+            
+            if archivos_data_list:
+                import json
+                adjuntos_data = json.dumps([{'nombre': a['nombre'], 'data': a['data'].hex()} for a in archivos_data_list]).encode()
+        
+        # Crear solicitud
+        solicitud = SolicitudEmpleado(
+            empleado_id=empleado.id,
+            tipo_solicitud=tipo_solicitud,
+            fecha_inicio=fecha_inicio_obj,
+            fecha_fin=fecha_fin_obj,
+            motivo=motivo,
+            observaciones=observaciones or None,
+            estado='PENDIENTE',
+            adjuntos_data=adjuntos_data,
+            adjuntos_nombres='|'.join(adjuntos_nombres) if adjuntos_nombres else None
+        )
+        
+        try:
+            db.session.add(solicitud)
+            db.session.commit()
+            
+            # Notificar al admin
+            from notificaciones import notificacion_manager
+            notificacion_manager.agregar_notificacion(
+                titulo="Nueva Solicitud de Empleado",
+                mensaje=f"{empleado.nombre_completo} ha enviado una solicitud de {tipo_solicitud.replace('_', ' ').title()}",
+                tipo='warning',
+                tipo_sonido='alerta',
+                icono='fas fa-file-alt'
+            )
+            
+            # Marcar formulario como enviado
+            session['form_submitted'] = True
+            
+            flash('Solicitud enviada exitosamente. Será revisada por el administrador.', 'success')
+            return redirect(url_for('solicitudes_publico', token=token))
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error al crear solicitud: {e}")
+            flash('Error al enviar la solicitud. Intente nuevamente.', 'error')
+            return redirect(url_for('solicitudes_publico', token=token))
+    
+    # Limpiar flag de formulario enviado al cargar la página
+    session.pop('form_submitted', None)
+    
+    return render_template('solicitudes_publico.html', token=token)
 
 @app.route('/asistencia/registrar', methods=['POST'])
 @login_required
@@ -2530,6 +2976,226 @@ def reporte_visitantes():
     ).all()
     
     return render_template('reporte_visitantes.html', visitantes=visitantes, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+
+# Sistema de Backups
+@app.route('/backups')
+@login_required
+def backups():
+    """Página de gestión de backups"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden acceder a esta sección', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Listar backups existentes
+    backups_dir = 'backups'
+    backups_list = []
+    if os.path.exists(backups_dir):
+        for archivo in os.listdir(backups_dir):
+            if archivo.endswith('.db') or archivo.endswith('.sql'):
+                ruta_completa = os.path.join(backups_dir, archivo)
+                tamaño = os.path.getsize(ruta_completa)
+                fecha_mod = datetime.fromtimestamp(os.path.getmtime(ruta_completa))
+                backups_list.append({
+                    'nombre': archivo,
+                    'tamaño': tamaño,
+                    'fecha': fecha_mod,
+                    'ruta': ruta_completa
+                })
+        backups_list.sort(key=lambda x: x['fecha'], reverse=True)
+    
+    return render_template('backups.html', backups=backups_list)
+
+@app.route('/backups/crear', methods=['POST'])
+@login_required
+def crear_backup():
+    """Crear un backup de la base de datos"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden crear backups', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        backups_dir = 'backups'
+        if not os.path.exists(backups_dir):
+            os.makedirs(backups_dir)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Detectar tipo de base de datos
+        database_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        
+        if 'sqlite' in database_url.lower():
+            # Backup SQLite
+            db_path = database_url.replace('sqlite:///', '')
+            if os.path.exists(db_path):
+                backup_path = os.path.join(backups_dir, f'backup_{timestamp}.db')
+                shutil.copy2(db_path, backup_path)
+                flash(f'Backup creado exitosamente: {os.path.basename(backup_path)}', 'success')
+            else:
+                flash('No se encontró la base de datos SQLite', 'error')
+        else:
+            # Backup PostgreSQL usando pg_dump
+            import subprocess
+            backup_path = os.path.join(backups_dir, f'backup_{timestamp}.sql')
+            
+            # Extraer información de conexión
+            if database_url.startswith('postgresql+psycopg://'):
+                database_url = database_url.replace('postgresql+psycopg://', 'postgresql://', 1)
+            
+            # Intentar crear backup
+            try:
+                # Usar pg_dump si está disponible
+                result = subprocess.run(
+                    ['pg_dump', database_url],
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+                if result.returncode == 0:
+                    with open(backup_path, 'w', encoding='utf-8') as f:
+                        f.write(result.stdout)
+                    flash(f'Backup creado exitosamente: {os.path.basename(backup_path)}', 'success')
+                else:
+                    flash('Error al crear backup de PostgreSQL. Asegúrese de tener pg_dump instalado.', 'error')
+            except FileNotFoundError:
+                flash('pg_dump no está instalado. No se puede crear backup de PostgreSQL automáticamente.', 'error')
+            except Exception as e:
+                flash(f'Error al crear backup: {str(e)}', 'error')
+    
+    except Exception as e:
+        flash(f'Error al crear backup: {str(e)}', 'error')
+    
+    return redirect(url_for('backups'))
+
+@app.route('/backups/descargar/<path:nombre>')
+@login_required
+def descargar_backup(nombre):
+    """Descargar un backup"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden descargar backups', 'error')
+        return redirect(url_for('dashboard'))
+    
+    backups_dir = 'backups'
+    ruta_backup = os.path.join(backups_dir, nombre)
+    
+    if os.path.exists(ruta_backup) and os.path.commonpath([backups_dir, ruta_backup]) == backups_dir:
+        return send_file(ruta_backup, as_attachment=True, download_name=nombre)
+    else:
+        flash('Backup no encontrado', 'error')
+        return redirect(url_for('backups'))
+
+@app.route('/backups/eliminar/<path:nombre>', methods=['POST'])
+@login_required
+def eliminar_backup(nombre):
+    """Eliminar un backup"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden eliminar backups', 'error')
+        return redirect(url_for('dashboard'))
+    
+    backups_dir = 'backups'
+    ruta_backup = os.path.join(backups_dir, nombre)
+    
+    if os.path.exists(ruta_backup) and os.path.commonpath([backups_dir, ruta_backup]) == backups_dir:
+        try:
+            os.remove(ruta_backup)
+            flash('Backup eliminado exitosamente', 'success')
+        except Exception as e:
+            flash(f'Error al eliminar backup: {str(e)}', 'error')
+    else:
+        flash('Backup no encontrado', 'error')
+    
+    return redirect(url_for('backups'))
+
+# Sistema de Cálculo de Nómina
+@app.route('/nomina')
+@login_required
+def nomina():
+    """Página principal de nómina"""
+    if not current_user.is_admin:
+        flash('Solo los administradores pueden acceder a esta sección', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Obtener período (mes y año)
+    periodo_mes = request.args.get('mes', date.today().month)
+    periodo_ano = request.args.get('ano', date.today().year)
+    
+    try:
+        periodo_mes = int(periodo_mes)
+        periodo_ano = int(periodo_ano)
+    except:
+        periodo_mes = date.today().month
+        periodo_ano = date.today().year
+    
+    # Calcular nómina para todos los empleados activos
+    empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
+    nomina_data = []
+    
+    primer_dia_mes = date(periodo_ano, periodo_mes, 1)
+    if periodo_mes == 12:
+        ultimo_dia_mes = date(periodo_ano + 1, 1, 1) - timedelta(days=1)
+    else:
+        ultimo_dia_mes = date(periodo_ano, periodo_mes + 1, 1) - timedelta(days=1)
+    
+    for empleado in empleados:
+        # Obtener asistencias del mes
+        asistencias = Asistencia.query.filter(
+            Asistencia.empleado_id == empleado.id,
+            Asistencia.fecha >= primer_dia_mes,
+            Asistencia.fecha <= ultimo_dia_mes,
+            Asistencia.horas_trabajadas.isnot(None)
+        ).all()
+        
+        # Calcular totales
+        total_horas = sum(a.horas_trabajadas for a in asistencias if a.horas_trabajadas)
+        total_dias = len(asistencias)
+        
+        # Obtener contrato activo
+        contrato = Contrato.query.filter_by(
+            empleado_id=empleado.id,
+            activo=True
+        ).first()
+        
+        salario_base = contrato.salario if contrato else empleado.salario_base
+        
+        # Calcular salario según tipo
+        if empleado.tipo_salario == 'Mensual':
+            # Salario mensual fijo
+            salario_calculado = salario_base
+            valor_hora = salario_base / 240  # 30 días * 8 horas
+        elif empleado.tipo_salario == 'Quincenal':
+            salario_calculado = salario_base * 2  # Dos quincenas
+            valor_hora = (salario_base * 2) / 240
+        else:
+            # Por horas
+            valor_hora = salario_base
+            salario_calculado = total_horas * valor_hora
+        
+        # Calcular horas extras (más de 8 horas por día)
+        horas_extras = 0
+        for asistencia in asistencias:
+            if asistencia.horas_trabajadas and asistencia.horas_trabajadas > 8:
+                horas_extras += asistencia.horas_trabajadas - 8
+        
+        valor_horas_extras = horas_extras * valor_hora * 1.25  # 25% extra
+        
+        # Total a pagar
+        total_pagar = salario_calculado + valor_horas_extras
+        
+        nomina_data.append({
+            'empleado': empleado,
+            'total_horas': total_horas,
+            'total_dias': total_dias,
+            'horas_extras': horas_extras,
+            'salario_base': salario_base,
+            'salario_calculado': salario_calculado,
+            'valor_horas_extras': valor_horas_extras,
+            'total_pagar': total_pagar,
+            'asistencias': asistencias
+        })
+    
+    return render_template('nomina.html',
+                         nomina_data=nomina_data,
+                         periodo_mes=periodo_mes,
+                         periodo_ano=periodo_ano)
 
 # Inicialización de la base de datos
 def init_db():

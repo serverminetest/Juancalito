@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Solicitud - Flores Juncalito SAS{% endblock %}
+
+{% block page_title %}Detalles de Solicitud{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-file-alt"></i> Solicitud #{{ solicitud.id }}
+                </h6>
+                <a href="{{ url_for('solicitudes') }}" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+            <div class="card-body">
+                <!-- Información de la Solicitud -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Información del Empleado</h5>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="40%">Empleado:</th>
+                                <td>{{ solicitud.empleado.nombre_completo }}</td>
+                            </tr>
+                            <tr>
+                                <th>Documento:</th>
+                                <td>{{ solicitud.empleado.cedula }}</td>
+                            </tr>
+                            <tr>
+                                <th>Cargo:</th>
+                                <td>{{ solicitud.empleado.cargo_puesto }}</td>
+                            </tr>
+                            <tr>
+                                <th>Departamento:</th>
+                                <td>{{ solicitud.empleado.departamento_laboral }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Detalles de la Solicitud</h5>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th width="40%">Tipo:</th>
+                                <td>
+                                    {% if solicitud.tipo_solicitud == 'VACACIONES' %}
+                                        <span class="badge bg-info"><i class="fas fa-plane"></i> Vacaciones</span>
+                                    {% elif solicitud.tipo_solicitud == 'PERMISO_REMUNERADO' %}
+                                        <span class="badge bg-success"><i class="fas fa-heart"></i> Permiso Remunerado</span>
+                                    {% elif solicitud.tipo_solicitud == 'LICENCIA_LUTO' %}
+                                        <span class="badge bg-secondary"><i class="fas fa-dove"></i> Licencia por Luto</span>
+                                    {% elif solicitud.tipo_solicitud == 'CALAMIDAD' %}
+                                        <span class="badge bg-warning"><i class="fas fa-home"></i> Calamidad Doméstica</span>
+                                    {% elif solicitud.tipo_solicitud == 'INCAPACIDAD' %}
+                                        <span class="badge bg-danger"><i class="fas fa-file-medical"></i> Incapacidad</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Fecha Inicio:</th>
+                                <td>{{ solicitud.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Fecha Fin:</th>
+                                <td>{{ solicitud.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Días:</th>
+                                <td>
+                                    {% set dias = (solicitud.fecha_fin - solicitud.fecha_inicio).days + 1 %}
+                                    <strong>{{ dias }} día(s)</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Estado:</th>
+                                <td>
+                                    {% if solicitud.estado == 'PENDIENTE' %}
+                                        <span class="badge bg-warning"><i class="fas fa-clock"></i> Pendiente</span>
+                                    {% elif solicitud.estado == 'APROBADA' %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Aprobada</span>
+                                    {% elif solicitud.estado == 'RECHAZADA' %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Rechazada</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Fecha Solicitud:</th>
+                                <td>{{ solicitud.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Motivo y Observaciones -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">Motivo de la Solicitud</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-0">{{ solicitud.motivo }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if solicitud.observaciones %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">Observaciones Adicionales</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-0">{{ solicitud.observaciones }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Archivos Adjuntos del Empleado -->
+                {% if adjuntos %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">Archivos Adjuntos del Empleado</h5>
+                        <div class="list-group">
+                            {% for adjunto in adjuntos %}
+                            <a href="{{ url_for('descargar_adjunto_solicitud', id=solicitud.id, adjunto_idx=loop.index0) }}" 
+                               class="list-group-item list-group-item-action">
+                                <i class="fas fa-file-alt me-2"></i> {{ adjunto.nombre }}
+                                <i class="fas fa-download float-end"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Información de Aprobación/Rechazo -->
+                {% if solicitud.estado != 'PENDIENTE' %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">Decisión Administrativa</h5>
+                        <div class="card {% if solicitud.estado == 'APROBADA' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                            <div class="card-body">
+                                <p><strong>Estado:</strong> {{ solicitud.estado }}</p>
+                                <p><strong>Fecha de Decisión:</strong> {{ solicitud.fecha_aprobacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_aprobacion else 'N/A' }}</p>
+                                {% if solicitud.aprobado_por %}
+                                <p><strong>Decidido por:</strong> {{ solicitud.aprobado_por.username }}</p>
+                                {% endif %}
+                                {% if solicitud.comentario_admin %}
+                                <p><strong>Comentario:</strong> {{ solicitud.comentario_admin }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Documentos del Admin -->
+                {% if documentos_admin %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">Documentos del Administrador</h5>
+                        <div class="list-group">
+                            {% for doc in documentos_admin %}
+                            <a href="{{ url_for('descargar_documento_admin', id=solicitud.id, doc_idx=loop.index0) }}" 
+                               class="list-group-item list-group-item-action">
+                                <i class="fas fa-file-alt me-2"></i> {{ doc.nombre }}
+                                <i class="fas fa-download float-end"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Formulario de Aprobación/Rechazo -->
+                {% if solicitud.estado == 'PENDIENTE' %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-gavel"></i> Decisión Administrativa</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('aprobar_solicitud', id=solicitud.id) }}" enctype="multipart/form-data" class="mb-3">
+                                    <div class="mb-3">
+                                        <label for="comentario_aprobacion" class="form-label">Comentario (Opcional)</label>
+                                        <textarea class="form-control" id="comentario_aprobacion" name="comentario" rows="3" placeholder="Comentario adicional al aprobar..."></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="documentos_admin_aprobacion" class="form-label">Documentos Adjuntos (Opcional)</label>
+                                        <input type="file" class="form-control" id="documentos_admin_aprobacion" name="documentos_admin" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                        <small class="form-text text-muted">Puede adjuntar documentos relacionados (máx. 5MB por archivo)</small>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Aprobar Solicitud
+                                    </button>
+                                </form>
+
+                                <hr>
+
+                                <form method="POST" action="{{ url_for('rechazar_solicitud', id=solicitud.id) }}">
+                                    <div class="mb-3">
+                                        <label for="comentario_rechazo" class="form-label">Motivo del Rechazo *</label>
+                                        <textarea class="form-control" id="comentario_rechazo" name="comentario" rows="3" required placeholder="Especifique el motivo del rechazo..."></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-times"></i> Rechazar Solicitud
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

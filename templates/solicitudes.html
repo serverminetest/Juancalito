@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitudes de Empleados - Flores Juncalito SAS{% endblock %}
+
+{% block page_title %}Solicitudes de Empleados{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-file-alt"></i> Gestión de Solicitudes
+                </h6>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('asistencia') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-qrcode"></i> Ver QR Solicitudes
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Filtrar por Estado</label>
+                        <select class="form-select" id="filtro-estado" onchange="filtrarSolicitudes()">
+                            <option value="TODAS" {% if estado_filtro == 'TODAS' %}selected{% endif %}>Todas</option>
+                            <option value="PENDIENTE" {% if estado_filtro == 'PENDIENTE' %}selected{% endif %}>Pendientes</option>
+                            <option value="APROBADA" {% if estado_filtro == 'APROBADA' %}selected{% endif %}>Aprobadas</option>
+                            <option value="RECHAZADA" {% if estado_filtro == 'RECHAZADA' %}selected{% endif %}>Rechazadas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Filtrar por Tipo</label>
+                        <select class="form-select" id="filtro-tipo" onchange="filtrarSolicitudes()">
+                            <option value="TODAS" {% if tipo_filtro == 'TODAS' %}selected{% endif %}>Todos</option>
+                            <option value="VACACIONES" {% if tipo_filtro == 'VACACIONES' %}selected{% endif %}>Vacaciones</option>
+                            <option value="PERMISO_REMUNERADO" {% if tipo_filtro == 'PERMISO_REMUNERADO' %}selected{% endif %}>Permiso Remunerado</option>
+                            <option value="LICENCIA_LUTO" {% if tipo_filtro == 'LICENCIA_LUTO' %}selected{% endif %}>Licencia por Luto</option>
+                            <option value="CALAMIDAD" {% if tipo_filtro == 'CALAMIDAD' %}selected{% endif %}>Calamidad Doméstica</option>
+                            <option value="INCAPACIDAD" {% if tipo_filtro == 'INCAPACIDAD' %}selected{% endif %}>Incapacidades</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tabla de Solicitudes -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Tipo</th>
+                                <th>Fecha Inicio</th>
+                                <th>Fecha Fin</th>
+                                <th>Días</th>
+                                <th>Estado</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if solicitudes %}
+                                {% for solicitud in solicitudes %}
+                                <tr>
+                                    <td>{{ solicitud.empleado.nombre_completo }}</td>
+                                    <td>
+                                        {% if solicitud.tipo_solicitud == 'VACACIONES' %}
+                                            <span class="badge bg-info"><i class="fas fa-plane"></i> Vacaciones</span>
+                                        {% elif solicitud.tipo_solicitud == 'PERMISO_REMUNERADO' %}
+                                            <span class="badge bg-success"><i class="fas fa-heart"></i> Permiso Remunerado</span>
+                                        {% elif solicitud.tipo_solicitud == 'LICENCIA_LUTO' %}
+                                            <span class="badge bg-secondary"><i class="fas fa-dove"></i> Licencia por Luto</span>
+                                        {% elif solicitud.tipo_solicitud == 'CALAMIDAD' %}
+                                            <span class="badge bg-warning"><i class="fas fa-home"></i> Calamidad Doméstica</span>
+                                        {% elif solicitud.tipo_solicitud == 'INCAPACIDAD' %}
+                                            <span class="badge bg-danger"><i class="fas fa-file-medical"></i> Incapacidad</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ solicitud.tipo_solicitud }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ solicitud.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ solicitud.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        {% set dias = (solicitud.fecha_fin - solicitud.fecha_inicio).days + 1 %}
+                                        {{ dias }}
+                                    </td>
+                                    <td>
+                                        {% if solicitud.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-warning"><i class="fas fa-clock"></i> Pendiente</span>
+                                        {% elif solicitud.estado == 'APROBADA' %}
+                                            <span class="badge bg-success"><i class="fas fa-check"></i> Aprobada</span>
+                                        {% elif solicitud.estado == 'RECHAZADA' %}
+                                            <span class="badge bg-danger"><i class="fas fa-times"></i> Rechazada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ solicitud.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('ver_solicitud', id=solicitud.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                        No hay solicitudes que mostrar
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filtrarSolicitudes() {
+    const estado = document.getElementById('filtro-estado').value;
+    const tipo = document.getElementById('filtro-tipo').value;
+    window.location.href = `{{ url_for('solicitudes') }}?estado=${estado}&tipo=${tipo}`;
+}
+</script>
+{% endblock %}
+

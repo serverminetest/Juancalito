@@ -294,6 +294,50 @@
     </div>
 </div>
 
+<!-- Sección QR de Solicitudes -->
+<div class="row mt-4 mx-0">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt"></i> Código QR para Solicitudes de Empleados
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 text-center">
+                        <img src="{{ url_for('generar_qr_solicitudes_imagen') }}" alt="QR Solicitudes" class="img-fluid mb-3" style="max-width: 200px;">
+                        <div class="alert alert-info py-2">
+                            <small>
+                                <strong>URL:</strong><br>
+                                <code class="small" id="url-solicitudes">{{ url_qr_solicitudes[:50] }}...</code><br>
+                                <i class="fas fa-infinity text-success"></i>
+                                <strong>QR permanente:</strong> disponible mientras no se regenere
+                            </small>
+                        </div>
+                        <button class="btn btn-outline-warning btn-sm" onclick="copiarUrlSolicitudes()">
+                            <i class="fas fa-copy"></i> Copiar URL
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Tipos de Solicitudes Disponibles:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-plane text-info"></i> Vacaciones</li>
+                            <li><i class="fas fa-heart text-success"></i> Permiso Remunerado</li>
+                            <li><i class="fas fa-dove text-secondary"></i> Licencia por Luto</li>
+                            <li><i class="fas fa-home text-warning"></i> Licencia por Calamidad Doméstica</li>
+                            <li><i class="fas fa-file-medical text-danger"></i> Incapacidades</li>
+                        </ul>
+                        <p class="text-muted small mb-0">
+                            Los empleados pueden escanear este código para realizar solicitudes desde sus dispositivos móviles.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Confirmación de Asistencia -->
 <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -540,6 +584,16 @@ function calcularHoras() {
             console.log(`Horas trabajadas: ${horas.toFixed(1)}`);
         }
     }
+}
+
+function copiarUrlSolicitudes() {
+    const url = '{{ url_qr_solicitudes }}';
+    navigator.clipboard.writeText(url).then(function() {
+        alert('URL copiada al portapapeles');
+    }, function(err) {
+        console.error('Error al copiar:', err);
+        alert('Error al copiar la URL');
+    });
 }
 </script>
 {% endblock %}
