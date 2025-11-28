@@ -44,10 +44,16 @@
         .modal-backdrop {
             z-index: 1040 !important;
             background-color: rgba(0, 0, 0, 0.5) !important;
-            pointer-events: auto !important;
         }
         .modal-backdrop.show {
             z-index: 1040 !important;
+        }
+        /* Hacer que el backdrop no bloquee eventos del modal */
+        .modal-backdrop + .modal {
+            pointer-events: none;
+        }
+        .modal-backdrop + .modal .modal-dialog {
+            pointer-events: auto;
         }
         .modal.show {
             z-index: 1060 !important;
@@ -415,7 +421,7 @@
                 existingBackdrops.forEach(backdrop => backdrop.remove());
                 
                 modalSolicitud = new bootstrap.Modal(modalElement, {
-                    backdrop: true,
+                    backdrop: 'static',  // Cambiar a 'static' para que no cierre al hacer clic pero permita interacción
                     keyboard: true,
                     focus: true
                 });
