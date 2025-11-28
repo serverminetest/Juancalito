@@ -38,7 +38,16 @@
             z-index: 1060 !important;
         }
         .modal-backdrop {
-            z-index: 1055 !important;
+            z-index: 1040 !important;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-dialog {
+            z-index: 1060 !important;
+            position: relative;
+        }
+        .modal-content {
+            z-index: 1060 !important;
+            position: relative;
         }
         .card {
             border: none;
@@ -373,17 +382,29 @@
         // Manejar selección de tipo de solicitud
         let modalSolicitud = null;
         
-        // Inicializar modal después de que el DOM esté listo
-        document.addEventListener('DOMContentLoaded', function() {
+        // Función para inicializar modal
+        function initModal() {
             const modalElement = document.getElementById('modalSolicitud');
-            if (modalElement) {
+            if (modalElement && !modalSolicitud) {
+                // Eliminar cualquier backdrop existente
+                const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+                existingBackdrops.forEach(backdrop => backdrop.remove());
+                
                 modalSolicitud = new bootstrap.Modal(modalElement, {
                     backdrop: true,
                     keyboard: true,
                     focus: true
                 });
             }
-        });
+            return modalSolicitud;
+        }
+        
+        // Inicializar modal después de que el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initModal);
+        } else {
+            initModal();
+        }
         
         document.querySelectorAll('.solicitud-option').forEach(option => {
             option.addEventListener('click', function(e) {
@@ -415,20 +436,31 @@
                 // Resetear formulario
                 document.getElementById('form-solicitud').reset();
                 
-                // Mostrar modal
-                if (modalSolicitud) {
-                    modalSolicitud.show();
-                } else {
-                    // Si el modal no está inicializado, inicializarlo ahora
+                // Asegurar que el modal esté inicializado
+                const modal = initModal();
+                
+                // Limpiar backdrops duplicados antes de mostrar
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    if (backdrops.length > 1) {
+                        for (let i = 1; i < backdrops.length; i++) {
+                            backdrops[i].remove();
+                        }
+                    }
+                    // Asegurar z-index correcto
                     const modalElement = document.getElementById('modalSolicitud');
                     if (modalElement) {
-                        modalSolicitud = new bootstrap.Modal(modalElement, {
-                            backdrop: true,
-                            keyboard: true,
-                            focus: true
-                        });
-                        modalSolicitud.show();
+                        modalElement.style.zIndex = '1060';
                     }
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.style.zIndex = '1040';
+                    }
+                }, 10);
+                
+                // Mostrar modal
+                if (modal) {
+                    modal.show();
                 }
             });
         });
@@ -440,12 +472,18 @@
         });
 
         // Limpiar selección al cerrar modal
-        document.getElementById('modalSolicitud').addEventListener('hidden.bs.modal', function() {
-            document.querySelectorAll('.solicitud-option').forEach(opt => {
-                opt.classList.remove('selected');
+        const modalElement = document.getElementById('modalSolicitud');
+        if (modalElement) {
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                document.querySelectorAll('.solicitud-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                document.getElementById('form-solicitud').reset();
+                // Limpiar backdrops al cerrar
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => backdrop.remove());
             });
-            document.getElementById('form-solicitud').reset();
-        });
+        }
 
         // Prevenir reenvío del formulario
         if (window.history.replaceState) {
