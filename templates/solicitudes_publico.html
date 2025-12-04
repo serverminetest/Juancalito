@@ -369,25 +369,124 @@
                                         <input type="text" class="form-control" id="nombre" name="nombre" required>
                                     </div>
 
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
-                                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                                    <!-- Campos comunes para todos los tipos -->
+                                    <div id="campos-comunes"></div>
+
+                                    <!-- Campos específicos para LICENCIA_LUTO -->
+                                    <div id="campos-licencia-luto" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="cantidad_dias_semestral" class="form-label">Cantidad de días semestral *</label>
+                                                <input type="number" class="form-control" id="cantidad_dias_semestral" name="cantidad_dias_semestral" min="1">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="ano" class="form-label">Año *</label>
+                                                <input type="number" class="form-control" id="ano" name="ano" min="2020" max="2100" value="2025">
+                                            </div>
                                         </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="fecha_fin" class="form-label">Fecha de Fin *</label>
-                                            <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="periodo" class="form-label">Periodo *</label>
+                                                <select class="form-control" id="periodo" name="periodo">
+                                                    <option value="">Seleccione...</option>
+                                                    <option value="PRIMER_SEMESTRE">Primer Semestre</option>
+                                                    <option value="SEGUNDO_SEMESTRE">Segundo Semestre</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="cantidad_dias_disponibles" class="form-label">Cantidad de días disponibles *</label>
+                                                <input type="number" class="form-control" id="cantidad_dias_disponibles" name="cantidad_dias_disponibles" min="1">
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label for="motivo" class="form-label">Motivo *</label>
-                                        <textarea class="form-control" id="motivo" name="motivo" rows="4" required placeholder="Describa el motivo de su solicitud..."></textarea>
+                                    <!-- Campos específicos para INCAPACIDAD -->
+                                    <div id="campos-incapacidad" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="numero_incapacidad" class="form-label">Número de incapacidad *</label>
+                                            <input type="text" class="form-control" id="numero_incapacidad" name="numero_incapacidad">
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="cantidad_dias_incapacidad" class="form-label">Cantidad de días *</label>
+                                                <input type="number" class="form-control" id="cantidad_dias_incapacidad" name="cantidad_dias_incapacidad" min="1">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="fecha_inicio_eps" class="form-label">Fecha inicio EPS *</label>
+                                                <input type="date" class="form-control" id="fecha_inicio_eps" name="fecha_inicio_eps">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="observaciones_incapacidad" class="form-label">Alguna observación</label>
+                                            <textarea class="form-control" id="observaciones_incapacidad" name="observaciones_incapacidad" rows="3"></textarea>
+                                        </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label for="observaciones" class="form-label">Observaciones Adicionales</label>
-                                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales (opcional)..."></textarea>
+                                    <!-- Campos específicos para CALAMIDAD -->
+                                    <div id="campos-calamidad" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="fecha_inicio_calamidad" class="form-label">Fecha inicial *</label>
+                                                <input type="date" class="form-control" id="fecha_inicio_calamidad" name="fecha_inicio_calamidad">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="cantidad_dias_calamidad" class="form-label">Cantidad de días *</label>
+                                                <input type="number" class="form-control" id="cantidad_dias_calamidad" name="cantidad_dias_calamidad" min="1">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Campos específicos para PERMISO_REMUNERADO -->
+                                    <div id="campos-permiso" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="fecha_inicio_permiso" class="form-label">Fecha inicial *</label>
+                                                <input type="date" class="form-control" id="fecha_inicio_permiso" name="fecha_inicio_permiso">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="numero_horas" class="form-label">Número de horas *</label>
+                                                <input type="number" class="form-control" id="numero_horas" name="numero_horas" min="1" step="0.5">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="motivo_permiso" class="form-label">Motivo permiso *</label>
+                                            <textarea class="form-control" id="motivo_permiso" name="motivo_permiso" rows="3"></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="observaciones_permiso" class="form-label">Observaciones</label>
+                                            <textarea class="form-control" id="observaciones_permiso" name="observaciones_permiso" rows="3"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <!-- Campos específicos para VACACIONES -->
+                                    <div id="campos-vacaciones" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="fecha_inicio_vacaciones" class="form-label">Día/mes/año *</label>
+                                                <input type="date" class="form-control" id="fecha_inicio_vacaciones" name="fecha_inicio_vacaciones">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="cantidad_dias_vacaciones" class="form-label">Cantidad de días *</label>
+                                                <input type="number" class="form-control" id="cantidad_dias_vacaciones" name="cantidad_dias_vacaciones" min="1">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="fecha_reintegro" class="form-label">Fecha de reintegro (calculada automáticamente)</label>
+                                            <input type="date" class="form-control" id="fecha_reintegro" name="fecha_reintegro" readonly style="background-color: #e9ecef;">
+                                            <small class="form-text text-muted">Se calcula automáticamente excluyendo domingos y festivos</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Campos específicos para RETIRO_CESANTIAS -->
+                                    <div id="campos-cesantias" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="motivo_cesantias" class="form-label">Motivo del retiro *</label>
+                                            <textarea class="form-control" id="motivo_cesantias" name="motivo_cesantias" rows="3"></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="observaciones_cesantias" class="form-label">Observaciones</label>
+                                            <textarea class="form-control" id="observaciones_cesantias" name="observaciones_cesantias" rows="3"></textarea>
+                                        </div>
                                     </div>
 
                                     <div class="mb-3">
@@ -508,6 +607,36 @@
                 // Resetear formulario
                 document.getElementById('form-solicitud').reset();
                 
+                // Ocultar todos los campos específicos
+                document.getElementById('campos-licencia-luto').style.display = 'none';
+                document.getElementById('campos-incapacidad').style.display = 'none';
+                document.getElementById('campos-calamidad').style.display = 'none';
+                document.getElementById('campos-permiso').style.display = 'none';
+                document.getElementById('campos-vacaciones').style.display = 'none';
+                document.getElementById('campos-cesantias').style.display = 'none';
+                
+                // Mostrar campos según el tipo
+                switch(tipo) {
+                    case 'LICENCIA_LUTO':
+                        document.getElementById('campos-licencia-luto').style.display = 'block';
+                        break;
+                    case 'INCAPACIDAD':
+                        document.getElementById('campos-incapacidad').style.display = 'block';
+                        break;
+                    case 'CALAMIDAD':
+                        document.getElementById('campos-calamidad').style.display = 'block';
+                        break;
+                    case 'PERMISO_REMUNERADO':
+                        document.getElementById('campos-permiso').style.display = 'block';
+                        break;
+                    case 'VACACIONES':
+                        document.getElementById('campos-vacaciones').style.display = 'block';
+                        break;
+                    case 'RETIRO_CESANTIAS':
+                        document.getElementById('campos-cesantias').style.display = 'block';
+                        break;
+                }
+                
                 // Asegurar que el modal esté inicializado
                 const modal = initModal();
                 
@@ -564,11 +693,62 @@
             });
         });
 
-        // Validar fechas
-        document.getElementById('fecha_inicio').addEventListener('change', function() {
-            const fechaFin = document.getElementById('fecha_fin');
-            fechaFin.min = this.value;
-        });
+        // Función para calcular fecha de reintegro (excluyendo domingos y festivos)
+        function calcularFechaReintegro(fechaInicio, cantidadDias) {
+            if (!fechaInicio || !cantidadDias) return null;
+            
+            const fecha = new Date(fechaInicio);
+            let diasAgregados = 0;
+            
+            // Festivos fijos en Colombia
+            const festivosFijos = [
+                [1, 1],   // Año Nuevo
+                [5, 1],   // Día del Trabajo
+                [7, 20],  // Día de la Independencia
+                [8, 7],   // Batalla de Boyacá
+                [12, 8],  // Día de la Inmaculada Concepción
+                [12, 25], // Navidad
+            ];
+            
+            function esFestivo(fecha) {
+                const mes = fecha.getMonth() + 1; // getMonth() es 0-indexed
+                const dia = fecha.getDate();
+                return festivosFijos.some(([m, d]) => m === mes && d === dia);
+            }
+            
+            while (diasAgregados < cantidadDias) {
+                fecha.setDate(fecha.getDate() + 1);
+                // Si no es domingo (0 = domingo) y no es festivo
+                if (fecha.getDay() !== 0 && !esFestivo(fecha)) {
+                    diasAgregados++;
+                }
+            }
+            
+            return fecha.toISOString().split('T')[0];
+        }
+        
+        // Calcular fecha de reintegro para vacaciones
+        const fechaInicioVacaciones = document.getElementById('fecha_inicio_vacaciones');
+        const cantidadDiasVacaciones = document.getElementById('cantidad_dias_vacaciones');
+        const fechaReintegro = document.getElementById('fecha_reintegro');
+        
+        if (fechaInicioVacaciones && cantidadDiasVacaciones && fechaReintegro) {
+            function actualizarFechaReintegro() {
+                const fechaInicio = fechaInicioVacaciones.value;
+                const cantidadDias = parseInt(cantidadDiasVacaciones.value);
+                if (fechaInicio && cantidadDias) {
+                    const fechaReintegroCalculada = calcularFechaReintegro(fechaInicio, cantidadDias);
+                    if (fechaReintegroCalculada) {
+                        fechaReintegro.value = fechaReintegroCalculada;
+                    }
+                } else {
+                    fechaReintegro.value = '';
+                }
+            }
+            
+            fechaInicioVacaciones.addEventListener('change', actualizarFechaReintegro);
+            cantidadDiasVacaciones.addEventListener('input', actualizarFechaReintegro);
+        }
 
         // Limpiar selección al cerrar modal
         const modalElement = document.getElementById('modalSolicitud');

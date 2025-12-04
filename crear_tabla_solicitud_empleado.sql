@@ -15,11 +15,14 @@ CREATE TABLE IF NOT EXISTS solicitud_empleado (
     
     -- Fechas
     fecha_inicio DATE NOT NULL,
-    fecha_fin DATE NOT NULL,
+    fecha_fin DATE,  -- Opcional para algunos tipos de solicitud
     
     -- Información de la solicitud
     motivo TEXT NOT NULL,
     observaciones TEXT,
+    
+    -- Datos adicionales específicos por tipo (almacenados como JSON)
+    datos_adicionales TEXT,
     
     -- Estado de la solicitud
     estado VARCHAR(20) DEFAULT 'PENDIENTE',
@@ -52,8 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_solicitud_empleado_aprobado_por ON solicitud_empl
 
 -- Agregar comentarios a la tabla y columnas para documentación
 COMMENT ON TABLE solicitud_empleado IS 'Tabla para gestionar solicitudes de empleados (vacaciones, licencias, permisos, etc.)';
-COMMENT ON COLUMN solicitud_empleado.tipo_solicitud IS 'Tipo de solicitud: VACACIONES, PERMISO_REMUNERADO, LICENCIA_LUTO, CALAMIDAD, INCAPACIDAD';
+COMMENT ON COLUMN solicitud_empleado.tipo_solicitud IS 'Tipo de solicitud: VACACIONES, PERMISO_REMUNERADO, LICENCIA_LUTO, CALAMIDAD, INCAPACIDAD, RETIRO_CESANTIAS';
 COMMENT ON COLUMN solicitud_empleado.estado IS 'Estado de la solicitud: PENDIENTE, APROBADA, RECHAZADA';
+COMMENT ON COLUMN solicitud_empleado.datos_adicionales IS 'Datos adicionales específicos según el tipo de solicitud almacenados como JSON';
 COMMENT ON COLUMN solicitud_empleado.adjuntos_data IS 'Archivos adjuntos del empleado almacenados como BYTEA (JSON serializado)';
 COMMENT ON COLUMN solicitud_empleado.documentos_admin_data IS 'Documentos del administrador almacenados como BYTEA (JSON serializado)';
 

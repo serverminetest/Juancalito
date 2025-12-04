@@ -40,6 +40,46 @@ def colombia_now():
     """Devuelve la fecha y hora actual en zona horaria de Colombia"""
     return datetime.now(COLOMBIA_TZ)
 
+def es_festivo_colombia(fecha):
+    """Verifica si una fecha es festivo en Colombia"""
+    # Festivos fijos en Colombia
+    festivos_fijos = [
+        (1, 1),   # Año Nuevo
+        (5, 1),   # Día del Trabajo
+        (7, 20),  # Día de la Independencia
+        (8, 7),   # Batalla de Boyacá
+        (12, 8),  # Día de la Inmaculada Concepción
+        (12, 25), # Navidad
+    ]
+    
+    # Festivos que dependen del año (Pascua y relacionados)
+    # Para simplificar, usaremos una aproximación básica
+    # En producción, se recomienda usar una librería como 'holidays' o calcular Pascua
+    
+    if (fecha.month, fecha.day) in festivos_fijos:
+        return True
+    
+    # Aquí se pueden agregar más festivos calculados (Pascua, etc.)
+    # Por ahora, solo verificamos festivos fijos
+    
+    return False
+
+def calcular_fecha_reintegro(fecha_inicio, cantidad_dias):
+    """Calcula la fecha de reintegro excluyendo domingos y festivos de Colombia"""
+    if isinstance(fecha_inicio, str):
+        fecha_actual = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+    else:
+        fecha_actual = fecha_inicio
+    dias_agregados = 0
+    
+    while dias_agregados < cantidad_dias:
+        fecha_actual += timedelta(days=1)
+        # Si no es domingo (0 = lunes, 6 = domingo) y no es festivo
+        if fecha_actual.weekday() != 6 and not es_festivo_colombia(fecha_actual):
+            dias_agregados += 1
+    
+    return fecha_actual
+
 def get_periodo_actual():
     """Devuelve el período actual en formato YYYY-MM"""
     return datetime.now().strftime('%Y-%m')
@@ -814,15 +854,18 @@ class SolicitudEmpleado(db.Model):
     empleado_id = db.Column(db.Integer, db.ForeignKey('empleado.id'), nullable=False)
     
     # Tipo de solicitud
-    tipo_solicitud = db.Column(db.String(50), nullable=False)  # VACACIONES, LICENCIA_LUTO, CALAMIDAD, INCAPACIDAD, PERMISO_REMUNERADO
+    tipo_solicitud = db.Column(db.String(50), nullable=False)  # VACACIONES, LICENCIA_LUTO, CALAMIDAD, INCAPACIDAD, PERMISO_REMUNERADO, RETIRO_CESANTIAS
     
     # Fechas
     fecha_inicio = db.Column(db.Date, nullable=False)
-    fecha_fin = db.Column(db.Date, nullable=False)
+    fecha_fin = db.Column(db.Date, nullable=True)  # Opcional para algunos tipos
     
     # Información de la solicitud
     motivo = db.Column(db.Text, nullable=False)
     observaciones = db.Column(db.Text)
+    
+    # Campos adicionales específicos por tipo (almacenados como JSON)
+    datos_adicionales = db.Column(db.Text)  # JSON con campos específicos según el tipo
     
     # Estado de la solicitud
     estado = db.Column(db.String(20), default='PENDIENTE')  # PENDIENTE, APROBADA, RECHAZADA
@@ -1832,15 +1875,92 @@ def solicitudes_publico(token):
         documento = request.form.get('documento', '').strip()
         nombre = request.form.get('nombre', '').strip()
         tipo_solicitud = request.form.get('tipo_solicitud', '').strip()
-        fecha_inicio = request.form.get('fecha_inicio', '').strip()
-        fecha_fin = request.form.get('fecha_fin', '').strip()
         motivo = request.form.get('motivo', '').strip()
         observaciones = request.form.get('observaciones', '').strip()
         
-        # Validar campos requeridos
-        if not all([documento, nombre, tipo_solicitud, fecha_inicio, fecha_fin, motivo]):
-            flash('Por favor complete todos los campos requeridos', 'error')
-            return redirect(url_for('solicitudes_publico', token=token))
+        # Obtener campos según el tipo de solicitud
+        datos_adicionales = {}
+        fecha_inicio = None
+        fecha_fin = None
+        
+        if tipo_solicitud == 'LICENCIA_LUTO':
+            fecha_inicio = request.form.get('fecha_inicio', '').strip()
+            datos_adicionales = {
+                'cantidad_dias_semestral': request.form.get('cantidad_dias_semestral', '').strip(),
+                'ano': request.form.get('ano', '').strip(),
+                'periodo': request.form.get('periodo', '').strip(),
+                'cantidad_dias_disponibles': request.form.get('cantidad_dias_disponibles', '').strip()
+            }
+            if not all([documento, nombre, tipo_solicitud, fecha_inicio] + list(datos_adicionales.values())):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+                
+        elif tipo_solicitud == 'INCAPACIDAD':
+            fecha_inicio = request.form.get('fecha_inicio_eps', '').strip()
+            datos_adicionales = {
+                'numero_incapacidad': request.form.get('numero_incapacidad', '').strip(),
+                'cantidad_dias': request.form.get('cantidad_dias_incapacidad', '').strip(),
+                'fecha_inicio_eps': fecha_inicio,
+                'observaciones': request.form.get('observaciones_incapacidad', '').strip()
+            }
+            if not all([documento, nombre, tipo_solicitud, fecha_inicio, datos_adicionales['numero_incapacidad'], datos_adicionales['cantidad_dias']]):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+                
+        elif tipo_solicitud == 'CALAMIDAD':
+            fecha_inicio = request.form.get('fecha_inicio_calamidad', '').strip()
+            cantidad_dias = request.form.get('cantidad_dias_calamidad', '').strip()
+            datos_adicionales = {
+                'cantidad_dias': cantidad_dias
+            }
+            if not all([documento, nombre, tipo_solicitud, fecha_inicio, cantidad_dias]):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+                
+        elif tipo_solicitud == 'PERMISO_REMUNERADO':
+            fecha_inicio = request.form.get('fecha_inicio_permiso', '').strip()
+            motivo_permiso = request.form.get('motivo_permiso', '').strip()
+            datos_adicionales = {
+                'numero_horas': request.form.get('numero_horas', '').strip(),
+                'motivo_permiso': motivo_permiso,
+                'observaciones': request.form.get('observaciones_permiso', '').strip()
+            }
+            motivo = motivo_permiso  # Usar motivo_permiso como motivo principal
+            if not all([documento, nombre, tipo_solicitud, fecha_inicio, motivo_permiso, datos_adicionales['numero_horas']]):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+                
+        elif tipo_solicitud == 'VACACIONES':
+            fecha_inicio = request.form.get('fecha_inicio_vacaciones', '').strip()
+            cantidad_dias = request.form.get('cantidad_dias_vacaciones', '').strip()
+            fecha_reintegro = request.form.get('fecha_reintegro', '').strip()
+            datos_adicionales = {
+                'cantidad_dias': cantidad_dias,
+                'fecha_reintegro': fecha_reintegro
+            }
+            fecha_fin = fecha_reintegro  # Usar fecha de reintegro como fecha_fin
+            if not all([documento, nombre, tipo_solicitud, fecha_inicio, cantidad_dias, fecha_reintegro]):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+                
+        elif tipo_solicitud == 'RETIRO_CESANTIAS':
+            motivo_cesantias = request.form.get('motivo_cesantias', '').strip()
+            datos_adicionales = {
+                'motivo_cesantias': motivo_cesantias,
+                'observaciones': request.form.get('observaciones_cesantias', '').strip()
+            }
+            motivo = motivo_cesantias  # Usar motivo_cesantias como motivo principal
+            fecha_inicio = date.today().isoformat()  # Fecha actual
+            if not all([documento, nombre, tipo_solicitud, motivo_cesantias]):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
+        else:
+            # Tipo genérico (por si acaso)
+            fecha_inicio = request.form.get('fecha_inicio', '').strip()
+            fecha_fin = request.form.get('fecha_fin', '').strip()
+            if not all([documento, nombre, tipo_solicitud, fecha_inicio, fecha_fin, motivo]):
+                flash('Por favor complete todos los campos requeridos', 'error')
+                return redirect(url_for('solicitudes_publico', token=token))
         
         # Buscar empleado
         empleado = Empleado.query.filter_by(cedula=documento).first()
@@ -1861,10 +1981,13 @@ def solicitudes_publico(token):
         # Validar fechas
         try:
             fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fecha_fin_obj = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            if fecha_fin_obj < fecha_inicio_obj:
-                flash('La fecha de fin debe ser posterior a la fecha de inicio', 'error')
-                return redirect(url_for('solicitudes_publico', token=token))
+            if fecha_fin:
+                fecha_fin_obj = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+                if fecha_fin_obj < fecha_inicio_obj:
+                    flash('La fecha de fin debe ser posterior a la fecha de inicio', 'error')
+                    return redirect(url_for('solicitudes_publico', token=token))
+            else:
+                fecha_fin_obj = None
         except ValueError:
             flash('Formato de fecha inválido', 'error')
             return redirect(url_for('solicitudes_publico', token=token))
@@ -1900,6 +2023,10 @@ def solicitudes_publico(token):
                 import json
                 adjuntos_data = json.dumps([{'nombre': a['nombre'], 'data': a['data'].hex()} for a in archivos_data_list]).encode()
         
+        # Serializar datos adicionales como JSON
+        import json
+        datos_adicionales_json = json.dumps(datos_adicionales) if datos_adicionales else None
+        
         # Crear solicitud
         solicitud = SolicitudEmpleado(
             empleado_id=empleado.id,
@@ -1908,6 +2035,7 @@ def solicitudes_publico(token):
             fecha_fin=fecha_fin_obj,
             motivo=motivo,
             observaciones=observaciones or None,
+            datos_adicionales=datos_adicionales_json,
             estado='PENDIENTE',
             adjuntos_data=adjuntos_data,
             adjuntos_nombres='|'.join(adjuntos_nombres) if adjuntos_nombres else None
