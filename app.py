@@ -595,11 +595,13 @@ class Empleado(db.Model):
     fecha_nacimiento = db.Column(db.Date, nullable=False)
     genero = db.Column(db.String(20), nullable=False)  # Masculino, Femenino, Otro
     estado_civil = db.Column(db.String(30), nullable=False)  # Soltero, Casado, etc.
+    fecha_expedicion_documento = db.Column(db.Date)  # Fecha de expedición del documento
+    lugar_expedicion_documento = db.Column(db.String(200))  # Lugar de expedición del documento
     
     # Contacto
     telefono_principal = db.Column(db.String(20), nullable=False)
     telefono_secundario = db.Column(db.String(20))
-    email_personal = db.Column(db.String(120), nullable=False)
+    email_personal = db.Column(db.String(120))  # Ahora es opcional
     email_corporativo = db.Column(db.String(120))
     
     # Dirección
@@ -1177,13 +1179,19 @@ def dashboard():
 @app.route('/empleados')
 @login_required
 def empleados():
-    empleados = Empleado.query.filter_by(estado_empleado='Activo').all()
+    # Mostrar todos los empleados, no solo los activos
+    empleados = Empleado.query.order_by(Empleado.created_at.desc()).all()
     return render_template('empleados.html', empleados=empleados)
 
 @app.route('/empleados/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_empleado():
     if request.method == 'POST':
+        # Manejar fecha_expedicion_documento opcional
+        fecha_expedicion = None
+        if request.form.get('fecha_expedicion_documento'):
+            fecha_expedicion = datetime.strptime(request.form['fecha_expedicion_documento'], '%Y-%m-%d').date()
+        
         empleado = Empleado(
             # Información Personal
             nombre_completo=request.form['nombre_completo'],
@@ -1191,11 +1199,13 @@ def nuevo_empleado():
             fecha_nacimiento=datetime.strptime(request.form['fecha_nacimiento'], '%Y-%m-%d').date(),
             genero=request.form['genero'],
             estado_civil=request.form['estado_civil'],
+            fecha_expedicion_documento=fecha_expedicion,
+            lugar_expedicion_documento=request.form.get('lugar_expedicion_documento', ''),
             
             # Contacto
             telefono_principal=request.form['telefono_principal'],
             telefono_secundario=request.form.get('telefono_secundario', ''),
-            email_personal=request.form['email_personal'],
+            email_personal=request.form.get('email_personal', ''),
             email_corporativo=request.form.get('email_corporativo', ''),
             
             # Dirección
@@ -1247,11 +1257,17 @@ def editar_empleado(id):
         empleado.fecha_nacimiento = datetime.strptime(request.form['fecha_nacimiento'], '%Y-%m-%d').date()
         empleado.genero = request.form['genero']
         empleado.estado_civil = request.form['estado_civil']
+        # Manejar fecha_expedicion_documento opcional
+        if request.form.get('fecha_expedicion_documento'):
+            empleado.fecha_expedicion_documento = datetime.strptime(request.form['fecha_expedicion_documento'], '%Y-%m-%d').date()
+        else:
+            empleado.fecha_expedicion_documento = None
+        empleado.lugar_expedicion_documento = request.form.get('lugar_expedicion_documento', '')
         
         # Contacto
         empleado.telefono_principal = request.form['telefono_principal']
         empleado.telefono_secundario = request.form.get('telefono_secundario', '')
-        empleado.email_personal = request.form['email_personal']
+        empleado.email_personal = request.form.get('email_personal', '')
         empleado.email_corporativo = request.form.get('email_corporativo', '')
         
         # Dirección
