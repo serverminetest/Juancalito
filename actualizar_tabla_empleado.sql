@@ -12,10 +12,9 @@ ADD COLUMN IF NOT EXISTS fecha_expedicion_documento DATE;
 
 -- Agregar campo lugar_expedicion_documento
 ALTER TABLE empleado 
-ADD COLUMN IF NOT EXISTS lugar_expedicion_documento VARCHAR(100);
+ADD COLUMN IF NOT EXISTS lugar_expedicion_documento VARCHAR(200);
 
 -- Agregar comentarios para documentación
 COMMENT ON COLUMN empleado.email_personal IS 'Email personal del empleado (opcional)';
 COMMENT ON COLUMN empleado.fecha_expedicion_documento IS 'Fecha de expedición del documento de identidad';
 COMMENT ON COLUMN empleado.lugar_expedicion_documento IS 'Lugar de expedición del documento de identidad';
-
