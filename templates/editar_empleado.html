@@ -336,16 +336,3 @@ document.getElementById('empleadoForm').addEventListener('submit', function(e) {
 });
 </script>
 {% endblock %}
-
-        } else {
-            campo.classList.remove('is-invalid');
-        }
-    });
-    
-    if (!valido) {
-        e.preventDefault();
-        alert('Por favor complete todos los campos obligatorios marcados con *');
-    }
-});
-</script>
-{% endblock %}
