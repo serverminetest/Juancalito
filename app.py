@@ -1300,11 +1300,20 @@ def editar_empleado(id):
         empleado.telefono_emergencia = request.form['telefono_emergencia']
         empleado.parentesco = request.form['parentesco']
         
-        db.session.commit()
-        flash('Empleado actualizado exitosamente', 'success')
-        return redirect(url_for('empleados'))
+        try:
+            db.session.commit()
+            flash('Empleado actualizado exitosamente', 'success')
+            return redirect(url_for('empleados'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar el empleado: {str(e)}', 'error')
+            return render_template('editar_empleado.html', empleado=empleado)
     
-    return render_template('editar_empleado.html', empleado=empleado)
+    try:
+        return render_template('editar_empleado.html', empleado=empleado)
+    except Exception as e:
+        flash(f'Error al cargar el formulario: {str(e)}', 'error')
+        return redirect(url_for('empleados'))
 
 @app.route('/empleados/<int:id>')
 @login_required

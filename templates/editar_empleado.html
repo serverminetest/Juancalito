@@ -71,19 +71,6 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="fecha_expedicion_documento" class="form-label">Fecha de Expedición del Documento</label>
-                            <input type="date" class="form-control" id="fecha_expedicion_documento" name="fecha_expedicion_documento" 
-                                   value="{{ empleado.fecha_expedicion_documento.strftime('%Y-%m-%d') if empleado.fecha_expedicion_documento else '' }}">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="lugar_expedicion_documento" class="form-label">Lugar de Expedición del Documento</label>
-                            <input type="text" class="form-control" id="lugar_expedicion_documento" name="lugar_expedicion_documento" 
-                                   value="{{ empleado.lugar_expedicion_documento or '' }}" placeholder="Ej: Bogotá, Cundinamarca">
-                        </div>
-                    </div>
-
                     <!-- Información de Contacto -->
                     <div class="row mb-4">
                         <div class="col-12">
